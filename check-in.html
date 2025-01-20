@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<head>
+ <meta charset="utf-8" />
+ <title>報到 - 點名系統</title>
+ 
+ <meta name="description" content="使用Google sheet的api紀錄出缺席" />
+ <meta name="author" content="毛哥EM" />
+ 
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <meta name="theme-color" content="00BFFF" />
+ <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+ 
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+<script>
+ //用 Get 讀取資料
+    window.onload = () => {
+     // api url - google appscript 產出的 url
+        let requestURL = "https://script.google.com/macros/s/AKfycbzR4iKMXjdOChNeXn9WjzhA9yWK3YJYpiHwERFqiduAkgIUQ1wd4hQN A-SoizyKo8s/exec";
+        let request = new XMLHttpRequest();
+        request.open("GET", requestURL);
+        request.responseType = "json";
+        request.send();
+        //收到資料後輪流做成按鈕
+        request.onload = function () {
+            let student = request.response;
+            for (var i in student) {
+                var now = student[i];
+                var stu = now.name;
+                var left = now.left;
+                --left;
+                var but = '<button id="' + stu + '">' + stu + "</button>";
+                console.log(but);
+                $("#students").append(but);
+                var iden = "#" + stu;
+                var click = 'to("' + stu + '", ' + left + ");";
+                $(iden).attr("onclick", click);
+            }
+            //載入完成後更改副標題
+            $("#header").text("點擊姓名即可完成報到");
+        };
+    };
+    function to(name, have) {
+        var currentdate = new Date();
+        var filltime = currentdate.getFullYear() + "/" + (currentdate.getMonth() + 1) + "/" + currentdate.getDate() + "  " + currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds();
+        // 打包 要的資料
+        var course = have;
+        console.log(course);
+        var data = {
+            name: name,
+            time: filltime,
+            remain: course,
+        };
+        var tag = name;
+        $.ajax({
+            // 這邊用 get type
+            type: "get",
+            // api url - google appscript 產出的 url
+            url: "https://script.google.com/.........",
+            // 剛剛整理好的資料帶入
+            data: data,
+            // 資料格式是 JSON
+            dataType: "JSON",
+            // 成功送出 會回頭觸發下面這塊
+            success: function (response) {
+                var msg = response;
+                alert("報到成功！還剩" + course + "堂課");
+            },
+        });
+        //報到完成的顯示在下方框框並將按鈕隱藏
+        $("#ed").prepend("<li>" + tag + "</li>");
+        var id = "#" + tag;
+        $(id).fadeOut();
+    }
+
+</head>
+<body>
+ <main>
+  <h1><a href="index.html">點名系統</a></h1>
+  <p id="header">載入中</p>
+  <div id="students"></div>
+  <h2>已到學生</h2>
+  <p class="ed" id="ed"></p>
+  <p><a href="https://Edit-Mr.github.io">毛哥EM</a>製作</p>
+ </main>
+</body>
