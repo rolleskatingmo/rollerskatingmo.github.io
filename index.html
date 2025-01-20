@@ -37,54 +37,7 @@
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwzgL3IVhhrsC4rRvivjCys-_p-RklPzWKAb-i32VOqtiM8jA09gl49brbLG7B2ZN_C2A/exec";
-
-    // 查詢學員記錄
-    function queryRecord() {
-      var studentName = document.getElementById("studentName").value;
-      const params = { studentName: studentName, action: 'queryRecord' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(data => {
-          if (data) {
-            alert(`姓名: ${data.name}\n班級: ${data.class}\n剩餘課堂數: ${data.remainingClasses}\n請假次數: ${data.leaveCount}\n請假日期: ${data.leaveDates}`);
-          } else {
-            alert("未找到學員資料");
-          }
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
-
-    // 調課功能
-    function changeClass() {
-      var studentName = document.getElementById("studentName").value;
-      var newClass = prompt("請選擇調課班級：A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2");
-
-      const params = { studentName: studentName, newClass: newClass, action: 'changeClass' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(data => {
-          alert(data.message);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
-
-    // 請假功能
-    function requestLeave() {
-      var studentName = document.getElementById("studentName").value;
-      var leaveDate = prompt("請輸入請假日期：");
-
-      const params = { studentName: studentName, leaveDate: leaveDate, action: 'requestLeave' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbyCygfKQyI-hjr4s0djt96tunLfjp8XL7A-VWcf4wXP-khmFPB1jU3ZDVLDMFAMFmmdIQ/exec";
 
     // 教練登入驗證
     function verifyCoachPassword() {
@@ -119,55 +72,32 @@
             var button = document.createElement("button");
             button.textContent = student;
             button.classList.add("button");
-            button.onclick = () => markAttendance(student, className);
+            button.onclick = () => markAttendance(student, className, false); // 默認顯示點名按鈕
             studentButtons.appendChild(button);
           });
         })
         .catch(error => console.error("Error fetching data: ", error));
     }
 
-    // 點名功能：扣減剩餘課堂數
-    function markAttendance(studentName, className) {
-      const params = { studentName: studentName, className: className, action: 'markAttendance' };
+    // 點名功能：扣減剩餘課堂數並標記顏色
+    function markAttendance(studentName, className, isChangedClass) {
+      const params = { studentName: studentName, className: className, action: 'markAttendance', isChangedClass: isChangedClass };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.text())
         .then(data => {
           alert(data);  // 返回点名成功消息
+          // 點名後將按鈕變為綠色
+          var buttons = document.querySelectorAll("button");
+          buttons.forEach((button) => {
+            if (button.textContent === studentName) {
+              button.style.backgroundColor = 'green';
+            }
+          });
         })
         .catch(error => console.error("Error fetching data: ", error));
     }
 
-    // 新增學生功能
-    function addStudent() {
-      var name = prompt("請輸入學生姓名：");
-      var className = prompt("請選擇班級：A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2");
-      var numClasses = prompt("請輸入課堂數：");
-
-      const params = { name: name, className: className, numClasses: numClasses, action: 'addStudent' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
-
-    // 新增課堂數功能
-    function addClassHours() {
-      var studentName = prompt("請輸入學生姓名：");
-      var classHours = prompt("請輸入新增課堂數：");
-
-      const params = { studentName: studentName, classHours: classHours, action: 'addClassHours' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
   </script>
 </body>
 </html>
