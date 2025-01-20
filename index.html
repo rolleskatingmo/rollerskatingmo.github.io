@@ -1,21 +1,148 @@
 <!doctype html>
-<head>
-    <meta charset="utf-8" />
-    <title>點名系統</title>
-    
-    <meta name="description" content="使用Google sheet的api紀錄出缺席" />
-    <meta name="author" content="毛哥EM" />
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="00BFFF" />
-    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
-</head>
-<body>
-    <main>
-        <h1>點名系統</h1>
-        <p>主選單</p>
-        <button onclick="window.location='check-in.html';">報到</button>
-        <button onclick="window.location='search.html';">查詢紀錄</button>
-        <button onclick="window.location='sign-up.html';">新增學生</button>
-    </main>
-</body>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>測試點名系統</title>
+        <meta name="theme-color" content="3B4252" />
+        <style>
+            /* 保持不變 */
+        </style>
+    </head>
+
+    <body>
+        <main>
+            <h1>測試點名系統</h1>
+            <h2 id="status">歡迎使用</h2>
+            <nav>
+                <button onclick="searchA()">查詢紀錄</button>
+                <button onclick="callA()">點名</button>
+                <button onclick="addA()">新增學生</button>
+                <button onclick="classSwitch()">調課</button> <!-- 調課按鈕 -->
+            </nav>
+            <section>
+                <div id="history">
+                    <div class="search">
+                        <input type="text" placeholder="輸入學生姓名查詢" id="search-name" />
+                        <button onclick="searchStudent()">查詢課堂及請假次數</button>
+                    </div>
+                    <div id="student-info"></div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <td>時間</td>
+                                <td>剩下課堂</td>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="call">
+                    <h2>載入中</h2>
+                </div>
+                <div id="add">
+                    <div class="search">
+                        <input type="text" id="add-name" placeholder="輸入學生姓名" />
+                        <select id="class-select"> <!-- 班級選擇框 -->
+                            <option value="A1">A1</option>
+                            <option value="A2">A2</option>
+                            <option value="A3">A3</option>
+                            <option value="A4">A4</option>
+                            <option value="B1">B1</option>
+                            <option value="B2">B2</option>
+                            <option value="B3">B3</option>
+                            <option value="B4">B4</option>
+                            <option value="B5">B5</option>
+                            <option value="B6">B6</option>
+                            <option value="C1">C1</option>
+                            <option value="C2">C2</option>
+                        </select>
+                        <button onclick="addStudent()">新增</button>
+                    </div>
+                </div>
+                <div id="leave">
+                    <div class="search">
+                        <input type="text" id="leave-name" placeholder="請假學生姓名" />
+                        <button onclick="leaveStudent()">請假</button>
+                    </div>
+                </div>
+                <div id="switch">
+                    <div class="search">
+                        <input type="text" id="switch-name" placeholder="輸入學生姓名" />
+                        <select id="switch-class"> <!-- 調課班級選擇框 -->
+                            <option value="A1">A1</option>
+                            <option value="A2">A2</option>
+                            <option value="A3">A3</option>
+                            <option value="A4">A4</option>
+                            <option value="B1">B1</option>
+                            <option value="B2">B2</option>
+                            <option value="B3">B3</option>
+                            <option value="B4">B4</option>
+                            <option value="B5">B5</option>
+                            <option value="B6">B6</option>
+                            <option value="C1">C1</option>
+                            <option value="C2">C2</option>
+                        </select>
+                        <button onclick="switchClass()">調課</button>
+                    </div>
+                </div>
+            </section>
+            <footer>
+                <a href="edit-mr.github.io/">毛哥EM</a>製作 |
+                <a href="https://emtech.cc/post/roll-call">教學</a>
+            </footer>
+        </main>
+        <script>
+            var url =
+                "https://script.google.com/macros/s/AKfycbzxqGIMBbLkCka2aveltdVHYtdG-k_X98qzSd_V9MHDxWaOYXFwZgE3rRHDzCakzTxs/exec";
+            const [history, call, add, leave, switchSection] = ["history", "call", "add", "leave", "switch"].map((t) =>
+                    document.getElementById(t)
+                );
+
+            // 新增學生
+            function addStudent() {
+                let name = document.getElementById("add-name").value;
+                let className = document.getElementById("class-select").value;
+                if (name) {
+                    fetch(url + `?type=new&name=${encodeURIComponent(name)}&class=${className}`)
+                        .then((response) => {
+                            if (response.ok) {
+                                alert(`${name} 已成功加入 ${className} 班！`);
+                            } else {
+                                alert(`新增失敗`);
+                            }
+                        })
+                        .catch((error) => {
+                            alert("新增學生錯誤：" + error);
+                        });
+                } else {
+                    alert("請輸入學生姓名！");
+                }
+            }
+
+            // 調課功能
+            function switchClass() {
+                let name = document.getElementById("switch-name").value;
+                let newClass = document.getElementById("switch-class").value;
+                if (name) {
+                    fetch(url + `?type=switch&name=${encodeURIComponent(name)}&newClass=${newClass}`)
+                        .then((response) => {
+                            if (response.ok) {
+                                alert(`${name} 已經臨時調到 ${newClass} 班！`);
+                            } else {
+                                alert(`${name} 調課失敗！`);
+                            }
+                        })
+                        .catch((error) => {
+                            alert("調課錯誤：" + error);
+                        });
+                } else {
+                    alert("請輸入學生姓名！");
+                }
+            }
+
+            // 其他功能保持不變
+        </script>
+    </body>
+</html>
