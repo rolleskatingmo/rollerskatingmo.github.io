@@ -35,7 +35,7 @@
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwBTW4QHaYJnfsQcQt0EYsJ2EepCcBUBmeWfYAM8wqP5qdYZpDXHSpbw8VwgIgooGCrZw/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbyE2a1eQ_JJ-wV0iq6mfAJRxfcJE5TCNl9msJKZSThTu120ERUEGAIT7XxSpUrI97nG/exec";
 
     // 查詢學員記錄
     function queryRecord() {
@@ -77,7 +77,7 @@
       const params = { studentName: studentName, leaveDate: leaveDate, action: 'requestLeave' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
           alert(data);
         })
@@ -109,7 +109,7 @@
       const params = { studentName: studentName, action: 'markAttendance' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
           alert(data);
         })
@@ -125,7 +125,7 @@
       const params = { name: name, className: className, numClasses: numClasses, action: 'addStudent' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
           alert(data);
         })
@@ -140,7 +140,7 @@
       const params = { studentName: studentName, classHours: classHours, action: 'addClassHours' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
           alert(data);
         })
