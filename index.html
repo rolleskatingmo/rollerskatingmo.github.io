@@ -7,7 +7,202 @@
         <title>測試點名系統</title>
         <meta name="theme-color" content="3B4252" />
         <style>
-            /* 保持不變，與您提供的 CSS 相同 */
+            h1 {
+                color: var(--nord7);
+            }
+
+            body {
+                background-color: var(--nord0);
+            }
+
+            body {
+                --nord0: #2e3440;
+                --nord1: #3b4252;
+                --nord2: #434c5e;
+                --nord3: #4c566a;
+                --nord4: #d8dee9;
+                --nord5: #e5e9f0;
+                --nord6: #eceff4;
+                --nord7: #8fbcbb;
+                --nord8: #88c0d0;
+                --nord9: #81a1c1;
+                --nord10: #5e81ac;
+                --nord11: #bf616a;
+                --nord12: #d08770;
+                --nord13: #ebcb8b;
+                --nord14: #a3be8c;
+                --nord15: #b48ead;
+                --black: #000;
+                --line: #4c566a;
+            }
+
+            main, nav {
+                display: flex;
+            }
+
+            .call button,
+            button:hover {
+                background-color: var(--nord2);
+            }
+
+            button, section > div {
+                background-color: var(--nord1);
+                box-shadow: rgba(0, 0, 0, 0.2) 0 0 0.5rem;
+            }
+
+            main, section > div {
+                padding: 1rem;
+                width: 100%;
+            }
+
+            footer, footer a {
+                color: var(--nord4);
+            }
+
+            .search button, button, input, section > div {
+                box-shadow: rgba(0, 0, 0, 0.2) 0 0 0.5rem;
+            }
+
+            body, button, h2, html {
+                text-align: center;
+            }
+
+            * {
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+                font-family: Arial, "微軟正黑體", Helvetica, sans-serif;
+                color: var(--nord6);
+            }
+
+            body, html {
+                min-height: 100%;
+            }
+
+            main {
+                flex-direction: column;
+                height: 100vh;
+                height: 100dvh;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+
+            nav {
+                justify-content: space-between;
+            }
+
+            button {
+                display: block;
+                height: 50px;
+                width: calc(1 / 3 * 100% - 1rem);
+                line-height: 50px;
+                border-radius: 1rem;
+                text-decoration: none;
+                border: none;
+                cursor: pointer;
+                transition: background-color 0.2s ease-in-out;
+            }
+
+            #call, .search, footer {
+                display: flex;
+            }
+
+            .call button {
+                width: calc(1 / 4 * 100% - 1rem);
+                margin: 0.5rem;
+            }
+
+            button:hover {
+                filter: brightness(1.2);
+            }
+
+            button:active {
+                background-color: var(--nord3);
+                filter: brightness(1.5);
+            }
+
+            section {
+                flex-grow: 1;
+                margin: 1rem 0;
+                position: relative;
+            }
+
+            footer {
+                justify-content: flex-end;
+                align-items: flex-end;
+            }
+
+            section > div {
+                border-radius: 1rem;
+                overflow-x: hidden;
+                overflow-y: auto;
+                position: absolute;
+                height: 100%;
+                transition: opacity 0.5s ease-in-out;
+            }
+
+            #add, #history {
+                opacity: 0;
+            }
+
+            #call {
+                z-index: 2;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+
+            .search {
+                justify-content: center;
+                align-items: center;
+            }
+
+            .search button, input {
+                height: 2rem;
+                width: 50%;
+                border-radius: 0.5rem;
+                border: transparent;
+                padding: 0 1rem;
+                background-color: var(--nord3);
+                color: var(--nord4);
+            }
+
+            h2, table {
+                width: 100%;
+            }
+
+            input:focus {
+                outline: transparent;
+            }
+
+            .search button {
+                margin-left: 1rem;
+                width: auto;
+                line-height: 100%;
+            }
+
+            table {
+                border-collapse: collapse;
+                margin-top: 1rem;
+            }
+
+            tr {
+                border-bottom: 1px solid var(--line);
+            }
+
+            td {
+                padding: 0.5rem;
+            }
+
+            h2 {
+                margin-top: 2rem;
+                font-weight: 600;
+            }
+
+            #status {
+                margin: 0.5rem 0 1rem;
+                color: var(--nord13);
+                font-size: 1.3rem;
+            }
         </style>
     </head>
 
@@ -19,7 +214,7 @@
                 <button onclick="searchA()">查詢紀錄</button>
                 <button onclick="callA()">點名</button>
                 <button onclick="addA()">新增學生</button>
-                <button onclick="classSwitch()">調課</button> <!-- 調課按鈕 -->
+                <button onclick="classSwitch()">調課</button>
             </nav>
             <section>
                 <div id="history">
@@ -44,7 +239,7 @@
                 <div id="add">
                     <div class="search">
                         <input type="text" id="add-name" placeholder="輸入學生姓名" />
-                        <select id="class-select"> <!-- 班級選擇框 -->
+                        <select id="class-select">
                             <option value="A1">A1</option>
                             <option value="A2">A2</option>
                             <option value="A3">A3</option>
@@ -70,7 +265,7 @@
                 <div id="switch">
                     <div class="search">
                         <input type="text" id="switch-name" placeholder="輸入學生姓名" />
-                        <select id="switch-class"> <!-- 調課班級選擇框 -->
+                        <select id="switch-class">
                             <option value="A1">A1</option>
                             <option value="A2">A2</option>
                             <option value="A3">A3</option>
@@ -94,7 +289,6 @@
             </footer>
         </main>
         <script>
-            // 更新的 URL
             var url =
                 "https://script.google.com/macros/s/AKfycbw26iifZgP6xSuJYoxUqg1dYQ6hLk6bDS89bQd_hEKwVVrg4oZVG68G2d8H57I7vHU3/exec";
 
@@ -131,7 +325,7 @@
                         .then((response) => response.json())
                         .then((data) => {
                             if (data.length > 0) {
-                                const studentData = data[0]; // 假設只會返回一個學生的資料
+                                const studentData = data[0];
                                 document.getElementById("student-info").innerHTML = `
                                     <p>剩餘課堂：${studentData.left}</p>
                                     <p>請假次數：${studentData.leave}</p>
