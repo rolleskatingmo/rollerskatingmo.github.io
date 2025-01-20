@@ -28,14 +28,16 @@
     <button class="button" onclick="verifyCoachPassword()">登錄</button>
 
     <div id="coachFunctions" style="display:none;">
-      <button class="button" onclick="markAttendance()">點名</button>
+      <button class="button" onclick="showClassStudents()">點名</button>
       <button class="button" onclick="addStudent()">新增學生</button>
       <button class="button" onclick="addClassHours()">新增課堂數</button>
     </div>
+    
+    <div id="studentButtons" style="margin-top:20px;"></div>  <!-- 顯示學生按鈕的地方 -->
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbyE2a1eQ_JJ-wV0iq6mfAJRxfcJE5TCNl9msJKZSThTu120ERUEGAIT7XxSpUrI97nG/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxx2CjbPBUQ2xVUA1j04vcBuZmbGXv5yZSSYbkVIZH3PoEUS0tD9Ejvht392TZUtLqOug/exec";
 
     // 查詢學員記錄
     function queryRecord() {
@@ -102,16 +104,36 @@
         .catch(error => console.error("Error fetching data: ", error));
     }
 
-    // 點名功能
-    function markAttendance() {
-      var studentName = prompt("請輸入學生姓名：");
+    // 顯示班級學生列表並生成按鈕
+    function showClassStudents() {
+      var className = prompt("請輸入班級（A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2）：");
 
-      const params = { studentName: studentName, action: 'markAttendance' };
+      const params = { className: className, action: 'getClassStudents' };
+
+      fetch(scriptUrl + '?' + new URLSearchParams(params))
+        .then(response => response.json())
+        .then(students => {
+          var studentButtons = document.getElementById("studentButtons");
+          studentButtons.innerHTML = "";  // 清空之前的按鈕
+          students.forEach(student => {
+            var button = document.createElement("button");
+            button.textContent = student;
+            button.classList.add("button");
+            button.onclick = () => markAttendance(student, className);
+            studentButtons.appendChild(button);
+          });
+        })
+        .catch(error => console.error("Error fetching data: ", error));
+    }
+
+    // 點名功能：扣減剩餘課堂數
+    function markAttendance(studentName, className) {
+      const params = { studentName: studentName, className: className, action: 'markAttendance' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.text())
         .then(data => {
-          alert(data);
+          alert(data);  // 返回点名成功消息
         })
         .catch(error => console.error("Error fetching data: ", error));
     }
