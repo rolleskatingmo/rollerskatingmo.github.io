@@ -11,6 +11,7 @@
     .button:hover { background-color: #0056b3; }
     .input { padding: 10px; width: 300px; margin: 5px 0; }
     label { font-weight: bold; }
+    #responseMessage { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; display: none; }
   </style>
 </head>
 <body>
@@ -34,6 +35,9 @@
     </div>
     
     <div id="studentButtons" style="margin-top:20px;"></div>  <!-- 顯示學生按鈕的地方 -->
+
+    <!-- 這是顯示訊息的地方 -->
+    <div id="responseMessage"></div>
   </div>
 
   <script>
@@ -48,12 +52,19 @@
         .then(response => response.json())
         .then(data => {
           if (data) {
-            alert(`姓名: ${data.name}\n班級: ${data.class}\n剩餘課堂數: ${data.remainingClasses}\n請假次數: ${data.leaveCount}\n請假日期: ${data.leaveDates}`);
+            showResponseMessage(`姓名: ${data.name}\n班級: ${data.class}\n剩餘課堂數: ${data.remainingClasses}\n請假次數: ${data.leaveCount}\n請假日期: ${data.leaveDates}`);
           } else {
-            alert("未找到學員資料");
+            showResponseMessage("未找到學員資料");
           }
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
+    }
+
+    // 顯示回傳訊息到頁面上
+    function showResponseMessage(message) {
+      const responseMessageDiv = document.getElementById("responseMessage");
+      responseMessageDiv.style.display = "block"; // 顯示訊息區塊
+      responseMessageDiv.textContent = message; // 設置訊息內容
     }
 
     // 調課功能
@@ -66,9 +77,9 @@
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.json())
         .then(data => {
-          alert(data.message);
+          showResponseMessage(data.message);
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
     }
 
     // 請假功能
@@ -81,9 +92,9 @@
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.text())
         .then(data => {
-          alert(data);
+          showResponseMessage(data);
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
     }
 
     // 教練登入驗證
@@ -96,12 +107,12 @@
         .then(data => {
           if (data.success) {
             document.getElementById("coachFunctions").style.display = "block";
-            alert("登錄成功");
+            showResponseMessage("登錄成功");
           } else {
-            alert("密碼錯誤");
+            showResponseMessage("密碼錯誤");
           }
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
     }
 
     // 顯示班級學生列表並生成按鈕
@@ -119,21 +130,21 @@
             var button = document.createElement("button");
             button.textContent = student;
             button.classList.add("button");
-            button.onclick = () => markAttendance(student, className, false); // 默認顯示點名按鈕
+            button.onclick = () => markAttendance(student, className);
             studentButtons.appendChild(button);
           });
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
     }
 
     // 點名功能：扣減剩餘課堂數並標記顏色
-    function markAttendance(studentName, className, isChangedClass) {
-      const params = { studentName: studentName, className: className, action: 'markAttendance', isChangedClass: isChangedClass };
+    function markAttendance(studentName, className) {
+      const params = { studentName: studentName, className: className, action: 'markAttendance' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.text())
         .then(data => {
-          alert(data);  // 返回点名成功消息
+          showResponseMessage(data);  // 返回点名成功消息
           // 點名後將按鈕變為綠色
           var buttons = document.querySelectorAll("button");
           buttons.forEach((button) => {
@@ -142,39 +153,9 @@
             }
           });
         })
-        .catch(error => console.error("Error fetching data: ", error));
+        .catch(error => showResponseMessage("Error fetching data: " + error));
     }
 
-    // 新增學生功能
-    function addStudent() {
-      var name = prompt("請輸入學生姓名：");
-      var className = prompt("請選擇班級：A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2");
-      var numClasses = prompt("請輸入課堂數：");
-
-      const params = { name: name, className: className, numClasses: numClasses, action: 'addStudent' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
-
-    // 新增課堂數功能
-    function addClassHours() {
-      var studentName = prompt("請輸入學生姓名：");
-      var classHours = prompt("請輸入新增課堂數：");
-
-      const params = { studentName: studentName, classHours: classHours, action: 'addClassHours' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-    }
   </script>
 </body>
 </html>
