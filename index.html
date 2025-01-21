@@ -12,6 +12,8 @@
     .input { padding: 10px; width: 300px; margin: 5px 0; }
     label { font-weight: bold; }
     #responseMessage { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; display: none; }
+    #studentButtons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; } /* 新增間隔並讓按鈕換行 */
+    #studentButtons button { min-width: 120px; }
   </style>
 </head>
 <body>
@@ -117,24 +119,26 @@
 
     // 顯示班級學生列表並生成按鈕
     function showClassStudents() {
-      var className = prompt("請輸入班級（A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2）：");
+      const classes = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "B5", "B6", "C1", "C2"];
 
-      const params = { className: className, action: 'getClassStudents' };
+      // 開新頁顯示學生名單
+      const newWindow = window.open('', '', 'width=800,height=600');
+      newWindow.document.write('<html><head><title>班級學生名單</title></head><body>');
+      newWindow.document.write('<h2>班級學生名單</h2>');
 
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(students => {
-          var studentButtons = document.getElementById("studentButtons");
-          studentButtons.innerHTML = "";  // 清空之前的按鈕
-          students.forEach(student => {
-            var button = document.createElement("button");
-            button.textContent = student;
-            button.classList.add("button");
-            button.onclick = () => markAttendance(student, className);
-            studentButtons.appendChild(button);
+      // 循環遍歷所有班級並顯示學生名單
+      classes.forEach(className => {
+        fetch(scriptUrl + '?' + new URLSearchParams({ className: className, action: 'getClassStudents' }))
+          .then(response => response.json())
+          .then(students => {
+            newWindow.document.write(`<h3>${className}</h3>`);
+            students.forEach(student => {
+              newWindow.document.write(`<button onclick="markAttendance('${student}', '${className}')">${student}</button><br>`);
+            });
           });
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
+      });
+
+      newWindow.document.write('</body></html>');
     }
 
     // 點名功能：扣減剩餘課堂數並標記顏色
@@ -155,7 +159,6 @@
         })
         .catch(error => showResponseMessage("Error fetching data: " + error));
     }
-
   </script>
 </body>
 </html>
