@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rollerskating點名系統 - 家長入口</title>
     <style>
         body {
@@ -106,13 +107,15 @@
     </div>
 
     <script>
-        // 部署網址
-        const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL';
-        
+        // 部署網址（需要替換為實際的部署URL）
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylYzMZZrSPnMOv3TzymDQM435PeGcw5KAz5i7t1V_KTiGvQEUzySf4KnGxlzqEvgzCDQ/exec';
+
         function showSearchForm() {
             document.getElementById('searchForm').style.display = 'block';
             document.getElementById('leaveForm').style.display = 'none';
             document.getElementById('message').innerHTML = '';
+            document.getElementById('searchResult').innerHTML = '';
+            document.getElementById('recordDetails').innerHTML = '';
         }
 
         function showLeaveForm() {
@@ -122,16 +125,23 @@
         }
 
         function searchRecord() {
-            const name = document.getElementById('searchName').value;
+            const name = document.getElementById('searchName').value.trim();
+            if (!name) {
+                showError('請輸入學生姓名');
+                return;
+            }
+
+            showMessage('搜尋中...');
             fetch(`${SCRIPT_URL}?action=searchStudent&name=${encodeURIComponent(name)}`)
                 .then(response => response.json())
                 .then(showSearchResult)
-                .catch(error => showError(error.message));
+                .catch(error => showError('查詢失敗: ' + error.message));
         }
 
         function showSearchResult(result) {
             const searchResult = document.getElementById('searchResult');
             const recordDetails = document.getElementById('recordDetails');
+            document.getElementById('message').innerHTML = '';
             
             if (result.error) {
                 searchResult.innerHTML = `<div class="error">${result.error}</div>`;
@@ -148,33 +158,47 @@
         }
 
         function showDetails(name) {
+            showMessage('載入詳細資料中...');
             fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`)
                 .then(response => response.json())
                 .then(displayDetails)
-                .catch(error => showError(error.message));
+                .catch(error => showError('獲取詳細資料失敗: ' + error.message));
         }
 
         function displayDetails(details) {
             const recordDetails = document.getElementById('recordDetails');
+            document.getElementById('message').innerHTML = '';
+            
             let html = '<h3>上課記錄</h3><ul>';
-            
-            details.classRecords.forEach(record => {
-                html += `<li>上課日期: ${record.date}, 時間: ${record.time}</li>`;
-            });
-            
-            if (details.leaveRecords.length > 0) {
-                html += '</ul><h3>請假記錄</h3><ul>';
-                details.leaveRecords.forEach(record => {
-                    html += `<li>請假日期: ${record.date}</li>`;
+            if (details.classRecords.length > 0) {
+                details.classRecords.forEach(record => {
+                    html += `<li>上課日期: ${record.date}, 時間: ${record.time}</li>`;
                 });
+            } else {
+                html += '<li>暫無上課記錄</li>';
             }
             
             html += '</ul>';
+            
+            if (details.leaveRecords.length > 0) {
+                html += '<h3>請假記錄</h3><ul>';
+                details.leaveRecords.forEach(record => {
+                    html += `<li>請假日期: ${record.date}</li>`;
+                });
+                html += '</ul>';
+            }
+            
             recordDetails.innerHTML = html;
         }
 
         function submitLeave() {
-            const name = document.getElementById('leaveName').value;
+            const name = document.getElementById('leaveName').value.trim();
+            if (!name) {
+                showError('請輸入學生姓名');
+                return;
+            }
+
+            showMessage('提交請假申請中...');
             fetch(`${SCRIPT_URL}?action=submitLeave&name=${encodeURIComponent(name)}`)
                 .then(response => response.json())
                 .then(result => {
@@ -182,9 +206,10 @@
                         showError(result.error);
                     } else {
                         showSuccess(result.message || '請假申請已提交');
+                        document.getElementById('leaveName').value = '';
                     }
                 })
-                .catch(error => showError(error.message));
+                .catch(error => showError('提交請假失敗: ' + error.message));
         }
 
         function showSuccess(message) {
@@ -193,6 +218,10 @@
 
         function showError(error) {
             document.getElementById('message').innerHTML = `<div class="error">${error}</div>`;
+        }
+
+        function showMessage(message) {
+            document.getElementById('message').innerHTML = `<div>${message}</div>`;
         }
     </script>
 </body>
