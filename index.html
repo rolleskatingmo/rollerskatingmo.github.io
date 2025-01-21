@@ -7,8 +7,8 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
     .container { margin: 20px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .button { padding: 10px 20px; background-color: #007BFF; color: white; border: none; cursor: pointer; margin-top: 10px; }
-    .button:hover { background-color: #0056b3; }
+    .button { padding: 10px 20px; background-color: red; color: white; border: none; cursor: pointer; margin-top: 10px; }
+    .button:hover { background-color: #cc0000; }
     .input { padding: 10px; width: 300px; margin: 5px 0; }
     label { font-weight: bold; }
     #responseMessage { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; display: none; }
@@ -69,54 +69,6 @@
       responseMessageDiv.textContent = message; // 設置訊息內容
     }
 
-    // 調課功能
-    function changeClass() {
-      var studentName = document.getElementById("studentName").value;
-      var newClass = prompt("請選擇調課班級：A1, A2, A3, A4, B1, B2, B3, B4, B5, B6, C1, C2");
-
-      const params = { studentName: studentName, newClass: newClass, action: 'changeClass' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(data => {
-          showResponseMessage(data.message);
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
-    }
-
-    // 請假功能
-    function requestLeave() {
-      var studentName = document.getElementById("studentName").value;
-      var leaveDate = prompt("請輸入請假日期：");
-
-      const params = { studentName: studentName, leaveDate: leaveDate, action: 'requestLeave' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          showResponseMessage(data);
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
-    }
-
-    // 教練登入驗證
-    function verifyCoachPassword() {
-      var password = document.getElementById("coachPassword").value;
-      const params = { password: password, action: 'checkCoachPassword' };
-
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            document.getElementById("coachFunctions").style.display = "block";
-            showResponseMessage("登錄成功");
-          } else {
-            showResponseMessage("密碼錯誤");
-          }
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
-    }
-
     // 顯示班級學生列表並生成按鈕
     function showClassStudents() {
       const classes = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "B5", "B6", "C1", "C2"];
@@ -133,7 +85,8 @@
           .then(students => {
             newWindow.document.write(`<h3>${className}</h3>`);
             students.forEach(student => {
-              newWindow.document.write(`<button onclick="markAttendance('${student}', '${className}')">${student}</button><br>`);
+              // 預設紅色按鈕，尚未點名
+              newWindow.document.write(`<button style="background-color: red;" id="${className}-${student}" onclick="markAttendance('${student}', '${className}', this)">${student}</button><br>`);
             });
           });
       });
@@ -142,23 +95,28 @@
     }
 
     // 點名功能：扣減剩餘課堂數並標記顏色
-    function markAttendance(studentName, className) {
+    function markAttendance(studentName, className, buttonElement) {
       const params = { studentName: studentName, className: className, action: 'markAttendance' };
 
       fetch(scriptUrl + '?' + new URLSearchParams(params))
         .then(response => response.text())
         .then(data => {
           showResponseMessage(data);  // 返回点名成功消息
-          // 點名後將按鈕變為綠色
-          var buttons = document.querySelectorAll("button");
-          buttons.forEach((button) => {
-            if (button.textContent === studentName) {
-              button.style.backgroundColor = 'green'; // 已點名，變綠色
-            }
-          });
+
+          // 記錄點名的日期（格式：mmdd, mmdd）
+          const date = new Date();
+          const formattedDate = `${("0" + (date.getMonth() + 1)).slice(-2)}${("0" + date.getDate()).slice(-2)}`;
+
+          // 更新課堂記錄，將日期追加到記錄中
+          const updateParams = { studentName: studentName, className: className, action: 'updateClassRecord', date: formattedDate };
+          fetch(scriptUrl + '?' + new URLSearchParams(updateParams));
+
+          // 將按鈕顏色變為綠色，表示已經點名
+          buttonElement.style.backgroundColor = 'green';
         })
         .catch(error => showResponseMessage("Error fetching data: " + error));
     }
+
   </script>
 </body>
 </html>
