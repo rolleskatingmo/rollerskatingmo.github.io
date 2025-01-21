@@ -1,122 +1,199 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>滾軸溜冰私教輪滑團點名系統</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
-    .container { margin: 20px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .button { padding: 10px 20px; background-color: red; color: white; border: none; cursor: pointer; margin-top: 10px; }
-    .button:hover { background-color: #cc0000; }
-    .input { padding: 10px; width: 300px; margin: 5px 0; }
-    label { font-weight: bold; }
-    #responseMessage { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; display: none; }
-    #studentButtons { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; } /* 新增間隔並讓按鈕換行 */
-    #studentButtons button { min-width: 120px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Rollerskating點名系統 - 家長入口</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .input-group {
+            margin: 20px 0;
+            display: none;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .nav-link {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .nav-link a {
+            color: #666;
+            text-decoration: none;
+        }
+        #recordDetails {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h2>家長入口</h2>
-    <label for="studentName">學員姓名：</label>
-    <input type="text" id="studentName" class="input" placeholder="輸入學員姓名">
-    <button class="button" onclick="queryRecord()">查詢記錄</button>
-    <button class="button" onclick="changeClass()">調課</button>
-    <button class="button" onclick="requestLeave()">請假</button>
+    <div class="container">
+        <div class="nav-link">
+            <a href="coach.html">教練入口 →</a>
+        </div>
+        <h1>Rollerskating點名系統 - 家長入口</h1>
+        
+        <div class="button-container">
+            <button onclick="showSearchForm()">查詢記錄</button>
+            <button onclick="showLeaveForm()">請假</button>
+        </div>
 
-    <h2>教練入口</h2>
-    <label for="coachPassword">密碼：</label>
-    <input type="password" id="coachPassword" class="input" placeholder="輸入密碼">
-    <button class="button" onclick="verifyCoachPassword()">登錄</button>
+        <div id="searchForm" class="input-group">
+            <input type="text" id="searchName" placeholder="請輸入學生姓名">
+            <button onclick="searchRecord()">查詢</button>
+            <div id="searchResult"></div>
+            <div id="recordDetails"></div>
+        </div>
 
-    <div id="coachFunctions" style="display:none;">
-      <button class="button" onclick="showClassStudents()">點名</button>
-      <button class="button" onclick="addStudent()">新增學生</button>
-      <button class="button" onclick="addClassHours()">新增課堂數</button>
+        <div id="leaveForm" class="input-group">
+            <input type="text" id="leaveName" placeholder="請輸入學生姓名">
+            <button onclick="submitLeave()">請假</button>
+        </div>
+
+        <div id="message"></div>
     </div>
-    
-    <div id="studentButtons" style="margin-top:20px;"></div>  <!-- 顯示學生按鈕的地方 -->
 
-    <!-- 這是顯示訊息的地方 -->
-    <div id="responseMessage"></div>
-  </div>
+    <script>
+        // 部署網址
+        const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL';
+        
+        function showSearchForm() {
+            document.getElementById('searchForm').style.display = 'block';
+            document.getElementById('leaveForm').style.display = 'none';
+            document.getElementById('message').innerHTML = '';
+        }
 
-  <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbyCygfKQyI-hjr4s0djt96tunLfjp8XL7A-VWcf4wXP-khmFPB1jU3ZDVLDMFAMFmmdIQ/exec";
+        function showLeaveForm() {
+            document.getElementById('leaveForm').style.display = 'block';
+            document.getElementById('searchForm').style.display = 'none';
+            document.getElementById('message').innerHTML = '';
+        }
 
-    // 查詢學員記錄
-    function queryRecord() {
-      var studentName = document.getElementById("studentName").value;
-      const params = { studentName: studentName, action: 'queryRecord' };
+        function searchRecord() {
+            const name = document.getElementById('searchName').value;
+            fetch(`${SCRIPT_URL}?action=searchStudent&name=${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(showSearchResult)
+                .catch(error => showError(error.message));
+        }
 
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.json())
-        .then(data => {
-          if (data) {
-            showResponseMessage(`姓名: ${data.name}\n班級: ${data.class}\n剩餘課堂數: ${data.remainingClasses}\n請假次數: ${data.leaveCount}\n請假日期: ${data.leaveDates}`);
-          } else {
-            showResponseMessage("未找到學員資料");
-          }
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
-    }
+        function showSearchResult(result) {
+            const searchResult = document.getElementById('searchResult');
+            const recordDetails = document.getElementById('recordDetails');
+            
+            if (result.error) {
+                searchResult.innerHTML = `<div class="error">${result.error}</div>`;
+                recordDetails.innerHTML = '';
+                return;
+            }
 
-    // 顯示回傳訊息到頁面上
-    function showResponseMessage(message) {
-      const responseMessageDiv = document.getElementById("responseMessage");
-      responseMessageDiv.style.display = "block"; // 顯示訊息區塊
-      responseMessageDiv.textContent = message; // 設置訊息內容
-    }
+            searchResult.innerHTML = `
+                <p>姓名: ${result.name}</p>
+                <p>班級: ${result.class}</p>
+                <p>剩餘課堂數: ${result.remainingClasses}</p>
+                <button onclick="showDetails('${result.name}')">詳情</button>
+            `;
+        }
 
-    // 顯示班級學生列表並生成按鈕
-    function showClassStudents() {
-      const classes = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "B5", "B6", "C1", "C2"];
+        function showDetails(name) {
+            fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(displayDetails)
+                .catch(error => showError(error.message));
+        }
 
-      // 開新頁顯示學生名單
-      const newWindow = window.open('', '', 'width=800,height=600');
-      newWindow.document.write('<html><head><title>班級學生名單</title></head><body>');
-      newWindow.document.write('<h2>班級學生名單</h2>');
-
-      // 循環遍歷所有班級並顯示學生名單
-      classes.forEach(className => {
-        fetch(scriptUrl + '?' + new URLSearchParams({ className: className, action: 'getClassStudents' }))
-          .then(response => response.json())
-          .then(students => {
-            newWindow.document.write(`<h3>${className}</h3>`);
-            students.forEach(student => {
-              // 預設紅色按鈕，尚未點名
-              newWindow.document.write(`<button style="background-color: red;" id="${className}-${student}" onclick="markAttendance('${student}', '${className}', this)">${student}</button><br>`);
+        function displayDetails(details) {
+            const recordDetails = document.getElementById('recordDetails');
+            let html = '<h3>上課記錄</h3><ul>';
+            
+            details.classRecords.forEach(record => {
+                html += `<li>上課日期: ${record.date}, 時間: ${record.time}</li>`;
             });
-          });
-      });
+            
+            if (details.leaveRecords.length > 0) {
+                html += '</ul><h3>請假記錄</h3><ul>';
+                details.leaveRecords.forEach(record => {
+                    html += `<li>請假日期: ${record.date}</li>`;
+                });
+            }
+            
+            html += '</ul>';
+            recordDetails.innerHTML = html;
+        }
 
-      newWindow.document.write('</body></html>');
-    }
+        function submitLeave() {
+            const name = document.getElementById('leaveName').value;
+            fetch(`${SCRIPT_URL}?action=submitLeave&name=${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.error) {
+                        showError(result.error);
+                    } else {
+                        showSuccess(result.message || '請假申請已提交');
+                    }
+                })
+                .catch(error => showError(error.message));
+        }
 
-    // 點名功能：扣減剩餘課堂數並標記顏色
-    function markAttendance(studentName, className, buttonElement) {
-      const params = { studentName: studentName, className: className, action: 'markAttendance' };
+        function showSuccess(message) {
+            document.getElementById('message').innerHTML = `<div class="success">${message}</div>`;
+        }
 
-      fetch(scriptUrl + '?' + new URLSearchParams(params))
-        .then(response => response.text())
-        .then(data => {
-          showResponseMessage(data);  // 返回点名成功消息
-
-          // 記錄點名的日期（格式：mmdd, mmdd）
-          const date = new Date();
-          const formattedDate = `${("0" + (date.getMonth() + 1)).slice(-2)}${("0" + date.getDate()).slice(-2)}`;
-
-          // 更新課堂記錄，將日期追加到記錄中
-          const updateParams = { studentName: studentName, className: className, action: 'updateClassRecord', date: formattedDate };
-          fetch(scriptUrl + '?' + new URLSearchParams(updateParams));
-
-          // 將按鈕顏色變為綠色，表示已經點名
-          buttonElement.style.backgroundColor = 'green';
-        })
-        .catch(error => showResponseMessage("Error fetching data: " + error));
-    }
-
-  </script>
+        function showError(error) {
+            document.getElementById('message').innerHTML = `<div class="error">${error}</div>`;
+        }
+    </script>
 </body>
 </html>

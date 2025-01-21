@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rollerskating點名系統 - 教練入口</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .student-button {
+            background-color: #2196F3;
+        }
+        .student-button.checked {
+            background-color: #4CAF50;
+        }
+        .input-group {
+            margin: 20px 0;
+            display: none;
+        }
+        input, select {
+            padding: 8px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .nav-link {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .nav-link a {
+            color: #666;
+            text-decoration: none;
+        }
+        .class-section {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .class-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        #loginForm {
+            max-width: 300px;
+            margin: 100px auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loginForm">
+        <h2>教練登入</h2>
+        <input type="password" id="password" placeholder="請輸入密碼">
+        <button onclick="login()">登入</button>
+        <div id="loginMessage" class="error"></div>
+    </div>
+
+    <div id="mainContent" class="container" style="display: none;">
+        <div class="nav-link">
+            <a href="index.html">← 返回家長入口</a>
+        </div>
+        <h1>Rollerskating點名系統 - 教練入口</h1>
+        
+        <div class="button-container">
+            <button onclick="showSection('attendance')">點名</button>
+            <button onclick="showSection('addStudent')">新增學生</button>
+            <button onclick="showSection('addClasses')">新增課堂數</button>
+            <button onclick="showSection('viewRecords')">查詢記錄</button>
+        </div>
+
+        <div id="attendance" class="input-group">
+            <h2>點名系統</h2>
+            <div id="attendanceList"></div>
+        </div>
+
+        <div id="addStudent" class="input-group">
+            <h2>新增學生</h2>
+            <input type="text" id="newStudentName" placeholder="學生姓名">
+            <select id="newStudentClass">
+                <option value="">選擇班級</option>
+                <option value="A1">A1</option>
+                <option value="A2">A2</option>
+                <option value="A3">A3</option>
+                <option value="B1">B1</option>
+                <option value="B2">B2</option>
+                <option value="B3">B3</option>
+                <option value="B4">B4</option>
+                <option value="B5">B5</option>
+                <option value="B6">B6</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+            </select>
+            <input type="number" id="newStudentClasses" placeholder="課堂次數">
+            <button onclick="addStudent()">新增學生</button>
+        </div>
+
+        <div id="addClasses" class="input-group">
+            <h2>新增課堂數</h2>
+            <div id="addClassesList"></div>
+        </div>
+
+        <div id="viewRecords" class="input-group">
+            <h2>學生記錄</h2>
+            <div id="recordsList"></div>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // 部署網址
+        const SCRIPT_URL = 'YOUR_DEPLOYMENT_URL';
+        
+        function login() {
+            const password = document.getElementById('password').value;
+            if (password === '123000') {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                loadData();
+            } else {
+                document.getElementById('loginMessage').textContent = '密碼錯誤';
+            }
+        }
+
+        function loadData() {
+            fetch(`${SCRIPT_URL}?action=getAllStudents`)
+                .then(response => response.json())
+                .then(updateUI)
+                .catch(error => showError(error.message));
+        }
+
+        function updateUI(data) {
+            updateAttendanceList(data);
+            updateAddClassesList(data);
+            updateRecordsList(data);
+        }
+
+        function showSection(sectionId) {
+            const sections = ['attendance', 'addStudent', 'addClasses', 'viewRecords'];
+            sections.forEach(id => {
+                document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
+            });
+            document.getElementById('message').innerHTML = '';
+        }
+
+        function updateAttendanceList(data) {
+            const container = document.getElementById('addClassesList');
+            let html = '';
+            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
+            
+            classes.forEach(className => {
+                const students = data.filter(student => student.class === className);
+                if (students.length > 0) {
+                    html += `
+                        <div class="class-section">
+                            <h3>${className}班</h3>
+                            <div class="class-buttons">
+                    `;
+                    students.forEach(student => {
+                        html += `
+                            <button 
+                                class="student-button" 
+                                onclick="showAddClassesForm('${student.name}')"
+                            >${student.name}</button>
+                        `;
+                    });
+                    html += '</div></div>';
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function updateRecordsList(data) {
+            const container = document.getElementById('recordsList');
+            let html = '<div class="class-section">';
+            
+            data.forEach(student => {
+                html += `
+                    <p>${student.name} (${student.class}班) - 剩餘課堂數: ${student.remainingClasses}</p>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function markAttendance(studentName) {
+            const button = document.getElementById(`attendance-${studentName}`);
+            if (!button.classList.contains('checked')) {
+                fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(studentName)}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            button.classList.add('checked');
+                            showSuccess('已記錄出席');
+                            loadData(); // 重新載入數據以更新顯示
+                        } else {
+                            showError(result.message || '記錄出席失敗');
+                        }
+                    })
+                    .catch(error => showError(error.message));
+            }
+        }
+
+        function addStudent() {
+            const name = document.getElementById('newStudentName').value;
+            const classValue = document.getElementById('newStudentClass').value;
+            const classes = document.getElementById('newStudentClasses').value;
+
+            if (!name || !classValue || !classes) {
+                showError('請填寫所有欄位');
+                return;
+            }
+
+            const data = {
+                name: name,
+                class: classValue,
+                classes: parseInt(classes)
+            };
+
+            fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(data))}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showSuccess('成功新增學生');
+                        document.getElementById('newStudentName').value = '';
+                        document.getElementById('newStudentClass').value = '';
+                        document.getElementById('newStudentClasses').value = '';
+                        loadData();
+                    } else {
+                        showError(result.message || '新增學生失敗');
+                    }
+                })
+                .catch(error => showError(error.message));
+        }
+
+        function showAddClassesForm(studentName) {
+            const classes = prompt(`請輸入要為 ${studentName} 增加/減少的課堂數：`);
+            if (classes !== null) {
+                const numClasses = parseInt(classes);
+                if (!isNaN(numClasses)) {
+                    fetch(`${SCRIPT_URL}?action=updateClasses&name=${encodeURIComponent(studentName)}&classes=${numClasses}`)
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                showSuccess('成功更新課堂數');
+                                loadData();
+                            } else {
+                                showError(result.message || '更新課堂數失敗');
+                            }
+                        })
+                        .catch(error => showError(error.message));
+                } else {
+                    showError('請輸入有效的數字');
+                }
+            }
+        }
+
+        function showSuccess(message) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="success">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        function showError(error) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="error">${error}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html> = document.getElementById('attendanceList');
+            let html = '';
+            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
+            
+            classes.forEach(className => {
+                const students = data.filter(student => student.class === className);
+                if (students.length > 0) {
+                    html += `
+                        <div class="class-section">
+                            <h3>${className}班</h3>
+                            <div class="class-buttons">
+                    `;
+                    students.forEach(student => {
+                        html += `
+                            <button 
+                                class="student-button" 
+                                onclick="markAttendance('${student.name}')"
+                                id="attendance-${student.name}"
+                            >${student.name}</button>
+                        `;
+                    });
+                    html += '</div></div>';
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function updateAddClassesList(data) {
+            const container
