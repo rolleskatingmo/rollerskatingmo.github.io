@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.1 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -184,7 +184,7 @@
 
         function updateUI(data) {
             updateAttendanceList(data);
-            updateAddClassesList(data);
+            updateAddClassesList(data);  // Make sure this function is defined
             updateRecordsList(data);
             updateLeaveList(data);  // 加載請假次數列表
         }
@@ -197,7 +197,7 @@
             document.getElementById('message').innerHTML = '';
         }
 
-        // 更新點名列表
+        // Update the attendance list with students' names and buttons for marking attendance
         function updateAttendanceList(data) {
             const container = document.getElementById('attendanceList');
             let html = '';
@@ -246,9 +246,9 @@
                 .catch(error => showError(error.message));
         }
 
-        // 清空請假次數
-        function updateLeaveList(data) {
-            const container = document.getElementById('leaveList');
+        // Update the list of students for adding or updating the number of classes
+        function updateAddClassesList(data) {
+            const container = document.getElementById('addClassesList');
             let html = '';
             const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
 
@@ -264,7 +264,7 @@
                         html += `
                             <button 
                                 class="student-button" 
-                                onclick="confirmClearLeave('${student.name}')"
+                                onclick="showAddClassesForm('${student.name}')"
                             >${student.name}</button>
                         `;
                     });
@@ -275,38 +275,26 @@
             container.innerHTML = html;
         }
 
-        // 確認清空請假次數
-        function confirmClearLeave(studentName) {
-            const confirmMessage = `${studentName}的請假次數即將清空，確認已交費並開始新一期?`;
-            if (confirm(confirmMessage)) {
-                clearLeaveCount(studentName);
+        function showAddClassesForm(studentName) {
+            const classes = prompt(`請輸入要為 ${studentName} 增加/減少的課堂數：`);
+            if (classes !== null) {
+                const numClasses = parseInt(classes);
+                if (!isNaN(numClasses)) {
+                    fetch(`${SCRIPT_URL}?action=updateClasses&name=${encodeURIComponent(studentName)}&classes=${numClasses}`)
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                showSuccess('成功更新課堂數');
+                                loadData();
+                            } else {
+                                showError(result.message || '更新課堂數失敗');
+                            }
+                        })
+                        .catch(error => showError(error.message));
+                } else {
+                    showError('請輸入有效的數字');
+                }
             }
-        }
-
-        function clearLeaveCount(studentName) {
-            fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(studentName)}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        showSuccess(`${studentName}的請假次數已清空`);
-                        loadData(); // 更新學生列表
-                    } else {
-                        showError(result.message || '清空請假次數失敗');
-                    }
-                })
-                .catch(error => showError(error.message));
-        }
-
-        // 點名完畢後將按鈕顏色設為藍色
-        function resetAttendance() {
-            // 清除本地存儲
-            localStorage.clear();
-            // 找到所有點名的按鈕，重置顏色
-            const buttons = document.querySelectorAll('.student-button');
-            buttons.forEach(button => {
-                button.classList.remove('checked');
-                button.style.backgroundColor = '#2196F3'; // 重設為藍色
-            });
         }
 
         function showSuccess(message) {
