@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.1 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -120,6 +120,7 @@
         <div id="attendance" class="input-group">
             <h2>點名系統</h2>
             <div id="attendanceList"></div>
+            <button onclick="resetAttendance()">點名完畢</button>
         </div>
 
         <div id="addStudent" class="input-group">
@@ -220,48 +221,6 @@
             container.innerHTML = html;
         }
 
-        function updateAddClassesList(data) {
-            const container = document.getElementById('addClassesList');
-            let html = '';
-            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
-
-            classes.forEach(className => {
-                const students = data.filter(student => student.class === className);
-                if (students.length > 0) {
-                    html += `
-                        <div class="class-section">
-                            <h3>${className}班</h3>
-                            <div class="class-buttons">
-                    `;
-                    students.forEach(student => {
-                        html += `
-                            <button 
-                                class="student-button" 
-                                onclick="showAddClassesForm('${student.name}')"
-                            >${student.name}</button>
-                        `;
-                    });
-                    html += '</div></div>';
-                }
-            });
-
-            container.innerHTML = html;
-        }
-
-        function updateRecordsList(data) {
-            const container = document.getElementById('recordsList');
-            let html = '<div class="class-section">';
-
-            data.forEach(student => {
-                html += `
-                    <p>${student.name} (${student.class}班) - 剩餘課堂數: ${student.remainingClasses}</p>
-                `;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
         function markAttendance(studentName) {
             const button = document.getElementById(`attendance-${studentName}`);
             if (!button.classList.contains('checked')) {
@@ -271,7 +230,6 @@
                         if (result.success) {
                             button.classList.add('checked');
                             showSuccess('已記錄出席');
-                            loadData();
                         } else {
                             showError(result.message || '記錄出席失敗');
                         }
@@ -280,58 +238,10 @@
             }
         }
 
-        function addStudent() {
-            const name = document.getElementById('newStudentName').value;
-            const classValue = document.getElementById('newStudentClass').value;
-            const classes = document.getElementById('newStudentClasses').value;
-
-            if (!name || !classValue || !classes) {
-                showError('請填寫所有欄位');
-                return;
-            }
-
-            const data = {
-                name: name,
-                class: classValue,
-                classes: parseInt(classes)
-            };
-
-            fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(data))}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        showSuccess('成功新增學生');
-                        document.getElementById('newStudentName').value = '';
-                        document.getElementById('newStudentClass').value = '';
-                        document.getElementById('newStudentClasses').value = '';
-                        loadData();
-                    } else {
-                        showError(result.message || '新增學生失敗');
-                    }
-                })
-                .catch(error => showError(error.message));
-        }
-
-        function showAddClassesForm(studentName) {
-            const classes = prompt(`請輸入要為 ${studentName} 增加/減少的課堂數：`);
-            if (classes !== null) {
-                const numClasses = parseInt(classes);
-                if (!isNaN(numClasses)) {
-                    fetch(`${SCRIPT_URL}?action=updateClasses&name=${encodeURIComponent(studentName)}&classes=${numClasses}`)
-                        .then(response => response.json())
-                        .then(result => {
-                            if (result.success) {
-                                showSuccess('成功更新課堂數');
-                                loadData();
-                            } else {
-                                showError(result.message || '更新課堂數失敗');
-                            }
-                        })
-                        .catch(error => showError(error.message));
-                } else {
-                    showError('請輸入有效的數字');
-                }
-            }
+        function resetAttendance() {
+            const buttons = document.querySelectorAll('.student-button.checked');
+            buttons.forEach(button => button.classList.remove('checked'));
+            showSuccess('點名狀態已重置');
         }
 
         function showSuccess(message) {
