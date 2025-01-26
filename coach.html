@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0.1 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.2 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -112,7 +112,9 @@
         <h6>注意! 家長交費後務必清空請假次數!因請假次數超過2節會扣減堂數!</h6>
         <h6>點名時如果點名完畢, 拉至最下方按點名完畢按鍵, 補點名務必修改記錄中的日期並備註, 家長會看到日期</h6>
         <h6>請於數據庫中直接加入學生, 在家長入口中查詢具體學生的課堂及請假記錄</h6>
+
         <div class="button-container">
+            <button onclick="addClassesWithPayment()">新增課堂數</button>
             <button onclick="showSection('attendance')">點名</button>
         </div>
 
@@ -157,8 +159,75 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwXFV3c9b5Q7pH65SDJhMdSwuCupq4QJVJcv9hK9-HaJ2tee8U0EDyFOP5SvjT3QHgUg/exec';
-        
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_Y2udYUc09G2aAPGMVOOwzC_HfWHYchflwQ8bZDN16YIqu0vNpjY8J87K8pWAG_yxjA/exec';
+
+        // 新增課堂數
+        function addClassesWithPayment() {
+            const confirmation = confirm("請確認您已經上傳交費截圖至交費系統。");
+
+            if (confirmation) {
+                promptForClasses('是');
+            } else {
+                const userChoice = confirm("您還沒有在交費系統填寫截圖，請選擇：\n\n1. 交費系統連結\n2. 我仍要繼續新增課堂數");
+                if (userChoice) {
+                    window.open("https://docs.google.com/forms/d/e/1FAIpQLScwwxn0GvUvWlDEo5RuXyGj0S4X8-1eaZI625Wo1oQgmxca2w/viewform?usp=dialog", "_blank");
+                } else {
+                    const reason = prompt("請填寫未交費原因");
+                    if (reason) {
+                        promptForClasses('否', reason);
+                    } else {
+                        alert("原因必須填寫!");
+                    }
+                }
+            }
+        }
+
+        function promptForClasses(paymentStatus, reason) {
+            const name = prompt("請輸入學生姓名");
+            if (!name) return;
+
+            const className = prompt("請輸入學生班級");
+            if (!className) return;
+
+            const classes = parseInt(prompt("請輸入新增課堂數 (可為負數)"));
+            if (isNaN(classes)) return;
+
+            if (paymentStatus === '是') {
+                updateClasses(name, className, classes, true);
+            } else {
+                updateClasses(name, className, classes, false, reason);
+            }
+        }
+
+        function updateClasses(name, className, classesToAdd, paid, reason = '') {
+            const payload = {
+                name: name,
+                className: className,
+                classes: classesToAdd,
+                paid: paid,
+                reason: reason
+            };
+
+            fetch(SCRIPT_URL + '?action=updateClasses', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert("課堂數已成功更新!");
+                } else {
+                    alert("更新課堂數時出現錯誤: " + result.message);
+                }
+            })
+            .catch(error => {
+                alert("發生錯誤: " + error.message);
+            });
+        }
+
         function login() {
             const password = document.getElementById('password').value;
             if (password === '123000') {
@@ -171,7 +240,7 @@
         }
 
         function loadData() {
-            fetch(`${SCRIPT_URL}?action=getAllStudents`)
+            fetch(SCRIPT_URL + "?action=getAllStudents")
                 .then(response => response.json())
                 .then(updateUI)
                 .catch(error => showError(error.message));
@@ -189,74 +258,6 @@
                 document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
             });
             document.getElementById('message').innerHTML = '';
-        }
-
-        function updateAttendanceList(data) {
-            const container = document.getElementById('attendanceList');
-            let html = '';
-            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
-
-            classes.forEach(className => {
-                const students = data.filter(student => student.class === className);
-                if (students.length > 0) {
-                    html += `
-                        <div class="class-section">
-                            <h3>${className}班</h3>
-                            <div class="class-buttons">
-                    `;
-                    students.forEach(student => {
-                        html += `
-                            <button 
-                                class="student-button" 
-                                onclick="markAttendance('${student.name}')"
-                                id="attendance-${student.name}"
-                            >${student.name}</button>
-                        `;
-                    });
-                    html += '</div></div>';
-                }
-            });
-
-            container.innerHTML = html;
-        }
-
-        function markAttendance(studentName) {
-            const button = document.getElementById(`attendance-${studentName}`);
-            if (!button.classList.contains('checked')) {
-                fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(studentName)}`)
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success) {
-                            button.classList.add('checked');
-                            showSuccess('已記錄出席');
-                        } else {
-                            showError(result.message || '記錄出席失敗');
-                        }
-                    })
-                    .catch(error => showError(error.message));
-            }
-        }
-
-        function resetAttendance() {
-            const buttons = document.querySelectorAll('.student-button.checked');
-            buttons.forEach(button => button.classList.remove('checked'));
-            showSuccess('點名狀態已重置');
-        }
-
-        function showSuccess(message) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="success">${message}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 3000);
-        }
-
-        function showError(error) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="error">${error}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 3000);
         }
     </script>
 </body>
