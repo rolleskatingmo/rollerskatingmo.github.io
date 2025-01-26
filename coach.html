@@ -115,6 +115,7 @@
         <div class="button-container">
             <button onclick="showSection('attendance')">點名</button>
             <button onclick="showSection('addClasses')">新增課堂數</button>
+            <button onclick="showSection('suspendClass')">停課</button>
         </div>
 
         <div id="attendance" class="input-group">
@@ -122,7 +123,11 @@
             <div id="attendanceList"></div>
             <button onclick="resetAttendance()">點名完畢</button>
         </div>
-
+        <div id="suspendClass" class="input-group">
+    <h2>停課</h2>
+    <input type="date" id="suspendDate" required>
+    <button onclick="submitSuspendClass()">確定停課</button>
+        </div>
         <div id="addClasses" class="input-group">
             <h2>新增課堂數</h2>
             <button onclick="showAddClassesForm(true)">已在交費系統登記</button>
@@ -154,7 +159,28 @@
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-yYQUNQvYOQdJvDvfhc8NG0J7P38SuTMFAJVoLI53i64OcFnqR9B2RJx6B2b2OIJQ6A/exec';
-        
+        function submitSuspendClass() {
+    const suspendDate = document.getElementById('suspendDate').value;
+    if (!suspendDate) {
+        showError('請選擇停課日期');
+        return;
+    }
+
+    fetch(`${SCRIPT_URL}?action=suspendClass&date=${encodeURIComponent(suspendDate)}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('suspendDate').value = '';
+            } else {
+                showError(result.message || '停課設置失敗');
+            }
+        })
+        .catch(error => showError(error.message));
+}
         function login() {
             const password = document.getElementById('password').value;
             if (password === '123000') {
