@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0.6 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.1 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,6 +40,12 @@
         button:hover {
             background-color: #45a049;
         }
+        .student-button {
+            background-color: #2196F3;
+        }
+        .student-button.checked {
+            background-color: #4CAF50;
+        }
         .input-group {
             margin: 20px 0;
             display: none;
@@ -71,18 +77,22 @@
             color: #666;
             text-decoration: none;
         }
+        .class-section {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .class-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
         #loginForm {
             max-width: 300px;
             margin: 100px auto;
             text-align: center;
-        }
-        .link-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .link-container a {
-            color: #2196F3;
-            text-decoration: none;
         }
     </style>
 </head>
@@ -102,9 +112,7 @@
         <h6>注意! 家長交費後務必清空請假次數!因請假次數超過2節會扣減堂數!</h6>
         <h6>點名時如果點名完畢, 拉至最下方按點名完畢按鍵, 補點名務必修改記錄中的日期並備註, 家長會看到日期</h6>
         <h6>請於數據庫中直接加入學生, 在家長入口中查詢具體學生的課堂及請假記錄</h6>
-
         <div class="button-container">
-            <button onclick="addClassesWithPayment()">新增課堂數</button>
             <button onclick="showSection('attendance')">點名</button>
         </div>
 
@@ -146,121 +154,11 @@
         </div>
 
         <div id="message"></div>
-
-        <!-- 交費確認部分，現在顯示為按鈕 -->
-        <div id="paymentConfirmationSection" class="link-container" style="display: none;">
-            <p>請確認您已經上傳交費截圖至交費系統：</p>
-            <button onclick="confirmPayment(true)">確認已交費</button>
-            <button onclick="confirmPayment(false)">未交費</button>
-        </div>
-
-        <div id="paymentLinkSection" class="link-container" style="display: none;">
-            <p>您還沒有在交費系統填寫截圖，請選擇：</p>
-            <button onclick="goToPaymentSystem()">前往交費系統</button>
-            <br>
-            <button onclick="continueWithoutPayment()">我仍要繼續新增課堂數</button>
-        </div>
-
-        <div id="reasonSection" class="input-group" style="display: none;">
-            <h2>未交費原因</h2>
-            <input type="text" id="reasonInput" placeholder="請填寫未交費原因">
-            <button onclick="saveReason()">保存原因並繼續新增課堂數</button>
-        </div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxcHbSC1GpBtslJqJxyJNZUeS0Q8RtY7BeEdU19At_G7AYeIl0WNezvag5YdKP8l2YjCA/exec';
-
-        // 新增課堂數
-        function addClassesWithPayment() {
-            // 顯示交費確認選項
-            document.getElementById("paymentConfirmationSection").style.display = "block";
-        }
-
-        function confirmPayment(isPaid) {
-            // 隱藏交費確認選項
-            document.getElementById("paymentConfirmationSection").style.display = "none";
-
-            if (isPaid) {
-                // 如果已交費，直接繼續新增課堂數
-                promptForClasses('是');
-            } else {
-                // 如果未交費，顯示交費系統連結
-                document.getElementById("paymentLinkSection").style.display = "block";
-            }
-        }
-
-        function goToPaymentSystem() {
-            window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScwwxn0GvUvWlDEo5RuXyGj0S4X8-1eaZI625Wo1oQgmxca2w/viewform?usp=dialog"; // 用戶點擊按鈕後跳轉到交費系統
-        }
-
-        function continueWithoutPayment() {
-            // 隱藏交費系統連結區並顯示填寫未交費原因的區域
-            document.getElementById("paymentLinkSection").style.display = "none";
-            document.getElementById("reasonSection").style.display = "block";
-        }
-
-        function saveReason() {
-            const reason = document.getElementById("reasonInput").value;
-            if (reason) {
-                promptForClasses('否', reason);
-            } else {
-                alert("原因必須填寫!");
-            }
-        }
-
-        function promptForClasses(paymentStatus, reason) {
-            const name = document.createElement("input");
-            name.type = "text";
-            name.placeholder = "請輸入學生姓名";
-            document.getElementById("reasonSection").appendChild(name);
-
-            const className = document.createElement("input");
-            className.type = "text";
-            className.placeholder = "請輸入學生班級";
-            document.getElementById("reasonSection").appendChild(className);
-
-            const classes = document.createElement("input");
-            classes.type = "number";
-            classes.placeholder = "請輸入新增課堂數";
-            document.getElementById("reasonSection").appendChild(classes);
-
-            const submitButton = document.createElement("button");
-            submitButton.textContent = "提交";
-            submitButton.onclick = function() {
-                const payload = {
-                    name: name.value,
-                    className: className.value,
-                    classes: parseInt(classes.value),
-                    paid: paymentStatus === '是',
-                    reason: reason || ''
-                };
-                updateClasses(payload);
-            };
-            document.getElementById("reasonSection").appendChild(submitButton);
-        }
-
-        function updateClasses(payload) {
-            fetch(SCRIPT_URL + '?action=updateClasses', {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert("課堂數已成功更新!");
-                } else {
-                    alert("更新課堂數時出現錯誤: " + result.message);
-                }
-            })
-            .catch(error => {
-                alert("發生錯誤: " + error.message);
-            });
-        }
-
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwXFV3c9b5Q7pH65SDJhMdSwuCupq4QJVJcv9hK9-HaJ2tee8U0EDyFOP5SvjT3QHgUg/exec';
+        
         function login() {
             const password = document.getElementById('password').value;
             if (password === '123000') {
@@ -273,7 +171,7 @@
         }
 
         function loadData() {
-            fetch(SCRIPT_URL + "?action=getAllStudents")
+            fetch(`${SCRIPT_URL}?action=getAllStudents`)
                 .then(response => response.json())
                 .then(updateUI)
                 .catch(error => showError(error.message));
@@ -291,6 +189,74 @@
                 document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
             });
             document.getElementById('message').innerHTML = '';
+        }
+
+        function updateAttendanceList(data) {
+            const container = document.getElementById('attendanceList');
+            let html = '';
+            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
+
+            classes.forEach(className => {
+                const students = data.filter(student => student.class === className);
+                if (students.length > 0) {
+                    html += `
+                        <div class="class-section">
+                            <h3>${className}班</h3>
+                            <div class="class-buttons">
+                    `;
+                    students.forEach(student => {
+                        html += `
+                            <button 
+                                class="student-button" 
+                                onclick="markAttendance('${student.name}')"
+                                id="attendance-${student.name}"
+                            >${student.name}</button>
+                        `;
+                    });
+                    html += '</div></div>';
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function markAttendance(studentName) {
+            const button = document.getElementById(`attendance-${studentName}`);
+            if (!button.classList.contains('checked')) {
+                fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(studentName)}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            button.classList.add('checked');
+                            showSuccess('已記錄出席');
+                        } else {
+                            showError(result.message || '記錄出席失敗');
+                        }
+                    })
+                    .catch(error => showError(error.message));
+            }
+        }
+
+        function resetAttendance() {
+            const buttons = document.querySelectorAll('.student-button.checked');
+            buttons.forEach(button => button.classList.remove('checked'));
+            showSuccess('點名狀態已重置');
+        }
+
+        function showSuccess(message) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="success">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        function showError(error) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="error">${error}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
         }
     </script>
 </body>
