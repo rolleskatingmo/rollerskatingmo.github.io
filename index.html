@@ -1,62 +1,193 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>滾軸溜冰課程系統 - 家長入口</title>
+    <title>滾軸溜冰私教輪滑團課程系統</title>
+    <h4>家長入口-查詢數字有出入請與教練聯繫</h4>
+    <h5>注意!為保護隱私，輸入的名字需與登記名完全一致，可向教練查詢</h5>
+    <h6>通知:自2025/02改用新系統, 舊系統課堂記錄不通用</h6>
+    <h6>課程系統V2.0.1 By Thomas</h6>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { text-align: center; }
-        input, button { margin: 10px 0; padding: 5px; }
-        #result { margin-top: 20px; }
-        .record { background: #f4f4f4; margin-bottom: 10px; padding: 10px; }
-        #showMore { display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+            text-align: center;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .input-group {
+            margin: 20px 0;
+            display: none;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .nav-link {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .nav-link a {
+            color: #666;
+            text-decoration: none;
+        }
+        #recordDetails {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .record {
+            background: #f9f9f9;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        #showMore {
+            display: none;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>滾軸溜冰課程系統 - 家長入口</h1>
-        <input type="text" id="studentName" placeholder="輸入學生姓名">
-        <button onclick="searchStudent()">查詢</button>
-        <div id="result"></div>
-        <button id="showMore" onclick="showMoreRecords()">顯示更多</button>
+        <div class="nav-link">
+            <a href="coach.html">教練入口 →</a>
+        </div>
+        <h3>滾軸溜冰私教輪滑團課程系統</h3>
+        
+        <div class="button-container">
+            <button onclick="showSearchForm()">查詢記錄</button>
+            <button onclick="showLeaveForm()">請假</button>
+        </div>
+
+        <div id="searchForm" class="input-group">
+            <input type="text" id="searchName" placeholder="請輸入學生姓名">
+            <button onclick="searchRecord()">查詢</button>
+            <div id="searchResult"></div>
+            <div id="recordDetails"></div>
+            <button id="showMore" onclick="showMoreRecords()">顯示更多</button>
+        </div>
+
+        <div id="leaveForm" class="input-group">
+            <input type="text" id="leaveName" placeholder="請輸入學生姓名">
+            <button onclick="submitLeave()">請假</button>
+        </div>
+
+        <div id="message"></div>
     </div>
+
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9OZw14kE_znJEYptRmCxqYangawPJkb4ZTeCXkXTNMmdM8ji6L9veATl_f4z5-sw6Cg/exec';
         let allRecords = [];
         let currentDisplayed = 0;
 
-        function searchStudent() {
-            const name = document.getElementById('studentName').value;
-            if (!name) {
-                alert('請輸入學生姓名');
-                return;
-            }
-            
-            fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    displayResults(data);
-                })
-                .catch(error => {
-                    document.getElementById('result').innerHTML = `<p>錯誤：${error.message}</p>`;
-                });
+        function showSearchForm() {
+            document.getElementById('searchForm').style.display = 'block';
+            document.getElementById('leaveForm').style.display = 'none';
+            document.getElementById('message').innerHTML = '';
+            document.getElementById('searchResult').innerHTML = '';
+            document.getElementById('recordDetails').innerHTML = '';
+            document.getElementById('showMore').style.display = 'none';
         }
 
-        function displayResults(data) {
-            allRecords = [...data.classRecords, ...data.leaveRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+        function showLeaveForm() {
+            document.getElementById('leaveForm').style.display = 'block';
+            document.getElementById('searchForm').style.display = 'none';
+            document.getElementById('message').innerHTML = '';
+        }
+
+        function searchRecord() {
+            const name = document.getElementById('searchName').value.trim();
+            if (!name) {
+                showError('請輸入學生姓名');
+                return;
+            }
+
+            showMessage('搜尋中...');
+            fetch(`${SCRIPT_URL}?action=searchStudent&name=${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(result => {
+                    showSearchResult(result);
+                    return fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
+                })
+                .then(response => response.json())
+                .then(displayDetails)
+                .catch(error => showError('查詢失敗: ' + error.message));
+        }
+
+        function showSearchResult(result) {
+            const searchResult = document.getElementById('searchResult');
+            document.getElementById('message').innerHTML = '';
+            
+            if (result.error) {
+                searchResult.innerHTML = `<div class="error">${result.error}</div>`;
+                document.getElementById('recordDetails').innerHTML = '';
+                return;
+            }
+
+            searchResult.innerHTML = `
+                <p>姓名: ${result.name}</p>
+                <p>班級: ${result.class}</p>
+                <p>剩餘課堂數: ${result.remainingClasses}</p>
+                <p>查詢出現負數即需要交費或提供最近一次的交費記錄更新課堂數~多謝支持~</p>
+            `;
+        }
+
+        function displayDetails(details) {
+            allRecords = [...details.classRecords, ...details.leaveRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
             currentDisplayed = 0;
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `<h2>${document.getElementById('studentName').value} 的記錄</h2>`;
+            const recordDetails = document.getElementById('recordDetails');
+            recordDetails.innerHTML = '<h3>學生記錄</h3>';
             displayMoreRecords();
         }
 
         function displayMoreRecords() {
-            const resultDiv = document.getElementById('result');
+            const recordDetails = document.getElementById('recordDetails');
             const endIndex = Math.min(currentDisplayed + 10, allRecords.length);
             
             for (let i = currentDisplayed; i < endIndex; i++) {
@@ -79,7 +210,7 @@
                 }
 
                 recordHtml += `</div>`;
-                resultDiv.innerHTML += recordHtml;
+                recordDetails.innerHTML += recordHtml;
             }
 
             currentDisplayed = endIndex;
@@ -88,6 +219,39 @@
 
         function showMoreRecords() {
             displayMoreRecords();
+        }
+
+        function submitLeave() {
+            const name = document.getElementById('leaveName').value.trim();
+            if (!name) {
+                showError('請輸入學生姓名');
+                return;
+            }
+
+            showMessage('提交請假申請中...');
+            fetch(`${SCRIPT_URL}?action=submitLeave&name=${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.error) {
+                        showError(result.error);
+                    } else {
+                        showSuccess(result.message || '請假申請已提交');
+                        document.getElementById('leaveName').value = '';
+                    }
+                })
+                .catch(error => showError('提交請假失敗: ' + error.message));
+        }
+
+        function showSuccess(message) {
+            document.getElementById('message').innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        function showError(error) {
+            document.getElementById('message').innerHTML = `<div class="error">${error}</div>`;
+        }
+
+        function showMessage(message) {
+            document.getElementById('message').innerHTML = `<div>${message}</div>`;
         }
     </script>
 </body>
