@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0.5 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.6 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,12 +40,6 @@
         button:hover {
             background-color: #45a049;
         }
-        .student-button {
-            background-color: #2196F3;
-        }
-        .student-button.checked {
-            background-color: #4CAF50;
-        }
         .input-group {
             margin: 20px 0;
             display: none;
@@ -76,18 +70,6 @@
         .nav-link a {
             color: #666;
             text-decoration: none;
-        }
-        .class-section {
-            margin: 20px 0;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-        }
-        .class-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 10px 0;
         }
         #loginForm {
             max-width: 300px;
@@ -178,6 +160,12 @@
             <br>
             <button onclick="continueWithoutPayment()">我仍要繼續新增課堂數</button>
         </div>
+
+        <div id="reasonSection" class="input-group" style="display: none;">
+            <h2>未交費原因</h2>
+            <input type="text" id="reasonInput" placeholder="請填寫未交費原因">
+            <button onclick="saveReason()">保存原因並繼續新增課堂數</button>
+        </div>
     </div>
 
     <script>
@@ -207,13 +195,9 @@
         }
 
         function continueWithoutPayment() {
-            document.getElementById("paymentLinkSection").style.display = "none"; // 隱藏交費系統連結區
-            const reasonSection = document.createElement("div");
-            reasonSection.innerHTML = `
-                <input type="text" id="reasonInput" placeholder="請填寫未交費原因">
-                <button onclick="saveReason()">保存原因並繼續新增課堂數</button>
-            `;
-            document.getElementById("paymentLinkSection").appendChild(reasonSection);
+            // 隱藏交費系統連結區並顯示填寫未交費原因的區域
+            document.getElementById("paymentLinkSection").style.display = "none";
+            document.getElementById("reasonSection").style.display = "block";
         }
 
         function saveReason() {
@@ -229,17 +213,17 @@
             const name = document.createElement("input");
             name.type = "text";
             name.placeholder = "請輸入學生姓名";
-            document.getElementById("paymentLinkSection").appendChild(name);
+            document.getElementById("reasonSection").appendChild(name);
 
             const className = document.createElement("input");
             className.type = "text";
             className.placeholder = "請輸入學生班級";
-            document.getElementById("paymentLinkSection").appendChild(className);
+            document.getElementById("reasonSection").appendChild(className);
 
             const classes = document.createElement("input");
             classes.type = "number";
             classes.placeholder = "請輸入新增課堂數";
-            document.getElementById("paymentLinkSection").appendChild(classes);
+            document.getElementById("reasonSection").appendChild(classes);
 
             const submitButton = document.createElement("button");
             submitButton.textContent = "提交";
@@ -253,7 +237,7 @@
                 };
                 updateClasses(payload);
             };
-            document.getElementById("paymentLinkSection").appendChild(submitButton);
+            document.getElementById("reasonSection").appendChild(submitButton);
         }
 
         function updateClasses(payload) {
