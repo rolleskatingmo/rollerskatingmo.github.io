@@ -159,28 +159,6 @@
 
     <script>
         const SCRIPT_URL = https://script.google.com/macros/s/AKfycbz9OZw14kE_znJEYptRmCxqYangawPJkb4ZTeCXkXTNMmdM8ji6L9veATl_f4z5-sw6Cg/exec';
-        function submitSuspendClass() {
-    const suspendDate = document.getElementById('suspendDate').value;
-    if (!suspendDate) {
-        showError('請選擇停課日期');
-        return;
-    }
-
-    fetch(`${SCRIPT_URL}?action=suspendClass&date=${encodeURIComponent(suspendDate)}`)
-        .then(response => response.json())
-        .then(result => {
-            if (result.error) {
-                throw new Error(result.error);
-            }
-            if (result.success) {
-                showSuccess(result.message);
-                document.getElementById('suspendDate').value = '';
-            } else {
-                showError(result.message || '停課設置失敗');
-            }
-        })
-        .catch(error => showError(error.message));
-}
         function login() {
             const password = document.getElementById('password').value;
             if (password === '123000') {
@@ -315,6 +293,29 @@
                 messageDiv.innerHTML = '';
             }, 3000);
         }
+        
+        function submitSuspendClass() {
+    const suspendDate = document.getElementById('suspendDate').value;
+    if (!suspendDate) {
+        showError('請選擇停課日期');
+        return;
+    }
+
+    fetch(`${SCRIPT_URL}?action=suspendClass&date=${encodeURIComponent(suspendDate)}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('suspendDate').value = '';
+            } else {
+                showError(result.message || '停課設置失敗');
+            }
+        })
+        .catch(error => showError(error.message));
+}
     </script>
 </body>
 </html>
