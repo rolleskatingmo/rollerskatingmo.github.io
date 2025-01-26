@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0.3 By thomas</h3>
+    <h3>教練入口,課程系統V2.0.4 By thomas</h3>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -165,10 +165,11 @@
 
         <div id="message"></div>
 
-        <!-- 顯示交費系統的連結及選項 -->
+        <!-- 交費系統的連結和繼續新增課堂的按鈕 -->
         <div id="paymentLinkSection" class="link-container" style="display: none;">
             <p>您還沒有在交費系統填寫截圖，請選擇：</p>
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLScwwxn0GvUvWlDEo5RuXyGj0S4X8-1eaZI625Wo1oQgmxca2w/viewform?usp=dialog" target="_blank">交費系統連結</a><br>
+            <button onclick="goToPaymentSystem()">前往交費系統</button>
+            <br>
             <button onclick="continueWithoutPayment()">我仍要繼續新增課堂數</button>
         </div>
     </div>
@@ -187,9 +188,22 @@
             }
         }
 
+        function goToPaymentSystem() {
+            window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScwwxn0GvUvWlDEo5RuXyGj0S4X8-1eaZI625Wo1oQgmxca2w/viewform?usp=dialog"; // 用戶點擊按鈕後跳轉到交費系統
+        }
+
         function continueWithoutPayment() {
-            document.getElementById("paymentLinkSection").style.display = "none"; // 隱藏交費系統連結
-            const reason = document.getElementById("noPaymentReason").value;
+            document.getElementById("paymentLinkSection").style.display = "none"; // 隱藏交費系統連結區
+            const reasonSection = document.createElement("div");
+            reasonSection.innerHTML = `
+                <input type="text" id="reasonInput" placeholder="請填寫未交費原因">
+                <button onclick="saveReason()">保存原因並繼續新增課堂數</button>
+            `;
+            document.getElementById("paymentLinkSection").appendChild(reasonSection);
+        }
+
+        function saveReason() {
+            const reason = document.getElementById("reasonInput").value;
             if (reason) {
                 promptForClasses('否', reason);
             } else {
@@ -198,28 +212,37 @@
         }
 
         function promptForClasses(paymentStatus, reason) {
-            const name = document.getElementById("newStudentName").value;
-            const className = document.getElementById("newStudentClass").value;
-            const classes = parseInt(document.getElementById("newStudentClasses").value);
+            const name = document.createElement("input");
+            name.type = "text";
+            name.placeholder = "請輸入學生姓名";
+            document.getElementById("paymentLinkSection").appendChild(name);
 
-            if (!name || !className || isNaN(classes)) return;
+            const className = document.createElement("input");
+            className.type = "text";
+            className.placeholder = "請輸入學生班級";
+            document.getElementById("paymentLinkSection").appendChild(className);
 
-            if (paymentStatus === '是') {
-                updateClasses(name, className, classes, true);
-            } else {
-                updateClasses(name, className, classes, false, reason);
-            }
+            const classes = document.createElement("input");
+            classes.type = "number";
+            classes.placeholder = "請輸入新增課堂數";
+            document.getElementById("paymentLinkSection").appendChild(classes);
+
+            const submitButton = document.createElement("button");
+            submitButton.textContent = "提交";
+            submitButton.onclick = function() {
+                const payload = {
+                    name: name.value,
+                    className: className.value,
+                    classes: parseInt(classes.value),
+                    paid: paymentStatus === '是',
+                    reason: reason || ''
+                };
+                updateClasses(payload);
+            };
+            document.getElementById("paymentLinkSection").appendChild(submitButton);
         }
 
-        function updateClasses(name, className, classesToAdd, paid, reason = '') {
-            const payload = {
-                name: name,
-                className: className,
-                classes: classesToAdd,
-                paid: paid,
-                reason: reason
-            };
-
+        function updateClasses(payload) {
             fetch(SCRIPT_URL + '?action=updateClasses', {
                 method: 'POST',
                 body: JSON.stringify(payload),
