@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>教練後台 · 輪滑課程系統</title>
     <style>
-        /* ========== 完整樣式 ========== */
-        * { box-sizing: border-box; }
+        /* ========== 全域樣式 ========== */
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #edf2f7;
             margin: 0;
             padding: 20px;
@@ -21,9 +23,20 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
             padding: 30px;
         }
-        h1, h2, h3 { color: #1a202c; }
-        .nav-link { text-align: right; margin-bottom: 20px; }
-        .nav-link a { color: #4a5568; text-decoration: none; background: #f7fafc; padding: 8px 16px; border-radius: 30px; }
+        h1, h2, h3 {
+            color: #1a202c;
+        }
+        .nav-link {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .nav-link a {
+            color: #4a5568;
+            text-decoration: none;
+            background: #f7fafc;
+            padding: 8px 16px;
+            border-radius: 30px;
+        }
         .button-grid {
             display: flex;
             flex-wrap: wrap;
@@ -41,13 +54,30 @@
             background: #e2e8f0;
             color: #2d3748;
         }
-        .btn-primary { background: #4299e1; color: white; }
-        .btn-success { background: #48bb78; color: white; }
-        .btn-warning { background: #ed8936; color: white; }
-        .btn-danger { background: #f56565; color: white; }
-        .btn-purple { background: #9f7aea; color: white; }
-        .btn-indigo { background: #667eea; color: white; }
-
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-purple {
+            background: #9f7aea;
+            color: white;
+        }
+        .btn-indigo {
+            background: #667eea;
+            color: white;
+        }
         .section {
             background: #f7fafc;
             border-radius: 20px;
@@ -55,7 +85,6 @@
             margin-bottom: 30px;
             border: 1px solid #e2e8f0;
         }
-
         .class-badge {
             display: inline-block;
             background: #4299e1;
@@ -65,7 +94,6 @@
             margin: 0 6px 6px 0;
             font-size: 0.9rem;
         }
-
         .student-button {
             background: #cbd5e0;
             border: none;
@@ -79,7 +107,6 @@
             background: #48bb78;
             color: white;
         }
-
         .form-row {
             display: flex;
             gap: 15px;
@@ -105,8 +132,6 @@
             width: 100%;
             min-width: 200px;
         }
-
-        /* 模糊搜尋下拉結果 */
         .search-dropdown {
             position: relative;
             width: 100%;
@@ -133,15 +158,19 @@
         .dropdown-item:hover {
             background: #f7fafc;
         }
-
         .message {
             margin-top: 15px;
             padding: 12px 18px;
             border-radius: 12px;
         }
-        .success { background: #c6f6d5; color: #22543d; }
-        .error { background: #fed7d7; color: #742a2a; }
-
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
         #loginForm {
             max-width: 380px;
             margin: 80px auto;
@@ -212,12 +241,10 @@
             <button class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px;">重置點名狀態</button>
         </div>
 
-        <!-- 2. 新增/扣減課堂區塊（模糊搜尋學生） -->
+        <!-- 2. 新增/扣減課堂（模糊搜尋） -->
         <div id="addClasses" class="section" style="display: none;">
             <h2>➕ 新增 / 扣減課堂</h2>
-            <div class="info-box">
-                💡 在下方輸入學生姓名關鍵字，從下拉清單選擇學生，系統會自動帶入班級。
-            </div>
+            <div class="info-box">💡 輸入姓名關鍵字，從下拉清單選擇學生，班級會自動帶入。</div>
             <div class="form-row">
                 <div class="form-group" style="flex:2;">
                     <label>🔍 搜尋學生</label>
@@ -246,9 +273,7 @@
         <!-- 3. 新增學生區塊（預設10堂） -->
         <div id="addStudent" class="section" style="display: none;">
             <h2>👤 新增學生（預設贈送10堂課）</h2>
-            <div class="info-box">
-                🎁 新學生建立後會自動獲得 <strong>10 堂課</strong>，如需不同數量請於「新增/扣減課堂」調整。
-            </div>
+            <div class="info-box">🎁 新學生建立後會自動獲得 <strong>10 堂課</strong>，如需不同數量請於「新增/扣減課堂」調整。</div>
             <div class="form-row">
                 <div class="form-group">
                     <label>學生姓名</label>
@@ -263,7 +288,7 @@
             <div id="addStudentMessage"></div>
         </div>
 
-        <!-- 4. 班級管理區塊 -->
+        <!-- 4. 班級管理區塊（自動排序） -->
         <div id="classManage" class="section" style="display: none;">
             <h2>🏫 班級管理</h2>
             <div class="form-row">
@@ -278,7 +303,7 @@
             <p style="color:#718096; font-size:0.9rem;">⚠️ 刪除班級不會刪除該班學生，僅移除選項。</p>
         </div>
 
-        <!-- 5. 清零請假次數區塊 -->
+        <!-- 5. 清零請假次數（僅顯示有請假學生） -->
         <div id="clearLeave" class="section" style="display: none;">
             <h2>🧼 家長交費後 · 清零請假次數</h2>
             <div class="form-row">
@@ -295,15 +320,23 @@
             </div>
         </div>
 
-        <!-- 6. 教練代請假區塊 -->
+        <!-- 6. 教練代請假（模糊搜尋） -->
         <div id="coachLeave" class="section" style="display: none;">
             <h2>📝 教練代為請假</h2>
+            <div class="info-box">🔍 輸入姓名關鍵字，從下拉清單選擇學生，系統會自動記錄請假並判斷是否扣課。</div>
             <div class="form-row">
-                <div class="form-group">
-                    <label>選擇學生</label>
-                    <select id="coachLeaveStudent"></select>
+                <div class="form-group" style="flex:2;">
+                    <label>🔍 搜尋學生</label>
+                    <div class="search-dropdown">
+                        <input type="text" id="coachLeaveSearchInput" placeholder="輸入姓名關鍵字" autocomplete="off">
+                        <div id="coachLeaveDropdown" class="dropdown-list"></div>
+                    </div>
                 </div>
-                <button class="btn btn-purple" onclick="submitCoachLeave()">提交請假</button>
+                <div class="form-group" style="flex:1;">
+                    <label>班級</label>
+                    <input type="text" id="coachLeaveSelectedClass" readonly placeholder="選擇學生後自動帶入">
+                </div>
+                <button class="btn btn-purple" onclick="submitCoachLeave()" style="align-self:flex-end;">提交請假</button>
             </div>
             <div id="coachLeaveMessage"></div>
             <div style="margin-top:20px;">
@@ -316,10 +349,11 @@
     </div>
 
     <script>
-        // ========== 後端網址（請替換為您的部署網址）==========
+        // ========== 後端網址（已更新為您提供的最新部署）==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2M28utyvPdlCh3khBxjJCWQInxZE41Aq8W6KKDGdyNr2uDh3kXUM64oDIx0cBqpd26g/exec';
 
-        let allStudents = []; // 快取所有學生資料
+        // ---------- 全域變數 ----------
+        let allStudents = []; // 所有學生資料快取
 
         // ---------- 登入（後端驗證）----------
         async function login() {
@@ -351,6 +385,7 @@
             renderLeaveStudentList();
         }
 
+        // ---------- 取得所有學生 ----------
         async function fetchAllStudents() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
             const data = await res.json();
@@ -358,20 +393,29 @@
             return data;
         }
 
+        // ---------- 班級排序函數（自然排序 A1, A2, A3... B1, B2...）----------
+        function sortClasses(classes) {
+            return classes.sort((a, b) => {
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            });
+        }
+
+        // ---------- 取得班級列表並自動排序 ----------
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
-            const classes = await res.json();
+            let classes = await res.json();
+            classes = sortClasses(classes);
             renderClassList(classes);
-            // 更新「新增學生」的班級下拉
+            // 更新新增學生的班級下拉選單
             const newStudentSelect = document.getElementById('newStudentClass');
             if (newStudentSelect) {
                 newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
                     classes.map(c => `<option value="${c}">${c}</option>`).join('');
             }
-            // 更新「新增課堂」的班級下拉（但我們改用自動帶入，保留備用）
             return classes;
         }
 
+        // ---------- 渲染班級標籤（管理區）----------
         function renderClassList(classes) {
             const container = document.getElementById('classListContainer');
             if (!container) return;
@@ -384,6 +428,7 @@
             container.innerHTML = html || '尚無班級，請新增。';
         }
 
+        // ---------- 新增班級 ----------
         async function addNewClass() {
             const className = document.getElementById('newClassName').value.trim();
             if (!className) return showError('請輸入班級名稱');
@@ -392,25 +437,26 @@
             if (result.success) {
                 showSuccess(result.message);
                 document.getElementById('newClassName').value = '';
-                loadClassList();
+                await loadClassList(); // 重新載入並排序
             } else {
                 showError(result.message);
             }
         }
 
+        // ---------- 刪除班級 ----------
         async function deleteClass(className) {
             if (!confirm(`確定刪除班級「${className}」？`)) return;
             const res = await fetch(`${SCRIPT_URL}?action=deleteClass&className=${encodeURIComponent(className)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess(result.message);
-                loadClassList();
+                await loadClassList(); // 重新載入並排序
             } else {
                 showError(result.message);
             }
         }
 
-        // ---------- 點名 ----------
+        // ---------- 點名功能 ----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -449,7 +495,7 @@
             showSuccess('點名狀態已重置');
         }
 
-        // ---------- 模糊搜尋學生（新增/扣減課堂專用）----------
+        // ---------- 新增/扣減課堂 - 模糊搜尋邏輯 ----------
         const searchInput = document.getElementById('searchStudentInput');
         const dropdown = document.getElementById('studentDropdown');
 
@@ -473,7 +519,6 @@
                 dropdown.style.display = 'block';
             });
 
-            // 點擊其他地方關閉下拉
             document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                     dropdown.style.display = 'none';
@@ -481,14 +526,13 @@
             });
         }
 
-        // 選擇學生後填入姓名與班級
         window.selectStudent = function(name, className) {
             document.getElementById('searchStudentInput').value = name;
             document.getElementById('selectedClass').value = className;
             dropdown.style.display = 'none';
         };
 
-        // ---------- 新增/扣減課堂送出 ----------
+        // ---------- 送出新增/扣減課堂 ----------
         async function submitAddClasses() {
             const name = document.getElementById('searchStudentInput').value.trim();
             const className = document.getElementById('selectedClass').value;
@@ -496,7 +540,7 @@
             const reason = document.getElementById('addClassReason').value.trim() || '教練手動調整';
 
             if (!name) return showError('請選擇或輸入學生姓名');
-            if (!className) return showError('班級無法自動帶入，請手動選擇或重新搜尋');
+            if (!className) return showError('班級無法自動帶入，請重新搜尋');
             if (isNaN(delta)) return showError('請輸入有效的課堂變動數字');
 
             const payload = { name, class: className, classesChange: delta, reason };
@@ -504,12 +548,11 @@
             const result = await res.json();
             if (result.success) {
                 showSuccess(result.message);
-                // 清空表單
                 document.getElementById('searchStudentInput').value = '';
                 document.getElementById('selectedClass').value = '';
                 document.getElementById('addClassDelta').value = '10';
                 document.getElementById('addClassReason').value = '';
-                fetchAllStudents();
+                await fetchAllStudents();
                 populateStudentSelects();
             } else {
                 showError(result.message);
@@ -523,7 +566,7 @@
             if (!name) return showError('請輸入學生姓名');
             if (!className) return showError('請選擇班級');
 
-            const payload = { name, class: className, classes: 10 }; // 預設10堂
+            const payload = { name, class: className, classes: 10 };
             const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}`);
             const result = await res.json();
             if (result.success) {
@@ -538,18 +581,17 @@
             }
         }
 
-        // ---------- 填充學生下拉選單（清零用、代請假用）----------
+        // ---------- 填充下拉選單（清零請假、代請假）----------
         function populateStudentSelects() {
+            // 清零請假：僅顯示有請假次數的學生
             const clearSelect = document.getElementById('clearLeaveStudent');
             if (clearSelect) {
+                const leaveStudents = allStudents.filter(s => s.leaveCount > 0);
                 clearSelect.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
-                    allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount}次</option>`).join('');
+                    leaveStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount}次</option>`).join('');
             }
-            const coachSelect = document.getElementById('coachLeaveStudent');
-            if (coachSelect) {
-                coachSelect.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
-                    allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount}次 剩${s.remainingClasses}堂</option>`).join('');
-            }
+
+            // 代請假的下拉已改為模糊搜尋，但保留原本下拉選單作為備用（可隱藏），此處不更新
         }
 
         // ---------- 清零請假次數 ----------
@@ -570,14 +612,54 @@
             }
         }
 
-        // ---------- 教練代請假 ----------
+        // ---------- 代請假 - 模糊搜尋邏輯 ----------
+        const coachLeaveSearchInput = document.getElementById('coachLeaveSearchInput');
+        const coachLeaveDropdown = document.getElementById('coachLeaveDropdown');
+
+        if (coachLeaveSearchInput) {
+            coachLeaveSearchInput.addEventListener('input', function(e) {
+                const keyword = e.target.value.trim().toLowerCase();
+                if (keyword.length < 1) {
+                    coachLeaveDropdown.style.display = 'none';
+                    return;
+                }
+                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(keyword));
+                if (filtered.length === 0) {
+                    coachLeaveDropdown.style.display = 'none';
+                    return;
+                }
+                let html = '';
+                filtered.forEach(s => {
+                    html += `<div class="dropdown-item" onclick="selectCoachLeaveStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 請假${s.leaveCount}次 剩${s.remainingClasses}堂</div>`;
+                });
+                coachLeaveDropdown.innerHTML = html;
+                coachLeaveDropdown.style.display = 'block';
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!coachLeaveSearchInput.contains(e.target) && !coachLeaveDropdown.contains(e.target)) {
+                    coachLeaveDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        window.selectCoachLeaveStudent = function(name, className) {
+            document.getElementById('coachLeaveSearchInput').value = name;
+            document.getElementById('coachLeaveSelectedClass').value = className;
+            coachLeaveDropdown.style.display = 'none';
+        };
+
+        // ---------- 送出代請假 ----------
         async function submitCoachLeave() {
-            const select = document.getElementById('coachLeaveStudent');
-            const name = select.value;
-            if (!name) return showError('請選擇學生');
+            const name = document.getElementById('coachLeaveSearchInput').value.trim();
+            const className = document.getElementById('coachLeaveSelectedClass').value;
+
+            if (!name) return showError('請選擇或輸入學生姓名');
+            if (!className) return showError('班級無法自動帶入，請重新搜尋');
+
             const student = allStudents.find(s => s.name === name);
             let confirmMsg = `確定為 ${name} 提交請假？`;
-            if (student.leaveCount >= 2) {
+            if (student && student.leaveCount >= 2) {
                 confirmMsg += `\n⚠️ 該生已請假 ${student.leaveCount} 次，本次請假將扣減1堂課！`;
             }
             if (!confirm(confirmMsg)) return;
@@ -590,12 +672,15 @@
                 populateStudentSelects();
                 renderLeaveStudentList();
                 updateAttendanceList();
+                // 清空代請假表單
+                document.getElementById('coachLeaveSearchInput').value = '';
+                document.getElementById('coachLeaveSelectedClass').value = '';
             } else {
                 showError(result.error || '請假失敗');
             }
         }
 
-        // ---------- 顯示目前有請假次數的學生 ----------
+        // ---------- 顯示目前有請假次數的學生（在清零區塊下方）----------
         function renderLeaveStudentList() {
             const container = document.getElementById('leaveStudentList');
             if (!container) return;
@@ -617,7 +702,7 @@
                 if (el) el.style.display = id === sectionId ? 'block' : 'none';
             });
             if (sectionId === 'clearLeave') {
-                renderLeaveStudentList();
+                renderLeaveStudentList(); // 每次切換到清零時刷新列表
             }
         }
 
