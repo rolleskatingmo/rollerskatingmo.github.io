@@ -2,32 +2,40 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>輪滑課程系統 · 家長查詢</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
+        /* ========== 全域變數與重置 ========== */
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5f7fa;
+            padding: 12px;
             color: #2c3e50;
+            line-height: 1.5;
         }
         .container {
-            max-width: 1000px;
+            max-width: 100%;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            padding: 20px 16px;
         }
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             color: #1e3c72;
             margin-top: 0;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .nav-link a {
             background: #3498db;
@@ -35,11 +43,13 @@
             padding: 8px 16px;
             border-radius: 30px;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
         }
         .search-area {
             background: #f0f4f8;
-            padding: 25px;
+            padding: 18px 16px;
             border-radius: 16px;
             margin-bottom: 20px;
         }
@@ -47,14 +57,17 @@
             font-weight: 600;
             margin-bottom: 8px;
             display: block;
+            font-size: 1rem;
         }
         #searchInput {
             width: 100%;
-            padding: 14px 18px;
+            padding: 14px 16px;
             font-size: 1rem;
             border: 2px solid #e2e8f0;
             border-radius: 40px;
             transition: 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
         }
         #searchInput:focus {
             border-color: #3498db;
@@ -65,17 +78,20 @@
             margin-top: 15px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
         .student-tag {
             background: white;
             border: 1px solid #d0d9e4;
             border-radius: 40px;
-            padding: 8px 20px;
-            font-size: 1rem;
+            padding: 8px 18px;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            flex: 0 0 auto;
+            max-width: 100%;
+            white-space: nowrap;
         }
         .student-tag:hover {
             background: #3498db;
@@ -85,7 +101,7 @@
         .detail-card {
             background: white;
             border-radius: 16px;
-            padding: 25px;
+            padding: 20px 16px;
             margin-top: 20px;
             border: 1px solid #e9eef2;
         }
@@ -94,19 +110,23 @@
             margin-bottom: 12px;
             border-bottom: 1px dashed #edf2f7;
             padding-bottom: 8px;
+            flex-wrap: wrap;
         }
         .info-label {
-            width: 120px;
+            width: 100px;
             font-weight: 600;
             color: #4a5568;
+            font-size: 0.95rem;
         }
         .info-value {
             flex: 1;
             color: #1e3c72;
             font-weight: 500;
+            font-size: 0.95rem;
         }
         .record-section {
             margin-top: 25px;
+            overflow-x: auto; /* 讓表格可橫向捲動 */
         }
         .record-table {
             width: 100%;
@@ -114,23 +134,28 @@
             background: #f9fbfd;
             border-radius: 12px;
             overflow: hidden;
+            font-size: 0.85rem;
+            min-width: 500px; /* 強制表格有基本寬度，觸發橫向捲動 */
         }
         .record-table th {
             background: #3182ce;
             color: white;
-            padding: 12px;
+            padding: 10px 8px;
             font-weight: 500;
+            white-space: nowrap;
         }
         .record-table td {
-            padding: 12px;
+            padding: 10px 8px;
             border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
         }
         .badge {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 30px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
+            white-space: nowrap;
         }
         .badge.red {
             background: #fc8181;
@@ -146,22 +171,65 @@
         }
         .warning-text {
             color: #c53030;
-            font-size: 0.9rem;
-            margin-top: 5px;
+            font-size: 0.85rem;
+            margin-top: 6px;
             font-weight: 500;
         }
         .message {
-            padding: 12px 18px;
+            padding: 12px 16px;
             border-radius: 10px;
             margin-top: 15px;
+            font-size: 0.9rem;
         }
         .footer {
             margin-top: 30px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #718096;
             text-align: center;
             border-top: 1px solid #e2e8f0;
-            padding-top: 20px;
+            padding-top: 16px;
+        }
+
+        /* ========== 手機專用樣式 ========== */
+        @media screen and (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+            .container {
+                padding: 16px 12px;
+            }
+            h1 {
+                font-size: 1.4rem;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .nav-link {
+                align-self: flex-end;
+                margin-top: -40px; /* 微調位置 */
+            }
+            .student-tag {
+                font-size: 0.85rem;
+                padding: 6px 14px;
+            }
+            .detail-card h2 {
+                font-size: 1.2rem;
+                flex-wrap: wrap;
+            }
+            .info-label {
+                width: 90px;
+                font-size: 0.9rem;
+            }
+            .info-value {
+                font-size: 0.9rem;
+            }
+            .record-table {
+                font-size: 0.8rem;
+                min-width: 450px;
+            }
+            .record-table th,
+            .record-table td {
+                padding: 8px 6px;
+            }
         }
     </style>
 </head>
@@ -183,12 +251,12 @@
 
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
-            <p>系統版本 3.1 · 由 Thomas 維護(冇錯就係果個Thomas哥哥)</p>
+            <p>系統版本 3.3 · By Thomas (冇錯就係Thomas哥哥)</p>
         </div>
     </div>
 
     <script>
-        // ---------- 後端網址（請替換為您的部署網址）----------
+        // ========== 後端網址（最新部署）==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2M28utyvPdlCh3khBxjJCWQInxZE41Aq8W6KKDGdyNr2uDh3kXUM64oDIx0cBqpd26g/exec';
 
         const searchInput = document.getElementById('searchInput');
@@ -252,7 +320,6 @@
         }
 
         function renderDetail(d) {
-            // 請假次數顯示與警告
             let leaveBadgeHtml = '';
             let leaveWarning = '';
             if (d.leaveCount >= 2) {
@@ -262,7 +329,6 @@
                 leaveBadgeHtml = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
             }
 
-            // 剩餘課堂警告
             let remainingDisplay = `<span style="font-size:1.4rem; font-weight:700;">${d.remainingClasses}</span>`;
             let remainingWarning = '';
             if (d.remainingClasses <= 0) {
@@ -291,7 +357,6 @@
                     ${remainingWarning}
             `;
 
-            // 合併記錄，不顯示備註
             let allRecords = [
                 ...d.classRecords.map(r => ({ ...r, type: '上課' })),
                 ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
@@ -302,27 +367,28 @@
             if (allRecords.length === 0) {
                 html += `<p style="color:#718096;">尚無任何上課或請假記錄。</p>`;
             } else {
-                html += `<table class="record-table">
-                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
-                    <tbody>`;
+                html += `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="record-table">
+                        <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
+                        <tbody>`;
                 allRecords.slice(0, 30).forEach(rec => {
                     if (rec.type === '上課') {
                         html += `<tr>
                             <td>${rec.date}</td>
                             <td>${rec.time || ''}</td>
-                            <td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px;">上課</span></td>
+                            <td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px; font-size:0.75rem;">上課</span></td>
                             <td>${rec.remainingClasses}</td>
                         </tr>`;
                     } else {
                         html += `<tr>
                             <td>${rec.date}</td>
                             <td>—</td>
-                            <td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px;">請假</span></td>
+                            <td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px; font-size:0.75rem;">請假</span></td>
                             <td>—</td>
                         </tr>`;
                     }
                 });
-                html += `</tbody></table>`;
+                html += `</tbody></table></div>`;
             }
             html += `</div></div>`;
 
