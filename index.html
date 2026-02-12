@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>輪滑私教課程系統 · 家長入口</title>
+    <title>輪滑課程系統 · 家長入口</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -140,6 +140,13 @@
         .badge.danger {
             background: #fc8181;
         }
+        .remaining-zero {
+            background: #fefcbf;
+            color: #975a16;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 700;
+        }
         .message {
             padding: 12px 18px;
             border-radius: 10px;
@@ -152,6 +159,14 @@
             text-align: center;
             border-top: 1px solid #e2e8f0;
             padding-top: 20px;
+        }
+        .warning-text {
+            color: #c05621;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            background: #fffaf0;
+            padding: 8px 12px;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -175,13 +190,13 @@
 
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
-            <p>系統版本 3.0 · 由 Thomas 維護</p>
+            <p>系統版本 3.1 · 由 Thomas 維護(冇錯就係Thomas哥哥)</p>
         </div>
     </div>
 
     <script>
-        // ---------- 設定 ----------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdGIKmMDMFy7lyDXypaukX0IJaefaiYpPszQZpPBGZFEtkODFZ3Tp3l2CP_tHeUaQuxg/exec';
+        // ---------- 設定：請更新為您的後端網址 ----------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzU1NTW8bh9LVaTJQKktc-hjElUt-xd0fzfbrkYcZSossSCiWfA7FZSv5-oAKBtp0scw/exec';
 
         // DOM 元素
         const searchInput = document.getElementById('searchInput');
@@ -192,7 +207,7 @@
         // 防抖計時器
         let searchTimer;
 
-        // ---------- 監聽輸入：即時模糊搜尋 ----------
+        // 監聽輸入：即時模糊搜尋
         searchInput.addEventListener('input', function(e) {
             clearTimeout(searchTimer);
             const keyword = e.target.value.trim();
@@ -206,7 +221,7 @@
             }, 300);
         });
 
-        // ---------- 執行模糊搜尋 ----------
+        // 執行模糊搜尋
         async function performSearch(keyword) {
             showMessage('搜尋中...', '#fefcbf');
             try {
@@ -220,7 +235,7 @@
             }
         }
 
-        // ---------- 渲染學生標籤清單 ----------
+        // 渲染學生標籤清單
         function renderStudentList(students) {
             studentListDiv.innerHTML = '';
             if (students.length === 0) {
@@ -236,7 +251,7 @@
             });
         }
 
-        // ---------- 載入單一學生詳細記錄 ----------
+        // 載入單一學生詳細記錄
         async function loadStudentDetail(name) {
             showMessage('載入上課記錄中...', '#e6fffa');
             detailContainer.style.display = 'none';
@@ -251,23 +266,46 @@
             }
         }
 
-        // ---------- 渲染詳細資料卡 ----------
+        // 渲染詳細資料卡
         function renderDetail(d) {
-            const leaveBadge = d.leaveCount > 2 ? 'danger' : (d.leaveCount > 0 ? 'warning' : '');
+            // 請假次數樣式與提示
+            let leaveBadgeClass = '';
+            let leaveMessage = '';
+            if (d.leaveCount >= 2) {
+                leaveBadgeClass = 'danger';
+                if (d.leaveCount === 2) {
+                    leaveMessage = '⚠️ 已請假2次，下一次請假將自動扣減1堂課。';
+                } else {
+                    leaveMessage = `⚠️ 已請假 ${d.leaveCount} 次，已自動扣減 ${d.leaveCount - 2} 堂課。`;
+                }
+            }
+
+            // 剩餘課堂樣式與提示
+            let remainingClass = '';
+            let remainingMessage = '';
+            if (d.remainingClasses <= 0) {
+                remainingClass = 'remaining-zero';
+                remainingMessage = '⚠️ 剩餘課堂不足，請聯繫教練核對或繳費。';
+            }
+
             let html = `
                 <div class="detail-card">
-                    <h2 style="margin-top:0; display:flex; align-items:center; gap:12px;">
+                    <h2 style="margin-top:0; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                         🧑‍🎓 ${d.name}
-                        <span class="badge ${leaveBadge}">請假 ${d.leaveCount} 次</span>
+                        <span class="badge ${leaveBadgeClass}">請假 ${d.leaveCount} 次</span>
                     </h2>
+                    ${leaveMessage ? `<div class="warning-text">${leaveMessage}</div>` : ''}
                     <div class="info-row">
                         <span class="info-label">班級</span>
                         <span class="info-value">${d.class}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">剩餘課堂</span>
-                        <span class="info-value" style="font-size:1.4rem; font-weight:700; color:#2b6cb0;">${d.remainingClasses}</span>
+                        <span class="info-value" style="font-size:1.4rem; font-weight:700; ${d.remainingClasses <= 0 ? 'color:#c05621;' : '#2b6cb0'}">
+                            <span class="${remainingClass}">${d.remainingClasses}</span>
+                        </span>
                     </div>
+                    ${remainingMessage ? `<div class="warning-text">${remainingMessage}</div>` : ''}
             `;
 
             // 合併上課記錄 + 請假記錄，依日期排序
@@ -282,7 +320,7 @@
                 html += `<p style="color:#718096;">尚無任何上課或請假記錄。</p>`;
             } else {
                 html += `<table class="record-table">
-                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th><th>備註</th></tr></thead>
+                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                     <tbody>`;
                 allRecords.slice(0, 30).forEach(rec => {
                     if (rec.type === '上課') {
@@ -291,7 +329,6 @@
                             <td>${rec.time || ''}</td>
                             <td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px;">上課</span></td>
                             <td>${rec.remainingClasses}</td>
-                            <td>${rec.reason || ''}</td>
                         </tr>`;
                     } else {
                         html += `<tr>
@@ -299,7 +336,6 @@
                             <td>—</td>
                             <td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px;">請假</span></td>
                             <td>—</td>
-                            <td></td>
                         </tr>`;
                     }
                 });
