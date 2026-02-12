@@ -3,255 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h4>家長入口-查詢數字有出入請與教練聯繫</h4>
-    <h5>注意!為保護隱私，輸入的名字需與登記名完全一致，可向教練查詢</h5>
-    <h6>通知:自2025/02改用新系統, 舊系統課堂記錄不通用</h6>
-    <h6>課程系統V2.0.1 By Thomas</h6>
+    <title>輪滑私教課程系統 · 家長入口</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
             padding: 20px;
-            background-color: #f0f0f0;
+            color: #2c3e50;
         }
         .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 30px;
         }
-        h1, h2, h3 {
-            color: #333;
-            text-align: center;
-        }
-        .button-container {
+        h1 {
+            font-size: 1.8rem;
+            color: #1e3c72;
+            margin-top: 0;
             display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 4px;
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .input-group {
-            margin: 20px 0;
-            display: none;
-        }
-        input {
-            padding: 8px;
-            font-size: 16px;
-            width: 100%;
-            margin: 10px 0;
-        }
-        #message {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .success {
-            background-color: #dff0d8;
-            color: #3c763d;
-        }
-        .error {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-        .nav-link {
-            text-align: right;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
         }
         .nav-link a {
-            color: #666;
+            background: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
             text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
-        #recordDetails {
+        .search-area {
+            background: #f0f4f8;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        .search-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 14px 18px;
+            font-size: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 40px;
+            transition: 0.2s;
+        }
+        #searchInput:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+        }
+        .student-list {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .student-tag {
+            background: white;
+            border: 1px solid #d0d9e4;
+            border-radius: 40px;
+            padding: 8px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .student-tag:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .detail-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
             margin-top: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
+            border: 1px solid #e9eef2;
         }
-        .record {
-            background: #f9f9f9;
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 4px;
+        .info-row {
+            display: flex;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #edf2f7;
+            padding-bottom: 8px;
         }
-        #showMore {
-            display: none;
-            margin-top: 10px;
+        .info-label {
+            width: 120px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .info-value {
+            flex: 1;
+            color: #1e3c72;
+            font-weight: 500;
+        }
+        .record-section {
+            margin-top: 25px;
+        }
+        .record-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f9fbfd;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .record-table th {
+            background: #3182ce;
+            color: white;
+            padding: 12px;
+            font-weight: 500;
+        }
+        .record-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .badge {
+            background: #48bb78;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge.warning {
+            background: #f6ad55;
+        }
+        .badge.danger {
+            background: #fc8181;
+        }
+        .message {
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #718096;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="nav-link">
-            <a href="coach.html">教練入口 →</a>
-        </div>
-        <h3>滾軸溜冰私教輪滑團課程系統</h3>
-        
-        <div class="button-container">
-            <button onclick="showSearchForm()">查詢記錄</button>
-            <button onclick="showLeaveForm()">請假</button>
+        <h1>
+            ⚡ 輪滑課程系統 · 家長查詢
+            <span class="nav-link"><a href="coach.html">教練入口 →</a></span>
+        </h1>
+
+        <!-- 模糊搜尋區塊 -->
+        <div class="search-area">
+            <label class="search-label">🔍 輸入學生姓名關鍵字</label>
+            <input type="text" id="searchInput" placeholder="例如：王小明" autocomplete="off">
+            <div id="studentList" class="student-list"></div>
         </div>
 
-        <div id="searchForm" class="input-group">
-            <input type="text" id="searchName" placeholder="請輸入學生姓名">
-            <button onclick="searchRecord()">查詢</button>
-            <div id="searchResult"></div>
-            <div id="recordDetails"></div>
-            <button id="showMore" onclick="showMoreRecords()">顯示更多</button>
-        </div>
+        <!-- 詳細資訊區塊 (預設隱藏) -->
+        <div id="detailContainer" style="display: none;"></div>
+        <div id="message" class="message"></div>
 
-        <div id="leaveForm" class="input-group">
-            <input type="text" id="leaveName" placeholder="請輸入學生姓名">
-            <button onclick="submitLeave()">請假</button>
+        <div class="footer">
+            <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
+            <p>系統版本 3.0 · 由 Thomas 維護</p>
         </div>
-
-        <div id="message"></div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9OZw14kE_znJEYptRmCxqYangawPJkb4ZTeCXkXTNMmdM8ji6L9veATl_f4z5-sw6Cg/exec';
-        let allRecords = [];
-        let currentDisplayed = 0;
+        // ---------- 設定 ----------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdGIKmMDMFy7lyDXypaukX0IJaefaiYpPszQZpPBGZFEtkODFZ3Tp3l2CP_tHeUaQuxg/exec';
 
-        function showSearchForm() {
-            document.getElementById('searchForm').style.display = 'block';
-            document.getElementById('leaveForm').style.display = 'none';
-            document.getElementById('message').innerHTML = '';
-            document.getElementById('searchResult').innerHTML = '';
-            document.getElementById('recordDetails').innerHTML = '';
-            document.getElementById('showMore').style.display = 'none';
-        }
+        // DOM 元素
+        const searchInput = document.getElementById('searchInput');
+        const studentListDiv = document.getElementById('studentList');
+        const detailContainer = document.getElementById('detailContainer');
+        const messageDiv = document.getElementById('message');
 
-        function showLeaveForm() {
-            document.getElementById('leaveForm').style.display = 'block';
-            document.getElementById('searchForm').style.display = 'none';
-            document.getElementById('message').innerHTML = '';
-        }
+        // 防抖計時器
+        let searchTimer;
 
-        function searchRecord() {
-            const name = document.getElementById('searchName').value.trim();
-            if (!name) {
-                showError('請輸入學生姓名');
+        // ---------- 監聽輸入：即時模糊搜尋 ----------
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimer);
+            const keyword = e.target.value.trim();
+            if (keyword === '') {
+                studentListDiv.innerHTML = '';
+                detailContainer.style.display = 'none';
                 return;
             }
+            searchTimer = setTimeout(() => {
+                performSearch(keyword);
+            }, 300);
+        });
 
-            showMessage('搜尋中...');
-            fetch(`${SCRIPT_URL}?action=searchStudent&name=${encodeURIComponent(name)}`)
-                .then(response => response.json())
-                .then(result => {
-                    showSearchResult(result);
-                    return fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
-                })
-                .then(response => response.json())
-                .then(displayDetails)
-                .catch(error => showError('查詢失敗: ' + error.message));
+        // ---------- 執行模糊搜尋 ----------
+        async function performSearch(keyword) {
+            showMessage('搜尋中...', '#fefcbf');
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=searchStudent&keyword=${encodeURIComponent(keyword)}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '搜尋失敗');
+                renderStudentList(data.students || []);
+                hideMessage();
+            } catch (err) {
+                showMessage('❌ ' + err.message, '#fed7d7');
+            }
         }
 
-        function showSearchResult(result) {
-            const searchResult = document.getElementById('searchResult');
-            document.getElementById('message').innerHTML = '';
-            
-            if (result.error) {
-                searchResult.innerHTML = `<div class="error">${result.error}</div>`;
-                document.getElementById('recordDetails').innerHTML = '';
+        // ---------- 渲染學生標籤清單 ----------
+        function renderStudentList(students) {
+            studentListDiv.innerHTML = '';
+            if (students.length === 0) {
+                studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
                 return;
             }
+            students.forEach(s => {
+                const tag = document.createElement('span');
+                tag.className = 'student-tag';
+                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂`;
+                tag.addEventListener('click', () => loadStudentDetail(s.name));
+                studentListDiv.appendChild(tag);
+            });
+        }
 
-            searchResult.innerHTML = `
-                <p>姓名: ${result.name}</p>
-                <p>班級: ${result.class}</p>
-                <p>剩餘課堂數: ${result.remainingClasses}</p>
-                <p>查詢出現負數即需要交費或提供最近一次的交費記錄更新課堂數~多謝支持~</p>
+        // ---------- 載入單一學生詳細記錄 ----------
+        async function loadStudentDetail(name) {
+            showMessage('載入上課記錄中...', '#e6fffa');
+            detailContainer.style.display = 'none';
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                renderDetail(data);
+                hideMessage();
+            } catch (err) {
+                showMessage('❌ 無法載入記錄：' + err.message, '#fed7d7');
+            }
+        }
+
+        // ---------- 渲染詳細資料卡 ----------
+        function renderDetail(d) {
+            const leaveBadge = d.leaveCount > 2 ? 'danger' : (d.leaveCount > 0 ? 'warning' : '');
+            let html = `
+                <div class="detail-card">
+                    <h2 style="margin-top:0; display:flex; align-items:center; gap:12px;">
+                        🧑‍🎓 ${d.name}
+                        <span class="badge ${leaveBadge}">請假 ${d.leaveCount} 次</span>
+                    </h2>
+                    <div class="info-row">
+                        <span class="info-label">班級</span>
+                        <span class="info-value">${d.class}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">剩餘課堂</span>
+                        <span class="info-value" style="font-size:1.4rem; font-weight:700; color:#2b6cb0;">${d.remainingClasses}</span>
+                    </div>
             `;
-        }
 
-        function displayDetails(details) {
-            allRecords = [...details.classRecords, ...details.leaveRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
-            currentDisplayed = 0;
-            const recordDetails = document.getElementById('recordDetails');
-            recordDetails.innerHTML = '<h3>學生記錄</h3>';
-            displayMoreRecords();
-        }
+            // 合併上課記錄 + 請假記錄，依日期排序
+            let allRecords = [
+                ...d.classRecords.map(r => ({ ...r, type: '上課' })),
+                ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
+            ];
+            allRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
 
-        function displayMoreRecords() {
-            const recordDetails = document.getElementById('recordDetails');
-            const endIndex = Math.min(currentDisplayed + 10, allRecords.length);
-            
-            for (let i = currentDisplayed; i < endIndex; i++) {
-                const record = allRecords[i];
-                let recordHtml = `<div class="record">
-                    <p>日期：${record.date}</p>`;
-
-                if (record.time) {
-                    recordHtml += `<p>時間：${record.time}</p>
-                    <p>類型：上課</p>
-                    <p>剩餘課堂數：${record.remainingClasses}</p>`;
-                    if (record.classesChange) {
-                        recordHtml += `<p>課堂數變更：${record.classesChange}</p>`;
-                    }
-                    if (record.reason) {
-                        recordHtml += `<p>原因：${record.reason}</p>`;
-                    }
-                } else {
-                    recordHtml += `<p>類型：請假</p>`;
-                }
-
-                recordHtml += `</div>`;
-                recordDetails.innerHTML += recordHtml;
-            }
-
-            currentDisplayed = endIndex;
-            document.getElementById('showMore').style.display = currentDisplayed < allRecords.length ? 'block' : 'none';
-        }
-
-        function showMoreRecords() {
-            displayMoreRecords();
-        }
-
-        function submitLeave() {
-            const name = document.getElementById('leaveName').value.trim();
-            if (!name) {
-                showError('請輸入學生姓名');
-                return;
-            }
-
-            showMessage('提交請假申請中...');
-            fetch(`${SCRIPT_URL}?action=submitLeave&name=${encodeURIComponent(name)}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.error) {
-                        showError(result.error);
+            html += `<div class="record-section"><h3>📋 近期記錄</h3>`;
+            if (allRecords.length === 0) {
+                html += `<p style="color:#718096;">尚無任何上課或請假記錄。</p>`;
+            } else {
+                html += `<table class="record-table">
+                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th><th>備註</th></tr></thead>
+                    <tbody>`;
+                allRecords.slice(0, 30).forEach(rec => {
+                    if (rec.type === '上課') {
+                        html += `<tr>
+                            <td>${rec.date}</td>
+                            <td>${rec.time || ''}</td>
+                            <td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px;">上課</span></td>
+                            <td>${rec.remainingClasses}</td>
+                            <td>${rec.reason || ''}</td>
+                        </tr>`;
                     } else {
-                        showSuccess(result.message || '請假申請已提交');
-                        document.getElementById('leaveName').value = '';
+                        html += `<tr>
+                            <td>${rec.date}</td>
+                            <td>—</td>
+                            <td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px;">請假</span></td>
+                            <td>—</td>
+                            <td></td>
+                        </tr>`;
                     }
-                })
-                .catch(error => showError('提交請假失敗: ' + error.message));
+                });
+                html += `</tbody></table>`;
+            }
+            html += `</div></div>`;
+
+            detailContainer.innerHTML = html;
+            detailContainer.style.display = 'block';
         }
 
-        function showSuccess(message) {
-            document.getElementById('message').innerHTML = `<div class="success">${message}</div>`;
+        function showMessage(msg, bgColor) {
+            messageDiv.innerHTML = msg;
+            messageDiv.style.backgroundColor = bgColor;
+            messageDiv.style.borderRadius = '8px';
+            messageDiv.style.padding = '12px';
         }
-
-        function showError(error) {
-            document.getElementById('message').innerHTML = `<div class="error">${error}</div>`;
-        }
-
-        function showMessage(message) {
-            document.getElementById('message').innerHTML = `<div>${message}</div>`;
+        function hideMessage() {
+            messageDiv.innerHTML = '';
+            messageDiv.style.backgroundColor = 'transparent';
         }
     </script>
 </body>
