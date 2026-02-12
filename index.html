@@ -17,6 +17,9 @@
             padding: 12px;
             color: #2c3e50;
             line-height: 1.5;
+            position: relative;
+            min-height: 100vh;
+            padding-bottom: 80px; /* 為右下角固定按鈕留空間 */
         }
         .container {
             max-width: 100%;
@@ -31,21 +34,33 @@
             color: #1e3c72;
             margin-top: 0;
             margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
         }
-        .nav-link a {
+        /* 教練入口按鈕 - 固定右下角 */
+        .coach-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
             background: #3498db;
             color: white;
-            padding: 8px 16px;
-            border-radius: 30px;
+            padding: 14px 24px;
+            border-radius: 40px;
             text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            transition: 0.2s;
             display: inline-block;
+            border: none;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .coach-fab:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+        .coach-fab:active {
+            transform: scale(0.98);
         }
         .search-area {
             background: #f0f4f8;
@@ -126,7 +141,7 @@
         }
         .record-section {
             margin-top: 25px;
-            overflow-x: auto; /* 讓表格可橫向捲動 */
+            overflow-x: auto;
         }
         .record-table {
             width: 100%;
@@ -135,7 +150,7 @@
             border-radius: 12px;
             overflow: hidden;
             font-size: 0.85rem;
-            min-width: 500px; /* 強制表格有基本寬度，觸發橫向捲動 */
+            min-width: 500px;
         }
         .record-table th {
             background: #3182ce;
@@ -190,22 +205,23 @@
             padding-top: 16px;
         }
 
-        /* ========== 手機專用樣式 ========== */
+        /* ========== 手機專用調整 ========== */
         @media screen and (max-width: 480px) {
             body {
                 padding: 8px;
+                padding-bottom: 80px;
             }
             .container {
                 padding: 16px 12px;
             }
             h1 {
                 font-size: 1.4rem;
-                flex-direction: column;
-                align-items: flex-start;
             }
-            .nav-link {
-                align-self: flex-end;
-                margin-top: -40px; /* 微調位置 */
+            .coach-fab {
+                bottom: 16px;
+                right: 16px;
+                padding: 12px 20px;
+                font-size: 0.9rem;
             }
             .student-tag {
                 font-size: 0.85rem;
@@ -234,11 +250,11 @@
     </style>
 </head>
 <body>
+    <!-- 教練入口按鈕 - 固定右下角 -->
+    <a href="coach.html" class="coach-fab">教練入口 →</a>
+
     <div class="container">
-        <h1>
-            ⚡ 輪滑課程系統 · 家長查詢
-            <span class="nav-link"><a href="coach.html">教練入口 →</a></span>
-        </h1>
+        <h1>⚡ 輪滑課程系統 · 家長查詢</h1>
 
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
@@ -251,13 +267,13 @@
 
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
-            <p>系統版本 3.3 · By Thomas (冇錯就係Thomas哥哥)</p>
+            <p>系統版本 3.4 · 由 Thomas 維護(冇錯就係Thomas哥哥)</p>
         </div>
     </div>
 
     <script>
-        // ========== 後端網址（最新部署）==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2M28utyvPdlCh3khBxjJCWQInxZE41Aq8W6KKDGdyNr2uDh3kXUM64oDIx0cBqpd26g/exec';
+        // ========== 後端網址（請替換為您的部署網址）==========
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwphUH70vgTRbAi2x0UpBpKvEjyI2Qja4EIhjPdu14zuBaWHgha_Y-5i37FQW-IysXc/exec';
 
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
