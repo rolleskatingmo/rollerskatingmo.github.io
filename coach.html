@@ -103,10 +103,17 @@
             font-weight: 500;
             cursor: pointer;
             font-size: 0.9rem;
+            transition: 0.2s;
         }
         .student-button.checked {
-            background: #48bb78;
-            color: white;
+            background: #48bb78 !important;
+            color: white !important;
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+        .student-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .form-row {
@@ -244,7 +251,6 @@
         
         <!-- 功能按鈕網格（動態權限控制） -->
         <div id="buttonGrid" class="button-grid">
-            <!-- 所有按鈕皆預先寫好，由 JavaScript 根據權限顯示/隱藏 -->
             <button id="btnAttendance" class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
             <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
             <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
@@ -255,11 +261,10 @@
             <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
         </div>
 
-        <!-- 1. 點名區塊 -->
+        <!-- 1. 點名區塊（防重複扣課） -->
         <div id="attendance" class="section" style="display: none;">
             <h2>📌 點名 (扣課)</h2>
             <div id="attendanceList"></div>
-            <!-- 重置按鈕：僅完整權限顯示 -->
             <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
         </div>
 
@@ -371,12 +376,12 @@
     </div>
 
     <script>
-        // ========== 後端網址（請替換為您的部署網址）==========
+        // ========== 後端網址（最新部署）==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwphUH70vgTRbAi2x0UpBpKvEjyI2Qja4EIhjPdu14zuBaWHgha_Y-5i37FQW-IysXc/exec';
 
         // ---------- 全域變數 ----------
         let allStudents = [];
-        let userRole = 'full'; // 'full' 或 'limited'，預設完整（登入後由後端決定）
+        let userRole = 'full'; // 'full' 或 'limited'
 
         // ---------- 登入（後端驗證，支援雙密碼權限）----------
         async function login() {
@@ -386,16 +391,12 @@
                 const res = await fetch(`${SCRIPT_URL}?action=verifyCoach&password=${encodeURIComponent(pwd)}`);
                 const data = await res.json();
                 if (data.success) {
-                    // 儲存使用者權限（後端回傳 role，預設完整）
                     userRole = data.role || 'full';
                     
                     document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('mainContent').style.display = 'block';
                     
-                    // 根據權限調整 UI
                     applyRoleRestrictions();
-                    
-                    // 載入資料
                     loadAllData();
                 } else {
                     showLoginError('密碼錯誤');
@@ -410,53 +411,42 @@
 
         // ---------- 根據權限限制 UI ----------
         function applyRoleRestrictions() {
-            // 完整權限：全部顯示
             if (userRole === 'full') {
-                // 顯示所有功能按鈕（預設都顯示，不需要特別隱藏）
                 document.getElementById('btnAddClasses').style.display = 'block';
                 document.getElementById('btnAddStudent').style.display = 'block';
                 document.getElementById('btnClassManage').style.display = 'block';
                 document.getElementById('btnClearLeave').style.display = 'block';
                 document.getElementById('btnCoachLeave').style.display = 'block';
                 document.getElementById('btnPayment').style.display = 'block';
-                // 顯示重置點名按鈕
                 document.getElementById('resetAttendanceBtn').style.display = 'inline-block';
             } else {
-                // 受限權限：僅保留「點名」與「課堂相片」
                 document.getElementById('btnAddClasses').style.display = 'none';
                 document.getElementById('btnAddStudent').style.display = 'none';
                 document.getElementById('btnClassManage').style.display = 'none';
                 document.getElementById('btnClearLeave').style.display = 'none';
                 document.getElementById('btnCoachLeave').style.display = 'none';
                 document.getElementById('btnPayment').style.display = 'none';
-                // 隱藏重置點名按鈕
                 document.getElementById('resetAttendanceBtn').style.display = 'none';
                 
-                // 強制切換到點名區塊（受限使用者一登入就看到點名）
                 showSection('attendance');
             }
-            // 課堂相片按鈕兩種權限都保留，無需隱藏
         }
 
-        // ---------- 區塊切換（加上權限檢查）----------
+        // ---------- 區塊切換（權限檢查）----------
         function showSection(sectionId) {
-            // 受限權限只能存取 attendance
             if (userRole === 'limited' && sectionId !== 'attendance') {
                 showError('您沒有權限使用此功能');
                 return;
             }
 
-            // 隱藏所有區塊
             ['attendance','addClasses','addStudent','classManage','clearLeave','coachLeave'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
             
-            // 顯示要求的區塊
             const target = document.getElementById(sectionId);
             if (target) target.style.display = 'block';
             
-            // 特定區塊的額外初始化
             if (sectionId === 'clearLeave') {
                 renderLeaveStudentList();
             }
@@ -534,6 +524,7 @@
             }
         }
 
+        // ---------- 點名（防重複扣課）----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -546,7 +537,11 @@
             for (let className in grouped) {
                 html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
                 grouped[className].forEach(s => {
-                    html += `<button class="student-button" data-name="${s.name}" onclick="markAttendance('${s.name}')">${s.name}</button>`;
+                    // 檢查 localStorage 是否已點名（僅前端記憶，重置按鈕清除）
+                    const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+                    const disabledAttr = isChecked ? 'disabled' : '';
+                    const checkedClass = isChecked ? 'checked' : '';
+                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabledAttr}>${s.name}</button>`;
                 });
                 html += '</div>';
             }
@@ -555,22 +550,46 @@
 
         async function markAttendance(name) {
             const btn = document.querySelector(`.student-button[data-name="${name}"]`);
-            if (btn && btn.classList.contains('checked')) return;
+            // 如果按鈕已禁用或已有checked類別，不執行
+            if (btn && (btn.disabled || btn.classList.contains('checked'))) {
+                showError('此學生已完成點名，請勿重複扣課');
+                return;
+            }
+            
             const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
             const data = await res.json();
             if (data.success) {
-                if (btn) btn.classList.add('checked');
+                if (btn) {
+                    btn.classList.add('checked');
+                    btn.disabled = true;
+                    // 儲存點名狀態到 localStorage，重置時清除
+                    localStorage.setItem(`attendance_${name}`, 'checked');
+                }
                 showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
-                fetchAllStudents();
+                // 更新學生資料快取（剩餘堂數）
+                await fetchAllStudents();
+                // 更新其他區塊的學生下拉選單
+                populateStudentSelects();
             } else {
                 showError(data.message || '點名失敗');
             }
         }
 
         function resetAttendance() {
-            if (userRole === 'limited') { showError('您沒有權限重置點名'); return; }
-            document.querySelectorAll('.student-button.checked').forEach(b => b.classList.remove('checked'));
-            showSuccess('點名狀態已重置');
+            if (userRole === 'limited') { 
+                showError('您沒有權限重置點名'); 
+                return; 
+            }
+            // 清除所有點名按鈕的 checked 狀態與 disabled
+            document.querySelectorAll('.student-button.checked').forEach(b => {
+                b.classList.remove('checked');
+                b.disabled = false;
+            });
+            // 清除 localStorage 中的點名記錄
+            allStudents.forEach(s => {
+                localStorage.removeItem(`attendance_${s.name}`);
+            });
+            showSuccess('點名狀態已重置，所有學生可再次點名');
         }
 
         // ---------- 新增/扣減課堂 - 模糊搜尋 ----------
@@ -619,6 +638,7 @@
                 document.getElementById('addClassReason').value = '';
                 await fetchAllStudents();
                 populateStudentSelects();
+                updateAttendanceList(); // 更新點名按鈕狀態
             } else {
                 showError(result.message);
             }
@@ -752,4 +772,3 @@
     </script>
 </body>
 </html>
-
