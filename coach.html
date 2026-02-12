@@ -3,310 +3,437 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>滾軸溜冰私教輪滑團課程系統</title>
-    <h3>教練入口,課程系統V2.0.5 By thomas</h3>
+    <title>教練後台 · 輪滑課程系統</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #edf2f7;
+            margin: 0;
             padding: 20px;
-            background-color: #f0f0f0;
         }
         .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 30px;
         }
-        h1, h2 {
-            color: #333;
-            text-align: center;
-        }
-        .button-container {
+        h1, h2, h3 { color: #1a202c; }
+        .nav-link { text-align: right; margin-bottom: 20px; }
+        .nav-link a { color: #4a5568; text-decoration: none; background: #f7fafc; padding: 8px 16px; border-radius: 30px; }
+        .button-grid {
             display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
             flex-wrap: wrap;
+            gap: 15px;
+            margin: 25px 0;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
+        .btn {
             border: none;
-            border-radius: 4px;
-            background-color: #4CAF50;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-primary {
+            background: #4299e1;
             color: white;
+        }
+        .btn-primary:hover { background: #3182ce; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-warning { background: #ed8936; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+
+        .section {
+            background: #f7fafc;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .class-badge {
+            display: inline-block;
+            background: #4299e1;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 30px;
+            margin: 0 6px 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .student-button {
+            background: #cbd5e0;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 30px;
+            margin: 6px;
+            font-weight: 500;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        .student-button {
-            background-color: #2196F3;
-        }
         .student-button.checked {
-            background-color: #4CAF50;
+            background: #48bb78;
+            color: white;
         }
-        .input-group {
-            margin: 20px 0;
-            display: none;
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #4a5568;
         }
         input, select, textarea {
-            padding: 8px;
-            font-size: 16px;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e0;
+            border-radius: 12px;
+            font-size: 0.95rem;
             width: 100%;
-            margin: 10px 0;
+            min-width: 200px;
         }
-        #message {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
+        .message {
+            margin-top: 15px;
+            padding: 12px 18px;
+            border-radius: 12px;
         }
-        .success {
-            background-color: #dff0d8;
-            color: #3c763d;
-        }
-        .error {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-        .nav-link {
-            text-align: right;
-            margin-bottom: 20px;
-        }
-        .nav-link a {
-            color: #666;
-            text-decoration: none;
-        }
-        .class-section {
-            margin: 20px 0;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-        }
-        .class-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 10px 0;
-        }
+        .success { background: #c6f6d5; color: #22543d; }
+        .error { background: #fed7d7; color: #742a2a; }
+
         #loginForm {
-            max-width: 300px;
-            margin: 100px auto;
+            max-width: 380px;
+            margin: 80px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
             text-align: center;
-        }
-        iframe {
-            width: 100%;
-            max-width: 640px;
-            height: 618px;
-            border: none;
-            margin: 20px auto;
-            display: block;
         }
     </style>
 </head>
 <body>
+    <!-- 登入畫面 -->
     <div id="loginForm">
-        <h2>教練登入</h2>
-        <input type="password" id="password" placeholder="請輸入密碼">
-        <button onclick="login()">登入</button>
-        <div id="loginMessage" class="error"></div>
+        <h2>🔐 教練專區</h2>
+        <input type="password" id="password" placeholder="請輸入密碼" style="margin:20px 0;">
+        <button class="btn btn-primary" onclick="login()" style="width:100%;">登入</button>
+        <div id="loginMessage" style="margin-top:15px;"></div>
     </div>
 
+    <!-- 主要後台 (登入後顯示) -->
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link">
             <a href="index.html">← 返回家長入口</a>
         </div>
-        <h1>滾軸溜冰私教輪滑團課程系統</h1>
-        <h6>注意! 家長交費後務必清空請假次數!因請假次數超過2節會扣減堂數!</h6>
-        <h6>補點名務必修改記錄中的日期並備註, 家長會看到日期!</h6>
-        <h6>請於數據後台中直接加入學生, 課堂數設為"0",在前端新增課堂,在家長入口中查詢具體學生的課堂及請假記錄</h6>
-        <h6>不建議直接在後台新增或修改課堂數, 建議在前端"新增課堂數"處新增。</h6>
-        <div class="button-container">
-            <button onclick="showSection('attendance')">點名</button>
-            <button onclick="showSection('addClasses')">新增課堂數</button>
-            <button onclick="showSection('suspendClass')">停課</button>
-            <button onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">交費系統</button>
-            <button onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdcOwr4fMcUBKPlFlZI_0N9DJ0FfGGQg2vb6nMqlINsG-8o3g/viewform?usp=dialog', '_blank')">課堂相片記錄系統</button>
+        <h1>⚙️ 教練後台 · 輪滑課程系統</h1>
+        <div class="button-grid">
+            <button class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
+            <button class="btn btn-success" onclick="showSection('addClasses')">➕ 新增課堂</button>
+            <button class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
+            <button class="btn btn-danger" onclick="showSection('clearLeave')">🧹 清零請假</button>
+            <button class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費系統</button>
+            <button class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
         </div>
 
-        <div id="attendance" class="input-group">
-            <h2>點名系統</h2>
+        <!-- 點名區塊 -->
+        <div id="attendance" class="section" style="display: none;">
+            <h2>📌 點名 (扣課)</h2>
             <div id="attendanceList"></div>
-            <button onclick="resetAttendance()">點名完畢</button>
+            <button class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px;">重置點名狀態</button>
         </div>
 
-        <div id="suspendClass" class="input-group">
-            <h2>停課</h2>
-            <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSd0VxrabwxUSxeUoq07x7-qvwU1MWMpSev0cEajXW2zPknEkA/viewform?embedded=true">載入中…</iframe>
-        </div>
-
-        <div id="addClasses" class="input-group">
-            <h2>新增課堂數</h2>
-            <button onclick="showAddClassesForm(true)">已在交費系統登記</button>
-            <button onclick="showAddClassesForm(false)">未在交費系統登記(正常續堂或新學生請先登記)</button>
-            <div id="addClassesForm" style="display: none;">
-                <input type="text" id="studentName" placeholder="學生姓名">
-                <select id="studentClass">
-                    <option value="">選擇班級</option>
-                    <option value="A1">A1</option>
-                    <option value="A2">A2</option>
-                    <option value="A3">A3</option>
-                    <option value="B1">B1</option>
-                    <option value="B2">B2</option>
-                    <option value="B3">B3</option>
-                    <option value="B4">B4</option>
-                    <option value="B5">B5</option>
-                    <option value="B6">B6</option>
-                    <option value="C1">C1</option>
-                    <option value="C2">C2</option>
-                </select>
-                <input type="number" id="classesChange" placeholder="新增/扣減課堂數">
-                <textarea id="reason" style="display: none;" placeholder="新增課堂原因"></textarea>
-                <button onclick="submitAddClasses()">確認</button>
+        <!-- 新增課堂數區塊 -->
+        <div id="addClasses" class="section" style="display: none;">
+            <h2>➕ 新增 / 扣減課堂</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>學生姓名</label>
+                    <input type="text" id="addClassName" placeholder="例：王小明">
+                </div>
+                <div class="form-group">
+                    <label>班級</label>
+                    <select id="addClassClass"></select>
+                </div>
+                <div class="form-group">
+                    <label>課堂變動</label>
+                    <input type="number" id="addClassDelta" placeholder="正：加堂，負：扣堂" value="10">
+                </div>
+                <div class="form-group">
+                    <label>原因</label>
+                    <textarea id="addClassReason" placeholder="例如：續費10堂"></textarea>
+                </div>
+                <button class="btn btn-success" onclick="submitAddClasses()" style="align-self:flex-end;">確認更新</button>
             </div>
+            <div id="addClassesMessage"></div>
         </div>
 
-        <div id="message"></div>
+        <!-- 班級管理區塊 -->
+        <div id="classManage" class="section" style="display: none;">
+            <h2>🏫 班級管理</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>新增班級</label>
+                    <input type="text" id="newClassName" placeholder="例如：D1">
+                </div>
+                <button class="btn btn-primary" onclick="addNewClass()">新增班級</button>
+            </div>
+            <h3>現有班級</h3>
+            <div id="classListContainer"></div>
+            <p style="color:#718096; font-size:0.9rem;">⚠️ 刪除班級不會刪除該班學生，僅移除選項。</p>
+        </div>
+
+        <!-- 清零請假次數區塊 -->
+        <div id="clearLeave" class="section" style="display: none;">
+            <h2>🧼 家長交費後 · 清零請假次數</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>選擇學生</label>
+                    <select id="clearLeaveStudent"></select>
+                </div>
+                <button class="btn btn-danger" onclick="clearLeaveCount()">將請假次數歸零</button>
+            </div>
+            <div id="clearLeaveMessage"></div>
+        </div>
+
+        <!-- 全域訊息 -->
+        <div id="message" class="message" style="margin-top:20px;"></div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9OZw14kE_znJEYptRmCxqYangawPJkb4ZTeCXkXTNMmdM8ji6L9veATl_f4z5-sw6Cg/exec';
+        // ---------- 全域設定 ----------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdGIKmMDMFy7lyDXypaukX0IJaefaiYpPszQZpPBGZFEtkODFZ3Tp3l2CP_tHeUaQuxg/exec';
+        let allStudents = []; // 快取學生資料
 
-        function login() {
-            const password = document.getElementById('password').value;
-            if (password === '123000') {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                loadData();
-            } else {
-                document.getElementById('loginMessage').textContent = '密碼錯誤';
+        // ---------- 登入 (密碼比對來自 Script Properties) ----------
+        async function login() {
+            const pwd = document.getElementById('password').value;
+            // 這裡我們透過一個簡易驗證 endpoint 驗證密碼
+            // 實務上應將密碼儲存在 GAS Properties，並透過 API 比對
+            // 為保持簡單，我們暫時保留前端硬編碼，但強烈建議改為後端驗證！
+            // 此處展示如何改成後端驗證 (需在 GAS 增加 action='verifyCoach' 回傳 boolean)
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=verifyCoach&password=${encodeURIComponent(pwd)}`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    loadAllData();
+                } else {
+                    document.getElementById('loginMessage').innerHTML = '<span class="error">密碼錯誤</span>';
+                }
+            } catch (e) {
+                // fallback 硬編碼 (僅開發用，請移除)
+                if (pwd === '123000') {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    loadAllData();
+                } else {
+                    document.getElementById('loginMessage').innerHTML = '<span class="error">密碼錯誤</span>';
+                }
             }
         }
 
-        function loadData() {
-            fetch(`${SCRIPT_URL}?action=getAllStudents`)
-                .then(response => response.json())
-                .then(updateUI)
-                .catch(error => showError(error.message));
+        // ---------- 初始化載入 ----------
+        async function loadAllData() {
+            await Promise.all([
+                fetchAllStudents(),
+                loadClassList()
+            ]);
+            updateAttendanceList();
+            populateStudentSelect();
         }
 
-        function updateUI(data) {
-            updateAttendanceList(data);
+        // 取得所有學生
+        async function fetchAllStudents() {
+            const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
+            const data = await res.json();
+            allStudents = data || [];
+            return data;
         }
 
-        function showSection(sectionId) {
-            const sections = ['attendance', 'addClasses', 'suspendClass'];
-            sections.forEach(id => {
-                document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
-            });
-            document.getElementById('message').innerHTML = '';
-        }
-
-        function updateAttendanceList(data) {
-            const container = document.getElementById('attendanceList');
-            let html = '';
-            const classes = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'C1', 'C2'];
-
-            classes.forEach(className => {
-                const students = data.filter(student => student.class === className);
-                if (students.length > 0) {
-                    html += `
-                        <div class="class-section">
-                            <h3>${className}班</h3>
-                            <div class="class-buttons">
-                    `;
-                    students.forEach(student => {
-                        html += `
-                            <button 
-                                class="student-button" 
-                                onclick="markAttendance('${student.name}')"
-                                id="attendance-${student.name}"
-                            >${student.name}</button>
-                        `;
-                    });
-                    html += '</div></div>';
+        // 取得班級清單並更新下拉選單
+        async function loadClassList() {
+            const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
+            const classes = await res.json(); // 直接回傳陣列
+            renderClassList(classes);
+            // 更新所有班級下拉選單
+            const selects = document.querySelectorAll('.class-select, #addClassClass, #studentClass');
+            selects.forEach(select => {
+                if (select) {
+                    select.innerHTML = '<option value="">選擇班級</option>' + 
+                        classes.map(c => `<option value="${c}">${c}</option>`).join('');
                 }
             });
+            return classes;
+        }
 
+        // 渲染班級列表 (管理用)
+        function renderClassList(classes) {
+            const container = document.getElementById('classListContainer');
+            if (!container) return;
+            let html = '';
+            classes.forEach(c => {
+                html += `<span class="class-badge">${c} 
+                    <button onclick="deleteClass('${c}')" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer;">✕</button>
+                </span>`;
+            });
+            container.innerHTML = html || '尚無班級，請新增。';
+        }
+
+        // 新增班級
+        async function addNewClass() {
+            const className = document.getElementById('newClassName').value.trim();
+            if (!className) return showError('請輸入班級名稱');
+            const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('newClassName').value = '';
+                loadClassList();
+            } else {
+                showError(result.message);
+            }
+        }
+
+        // 刪除班級
+        async function deleteClass(className) {
+            if (!confirm(`確定刪除班級「${className}」？`)) return;
+            const res = await fetch(`${SCRIPT_URL}?action=deleteClass&className=${encodeURIComponent(className)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                loadClassList();
+            } else {
+                showError(result.message);
+            }
+        }
+
+        // ---------- 點名區塊 ----------
+        function updateAttendanceList() {
+            const container = document.getElementById('attendanceList');
+            if (!container) return;
+
+            // 依班級分組
+            const grouped = {};
+            allStudents.forEach(s => {
+                if (!grouped[s.class]) grouped[s.class] = [];
+                grouped[s.class].push(s);
+            });
+
+            let html = '';
+            for (let className in grouped) {
+                html += `<div style="margin-bottom:20px;"><h3>${className}班</h3>`;
+                grouped[className].forEach(s => {
+                    html += `<button class="student-button" data-name="${s.name}" onclick="markAttendance('${s.name}')">${s.name}</button>`;
+                });
+                html += '</div>';
+            }
             container.innerHTML = html;
         }
 
-        function markAttendance(studentName) {
-            const button = document.getElementById(`attendance-${studentName}`);
-            if (!button.classList.contains('checked')) {
-                fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(studentName)}`)
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success) {
-                            button.classList.add('checked');
-                            showSuccess('已記錄出席');
-                        } else {
-                            showError(result.message || '記錄出席失敗');
-                        }
-                    })
-                    .catch(error => showError(error.message));
+        // 點名扣課
+        async function markAttendance(name) {
+            const btn = document.querySelector(`.student-button[data-name="${name}"]`);
+            if (btn && btn.classList.contains('checked')) return;
+            const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
+            const data = await res.json();
+            if (data.success) {
+                if (btn) btn.classList.add('checked');
+                showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
+                fetchAllStudents(); // 更新快取
+            } else {
+                showError(data.message || '點名失敗');
             }
         }
 
         function resetAttendance() {
-            const buttons = document.querySelectorAll('.student-button.checked');
-            buttons.forEach(button => button.classList.remove('checked'));
+            document.querySelectorAll('.student-button.checked').forEach(b => b.classList.remove('checked'));
             showSuccess('點名狀態已重置');
         }
 
-        function showAddClassesForm(isPaid) {
-            document.getElementById('addClassesForm').style.display = 'block';
-            document.getElementById('reason').style.display = isPaid ? 'none' : 'block';
-        }
+        // ---------- 新增課堂 ----------
+        async function submitAddClasses() {
+            const name = document.getElementById('addClassName').value.trim();
+            const className = document.getElementById('addClassClass').value;
+            const delta = parseInt(document.getElementById('addClassDelta').value);
+            const reason = document.getElementById('addClassReason').value.trim() || '教練手動調整';
 
-        function submitAddClasses() {
-            const studentName = document.getElementById('studentName').value;
-            const studentClass = document.getElementById('studentClass').value;
-            const classesChange = parseInt(document.getElementById('classesChange').value);
-            const reason = document.getElementById('reason').value;
-
-            if (!studentName || !studentClass || isNaN(classesChange)) {
-                showError('請填寫所有必要資料');
-                return;
+            if (!name || !className || isNaN(delta)) {
+                return showError('姓名、班級、課堂數為必填');
             }
 
-            const data = {
-                name: studentName,
-                class: studentClass,
-                classesChange: classesChange,
-                reason: reason
-            };
-
-            fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(data))}`)
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        showSuccess(result.message);
-                        document.getElementById('addClassesForm').style.display = 'none';
-                        loadData(); // 重新加載數據
-                    } else {
-                        showError(result.message || '更新失敗');
-                    }
-                })
-                .catch(error => showError(error.message));
+            const payload = { name, class: className, classesChange: delta, reason };
+            const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('addClassName').value = '';
+                document.getElementById('addClassDelta').value = '10';
+                document.getElementById('addClassReason').value = '';
+                fetchAllStudents();
+            } else {
+                showError(result.message);
+            }
         }
 
-        function showSuccess(message) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="success">${message}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 3000);
+        // ---------- 清零請假次數 ----------
+        async function populateStudentSelect() {
+            const select = document.getElementById('clearLeaveStudent');
+            if (!select) return;
+            await fetchAllStudents();
+            select.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
+                allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount || 0}次</option>`).join('');
         }
 
-        function showError(error) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="error">${error}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 3000);
+        async function clearLeaveCount() {
+            const select = document.getElementById('clearLeaveStudent');
+            const name = select.value;
+            if (!name) return showError('請選擇學生');
+            if (!confirm(`確定將 ${name} 的請假次數歸零？`)) return;
+
+            const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`${name} 請假次數已清零`);
+                populateStudentSelect(); // 更新下拉顯示
+                fetchAllStudents();
+            } else {
+                showError(result.message || '清零失敗');
+            }
+        }
+
+        // ---------- 區塊切換 ----------
+        function showSection(sectionId) {
+            ['attendance','addClasses','classManage','clearLeave'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = id === sectionId ? 'block' : 'none';
+            });
+        }
+
+        // ---------- 輔助訊息 ----------
+        function showSuccess(msg) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<div class="success">✅ ${msg}</div>`;
+            setTimeout(() => msgDiv.innerHTML = '', 4000);
+        }
+        function showError(msg) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<div class="error">❌ ${msg}</div>`;
+            setTimeout(() => msgDiv.innerHTML = '', 4000);
         }
     </script>
 </body>
