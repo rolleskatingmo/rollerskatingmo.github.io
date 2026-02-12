@@ -166,7 +166,7 @@
                 </div>
                 <div class="form-group">
                     <label>班級</label>
-                    <select id="addClassClass"></select>
+                    <select id="addClassClass" class="class-select"></select>
                 </div>
                 <div class="form-group">
                     <label>課堂變動</label>
@@ -214,17 +214,18 @@
     </div>
 
     <script>
-        // ---------- 全域設定 ----------
+        // ---------- 設定：請更新為您的後端網址 ----------
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdGIKmMDMFy7lyDXypaukX0IJaefaiYpPszQZpPBGZFEtkODFZ3Tp3l2CP_tHeUaQuxg/exec';
-        let allStudents = []; // 快取學生資料
 
-        // ---------- 登入 (密碼比對來自 Script Properties) ----------
+        let allStudents = [];
+
+        // ---------- 登入 (完全後端驗證) ----------
         async function login() {
             const pwd = document.getElementById('password').value;
-            // 這裡我們透過一個簡易驗證 endpoint 驗證密碼
-            // 實務上應將密碼儲存在 GAS Properties，並透過 API 比對
-            // 為保持簡單，我們暫時保留前端硬編碼，但強烈建議改為後端驗證！
-            // 此處展示如何改成後端驗證 (需在 GAS 增加 action='verifyCoach' 回傳 boolean)
+            if (!pwd) {
+                document.getElementById('loginMessage').innerHTML = '<span class="error">請輸入密碼</span>';
+                return;
+            }
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=verifyCoach&password=${encodeURIComponent(pwd)}`);
                 const data = await res.json();
@@ -236,14 +237,7 @@
                     document.getElementById('loginMessage').innerHTML = '<span class="error">密碼錯誤</span>';
                 }
             } catch (e) {
-                // fallback 硬編碼 (僅開發用，請移除)
-                if (pwd === '123000') {
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    loadAllData();
-                } else {
-                    document.getElementById('loginMessage').innerHTML = '<span class="error">密碼錯誤</span>';
-                }
+                document.getElementById('loginMessage').innerHTML = '<span class="error">連線失敗，請檢查網路或後端網址</span>';
             }
         }
 
@@ -268,10 +262,10 @@
         // 取得班級清單並更新下拉選單
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
-            const classes = await res.json(); // 直接回傳陣列
+            const classes = await res.json();
             renderClassList(classes);
             // 更新所有班級下拉選單
-            const selects = document.querySelectorAll('.class-select, #addClassClass, #studentClass');
+            const selects = document.querySelectorAll('.class-select, #addClassClass');
             selects.forEach(select => {
                 if (select) {
                     select.innerHTML = '<option value="">選擇班級</option>' + 
@@ -322,12 +316,11 @@
             }
         }
 
-        // ---------- 點名區塊 ----------
+        // 點名區塊
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
 
-            // 依班級分組
             const grouped = {};
             allStudents.forEach(s => {
                 if (!grouped[s.class]) grouped[s.class] = [];
@@ -354,7 +347,7 @@
             if (data.success) {
                 if (btn) btn.classList.add('checked');
                 showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
-                fetchAllStudents(); // 更新快取
+                fetchAllStudents();
             } else {
                 showError(data.message || '點名失敗');
             }
@@ -365,7 +358,7 @@
             showSuccess('點名狀態已重置');
         }
 
-        // ---------- 新增課堂 ----------
+        // 新增課堂
         async function submitAddClasses() {
             const name = document.getElementById('addClassName').value.trim();
             const className = document.getElementById('addClassClass').value;
@@ -390,7 +383,7 @@
             }
         }
 
-        // ---------- 清零請假次數 ----------
+        // 清零請假次數 - 下拉選單
         async function populateStudentSelect() {
             const select = document.getElementById('clearLeaveStudent');
             if (!select) return;
@@ -409,14 +402,14 @@
             const result = await res.json();
             if (result.success) {
                 showSuccess(`${name} 請假次數已清零`);
-                populateStudentSelect(); // 更新下拉顯示
+                populateStudentSelect();
                 fetchAllStudents();
             } else {
                 showError(result.message || '清零失敗');
             }
         }
 
-        // ---------- 區塊切換 ----------
+        // 區塊切換
         function showSection(sectionId) {
             ['attendance','addClasses','classManage','clearLeave'].forEach(id => {
                 const el = document.getElementById(id);
@@ -424,7 +417,7 @@
             });
         }
 
-        // ---------- 輔助訊息 ----------
+        // 輔助訊息
         function showSuccess(msg) {
             const msgDiv = document.getElementById('message');
             msgDiv.innerHTML = `<div class="success">✅ ${msg}</div>`;
