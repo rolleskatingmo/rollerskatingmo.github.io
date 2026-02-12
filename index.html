@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>輪滑課程系統 · 家長入口</title>
+    <title>輪滑課程系統 · 家長查詢</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -36,7 +36,6 @@
             border-radius: 30px;
             text-decoration: none;
             font-size: 0.9rem;
-            font-weight: 500;
         }
         .search-area {
             background: #f0f4f8;
@@ -127,25 +126,29 @@
             border-bottom: 1px solid #e2e8f0;
         }
         .badge {
-            background: #48bb78;
-            color: white;
+            display: inline-block;
             padding: 4px 12px;
             border-radius: 30px;
             font-size: 0.8rem;
             font-weight: 600;
         }
-        .badge.warning {
-            background: #f6ad55;
-        }
-        .badge.danger {
+        .badge.red {
             background: #fc8181;
+            color: white;
         }
-        .remaining-zero {
-            background: #fefcbf;
-            color: #975a16;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 700;
+        .badge.yellow {
+            background: #f6e05e;
+            color: #744210;
+        }
+        .badge.green {
+            background: #48bb78;
+            color: white;
+        }
+        .warning-text {
+            color: #c53030;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            font-weight: 500;
         }
         .message {
             padding: 12px 18px;
@@ -160,14 +163,6 @@
             border-top: 1px solid #e2e8f0;
             padding-top: 20px;
         }
-        .warning-text {
-            color: #c05621;
-            font-size: 0.9rem;
-            margin-top: 8px;
-            background: #fffaf0;
-            padding: 8px 12px;
-            border-radius: 8px;
-        }
     </style>
 </head>
 <body>
@@ -177,37 +172,32 @@
             <span class="nav-link"><a href="coach.html">教練入口 →</a></span>
         </h1>
 
-        <!-- 模糊搜尋區塊 -->
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
             <input type="text" id="searchInput" placeholder="例如：王小明" autocomplete="off">
             <div id="studentList" class="student-list"></div>
         </div>
 
-        <!-- 詳細資訊區塊 (預設隱藏) -->
         <div id="detailContainer" style="display: none;"></div>
         <div id="message" class="message"></div>
 
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
-            <p>系統版本 3.1 · 由 Thomas 維護(冇錯就係Thomas哥哥)</p>
+            <p>系統版本 3.1 · 由 Thomas 維護(冇錯就係果個Thomas哥哥)</p>
         </div>
     </div>
 
     <script>
-        // ---------- 設定：請更新為您的後端網址 ----------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzU1NTW8bh9LVaTJQKktc-hjElUt-xd0fzfbrkYcZSossSCiWfA7FZSv5-oAKBtp0scw/exec';
+        // ---------- 後端網址（請替換為您的部署網址）----------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2M28utyvPdlCh3khBxjJCWQInxZE41Aq8W6KKDGdyNr2uDh3kXUM64oDIx0cBqpd26g/exec';
 
-        // DOM 元素
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
         const detailContainer = document.getElementById('detailContainer');
         const messageDiv = document.getElementById('message');
 
-        // 防抖計時器
         let searchTimer;
 
-        // 監聽輸入：即時模糊搜尋
         searchInput.addEventListener('input', function(e) {
             clearTimeout(searchTimer);
             const keyword = e.target.value.trim();
@@ -216,12 +206,9 @@
                 detailContainer.style.display = 'none';
                 return;
             }
-            searchTimer = setTimeout(() => {
-                performSearch(keyword);
-            }, 300);
+            searchTimer = setTimeout(() => performSearch(keyword), 300);
         });
 
-        // 執行模糊搜尋
         async function performSearch(keyword) {
             showMessage('搜尋中...', '#fefcbf');
             try {
@@ -235,7 +222,6 @@
             }
         }
 
-        // 渲染學生標籤清單
         function renderStudentList(students) {
             studentListDiv.innerHTML = '';
             if (students.length === 0) {
@@ -251,7 +237,6 @@
             });
         }
 
-        // 載入單一學生詳細記錄
         async function loadStudentDetail(name) {
             showMessage('載入上課記錄中...', '#e6fffa');
             detailContainer.style.display = 'none';
@@ -266,49 +251,47 @@
             }
         }
 
-        // 渲染詳細資料卡
         function renderDetail(d) {
-            // 請假次數樣式與提示
-            let leaveBadgeClass = '';
-            let leaveMessage = '';
+            // 請假次數顯示與警告
+            let leaveBadgeHtml = '';
+            let leaveWarning = '';
             if (d.leaveCount >= 2) {
-                leaveBadgeClass = 'danger';
-                if (d.leaveCount === 2) {
-                    leaveMessage = '⚠️ 已請假2次，下一次請假將自動扣減1堂課。';
-                } else {
-                    leaveMessage = `⚠️ 已請假 ${d.leaveCount} 次，已自動扣減 ${d.leaveCount - 2} 堂課。`;
-                }
+                leaveBadgeHtml = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次 (再請假將扣1堂)</span>`;
+                leaveWarning = `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>`;
+            } else {
+                leaveBadgeHtml = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
             }
 
-            // 剩餘課堂樣式與提示
-            let remainingClass = '';
-            let remainingMessage = '';
+            // 剩餘課堂警告
+            let remainingDisplay = `<span style="font-size:1.4rem; font-weight:700;">${d.remainingClasses}</span>`;
+            let remainingWarning = '';
             if (d.remainingClasses <= 0) {
-                remainingClass = 'remaining-zero';
-                remainingMessage = '⚠️ 剩餘課堂不足，請聯繫教練核對或繳費。';
+                remainingDisplay = `<span style="font-size:1.4rem; font-weight:700; color:#c53030; background:#fed7d7; padding:4px 12px; border-radius:30px;">${d.remainingClasses} 堂</span>`;
+                remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練核對或繳費。</div>`;
+            } else if (d.remainingClasses <= 2) {
+                remainingDisplay = `<span style="font-size:1.4rem; font-weight:700; color:#b7791f; background:#fefcbf; padding:4px 12px; border-radius:30px;">${d.remainingClasses} 堂</span>`;
+                remainingWarning = `<div style="color:#b7791f; font-size:0.9rem; margin-top:5px;">📌 剩餘課堂不多，請適時續費。</div>`;
             }
 
             let html = `
                 <div class="detail-card">
                     <h2 style="margin-top:0; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                         🧑‍🎓 ${d.name}
-                        <span class="badge ${leaveBadgeClass}">請假 ${d.leaveCount} 次</span>
+                        ${leaveBadgeHtml}
                     </h2>
-                    ${leaveMessage ? `<div class="warning-text">${leaveMessage}</div>` : ''}
+                    ${leaveWarning}
                     <div class="info-row">
                         <span class="info-label">班級</span>
                         <span class="info-value">${d.class}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">剩餘課堂</span>
-                        <span class="info-value" style="font-size:1.4rem; font-weight:700; ${d.remainingClasses <= 0 ? 'color:#c05621;' : '#2b6cb0'}">
-                            <span class="${remainingClass}">${d.remainingClasses}</span>
-                        </span>
+                        <span class="info-value">${remainingDisplay}</span>
                     </div>
-                    ${remainingMessage ? `<div class="warning-text">${remainingMessage}</div>` : ''}
+                    ${remainingWarning}
             `;
 
-            // 合併上課記錄 + 請假記錄，依日期排序
+            // 合併記錄，不顯示備註
             let allRecords = [
                 ...d.classRecords.map(r => ({ ...r, type: '上課' })),
                 ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
@@ -350,8 +333,8 @@
         function showMessage(msg, bgColor) {
             messageDiv.innerHTML = msg;
             messageDiv.style.backgroundColor = bgColor;
-            messageDiv.style.borderRadius = '8px';
             messageDiv.style.padding = '12px';
+            messageDiv.style.borderRadius = '8px';
         }
         function hideMessage() {
             messageDiv.innerHTML = '';
