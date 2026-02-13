@@ -82,6 +82,15 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
         }
+        .search-hint {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #4a5568;
+            background: #e6fffa;
+            padding: 8px 12px;
+            border-radius: 30px;
+            display: inline-block;
+        }
         .student-list {
             margin-top: 15px;
             display: flex;
@@ -242,6 +251,7 @@
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
             <input type="text" id="searchInput" placeholder="例如：王小明" autocomplete="off">
+            <div class="search-hint">💡 點擊學生姓名可查看完整記錄（請假次數、租借裝備次數、上課記錄等）</div>
             <div id="studentList" class="student-list"></div>
         </div>
         <div id="detailContainer" style="display: none;"></div>
@@ -294,7 +304,7 @@
             students.forEach(s => {
                 const tag = document.createElement('span');
                 tag.className = 'student-tag';
-                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂 租${s.rentalCount}次`;
+                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂`;
                 tag.addEventListener('click', () => loadStudentDetail(s.name));
                 studentListDiv.appendChild(tag);
             });
@@ -318,7 +328,7 @@
             let leaveBadgeHtml = '';
             let leaveWarning = '';
             if (d.leaveCount >= 2) {
-                leaveBadgeHtml = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次 (再請假將扣1堂)</span>`;
+                leaveBadgeHtml = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次 </span>`;
                 leaveWarning = `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>`;
             } else {
                 leaveBadgeHtml = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
@@ -328,10 +338,10 @@
             let remainingWarning = '';
             if (d.remainingClasses <= 0) {
                 remainingDisplay = `<span style="font-size:1.4rem; font-weight:700; color:#c53030; background:#fed7d7; padding:4px 12px; border-radius:30px;">${d.remainingClasses} 堂</span>`;
-                remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練核對或繳費。</div>`;
+                remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練核對或繳費，多謝支持~</div>`;
             } else if (d.remainingClasses <= 2) {
                 remainingDisplay = `<span style="font-size:1.4rem; font-weight:700; color:#b7791f; background:#fefcbf; padding:4px 12px; border-radius:30px;">${d.remainingClasses} 堂</span>`;
-                remainingWarning = `<div style="color:#b7791f; font-size:0.9rem; margin-top:5px;">📌 剩餘課堂不多，請適時續費。</div>`;
+                remainingWarning = `<div style="color:#b7791f; font-size:0.9rem; margin-top:5px;">📌 剩餘課堂不多，請適時續費，多謝支持~。</div>`;
             }
 
             let html = `
