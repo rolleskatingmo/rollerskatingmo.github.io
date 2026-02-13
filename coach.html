@@ -3,14 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統</title>
+    <title>教練後台 · 輪滑課程系統V3.5</title>
     <style>
-        /* ========== 全域樣式（手機優化）========= */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
             background: #edf2f7;
@@ -71,6 +66,7 @@
         .btn-danger { background: #f56565; color: white; }
         .btn-purple { background: #9f7aea; color: white; }
         .btn-indigo { background: #667eea; color: white; }
+        .btn-rental { background: #38b2ac; color: white; } /* 租借按鈕新色 */
 
         .section {
             background: #f7fafc;
@@ -79,10 +75,7 @@
             margin-bottom: 25px;
             border: 1px solid #e2e8f0;
         }
-        .section h2 {
-            font-size: 1.3rem;
-            margin-bottom: 16px;
-        }
+        .section h2 { font-size: 1.3rem; margin-bottom: 16px; }
 
         .class-badge {
             display: inline-block;
@@ -94,7 +87,7 @@
             font-size: 0.85rem;
         }
 
-        .student-button {
+        .student-button, .rental-button {
             background: #cbd5e0;
             border: none;
             padding: 8px 16px;
@@ -115,6 +108,12 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+        .rental-button {
+            background: #38b2ac;
+            color: white;
+            min-width: 80px;
+        }
+        .rental-button:hover { background: #319795; }
 
         .form-row {
             display: flex;
@@ -141,7 +140,6 @@
             font-size: 0.95rem;
             width: 100%;
             -webkit-appearance: none;
-            appearance: none;
             background: white;
         }
         .search-dropdown {
@@ -168,9 +166,7 @@
             border-bottom: 1px solid #edf2f7;
             font-size: 0.9rem;
         }
-        .dropdown-item:hover {
-            background: #f7fafc;
-        }
+        .dropdown-item:hover { background: #f7fafc; }
         .message {
             margin-top: 15px;
             padding: 12px 16px;
@@ -201,14 +197,14 @@
             flex-wrap: wrap;
             gap: 8px;
         }
-        .leave-badge {
-            background: #f56565;
-            color: white;
+        .leave-badge, .rental-badge {
             padding: 4px 12px;
             border-radius: 30px;
             font-size: 0.8rem;
             font-weight: 600;
         }
+        .leave-badge { background: #f56565; color: white; }
+        .rental-badge { background: #38b2ac; color: white; }
         .info-box {
             background: #ebf8ff;
             border-left: 4px solid #4299e1;
@@ -217,8 +213,6 @@
             border-radius: 8px;
             font-size: 0.9rem;
         }
-
-        /* ========== 手機專用樣式 ========== */
         @media screen and (max-width: 480px) {
             body { padding: 8px; }
             .container { padding: 16px 12px; }
@@ -227,51 +221,68 @@
             .btn { flex: 1 0 calc(50% - 8px); font-size: 0.85rem; padding: 10px 8px; }
             .section h2 { font-size: 1.2rem; }
             .form-group { flex: 1 1 100%; }
-            .student-button { font-size: 0.85rem; padding: 6px 14px; }
-            .class-badge { font-size: 0.8rem; padding: 4px 12px; }
-            .dropdown-item { padding: 10px 14px; font-size: 0.85rem; }
+            .student-button, .rental-button { font-size: 0.85rem; padding: 6px 14px; }
         }
     </style>
 </head>
 <body>
-    <!-- 登入畫面 -->
     <div id="loginForm">
         <h2>🔐 教練專區</h2>
         <input type="password" id="password" placeholder="請輸入密碼" style="margin:20px 0; padding:14px;">
         <button class="btn btn-primary" onclick="login()" style="width:100%;">登入</button>
         <div id="loginMessage" style="margin-top:15px;"></div>
+        <p style="margin-top:20px; font-size:0.8rem; color:#718096;">⚠️ 密碼區分權限：完整功能 / 僅點名+租借+相片</p>
     </div>
 
-    <!-- 主要後台內容（登入後顯示） -->
     <div id="mainContent" class="container" style="display: none;">
-        <div class="nav-link">
-            <a href="index.html">← 返回家長入口</a>
-        </div>
+        <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
         <h1>⚙️ 教練後台 · 輪滑課程系統</h1>
-        
-        <!-- 功能按鈕網格（動態權限控制） -->
         <div id="buttonGrid" class="button-grid">
             <button id="btnAttendance" class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
+            <button id="btnRental" class="btn btn-rental" onclick="showSection('rental')">🛞 租借裝備</button>
+            <button id="btnTrial" class="btn btn-indigo" onclick="showSection('trial')">🧪 試堂管理</button>
             <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
             <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
             <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
-            <button id="btnClearLeave" class="btn btn-danger" onclick="showSection('clearLeave')">🧹 清零請假</button>
+            <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 清零請假/租借</button>
             <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
             <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
             <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
         </div>
 
-        <!-- 1. 點名區塊（防重複扣課） -->
+        <!-- 點名區塊（防重複） -->
         <div id="attendance" class="section" style="display: none;">
             <h2>📌 點名 (扣課)</h2>
             <div id="attendanceList"></div>
             <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
         </div>
 
-        <!-- 2. 新增/扣減課堂（模糊搜尋） -->
+        <!-- 租借裝備區塊（所有教練可用） -->
+        <div id="rental" class="section" style="display: none;">
+            <h2>🛞 裝備租借 (每次 $20)</h2>
+            <div id="rentalList"></div>
+        </div>
+
+        <!-- 試堂管理（僅完整權限） -->
+        <div id="trial" class="section" style="display: none;">
+            <h2>🧪 試堂學生管理</h2>
+            <div class="info-box">試堂學生僅記錄一堂，過期未付費會在家長首頁提醒。</div>
+            <div class="form-row">
+                <div class="form-group"><label>姓名</label><input type="text" id="trialName"></div>
+                <div class="form-group"><label>試堂日期</label><input type="date" id="trialDate"></div>
+                <div class="form-group"><label>租借裝備</label><select id="trialRent"><option value="false">否</option><option value="true">是</option></select></div>
+                <div class="form-group"><label>已付費</label><select id="trialPaid"><option value="false">否</option><option value="true">是</option></select></div>
+                <div class="form-group"><label>備註</label><input type="text" id="trialNote"></div>
+                <button class="btn btn-indigo" onclick="addTrial()" style="width:100%;">新增試堂學生</button>
+            </div>
+            <h3>現有試堂學生</h3>
+            <div id="trialList"></div>
+        </div>
+
+        <!-- 新增/扣課（完整權限） -->
         <div id="addClasses" class="section" style="display: none;">
             <h2>➕ 新增 / 扣減課堂</h2>
-            <div class="info-box">💡 輸入姓名關鍵字，從下拉清單選擇學生，班級會自動帶入。</div>
+            <div class="info-box">💡 輸入姓名關鍵字選擇學生，班級自動帶入。</div>
             <div class="form-row">
                 <div class="form-group">
                     <label>🔍 搜尋學生</label>
@@ -280,77 +291,54 @@
                         <div id="studentDropdown" class="dropdown-list"></div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>班級</label>
-                    <input type="text" id="selectedClass" readonly placeholder="選擇學生後自動帶入">
-                </div>
-                <div class="form-group">
-                    <label>課堂變動</label>
-                    <input type="number" id="addClassDelta" placeholder="正：加堂，負：扣堂" value="10">
-                </div>
-                <div class="form-group">
-                    <label>原因 (選填)</label>
-                    <textarea id="addClassReason" placeholder="例如：續費10堂"></textarea>
-                </div>
+                <div class="form-group"><label>班級</label><input type="text" id="selectedClass" readonly></div>
+                <div class="form-group"><label>課堂變動</label><input type="number" id="addClassDelta" value="10"></div>
+                <div class="form-group"><label>原因</label><textarea id="addClassReason" placeholder="續費10堂"></textarea></div>
                 <button class="btn btn-success" onclick="submitAddClasses()" style="width:100%;">確認更新</button>
             </div>
             <div id="addClassesMessage"></div>
         </div>
 
-        <!-- 3. 新增學生區塊（預設10堂） -->
+        <!-- 新增學生（完整權限） -->
         <div id="addStudent" class="section" style="display: none;">
             <h2>👤 新增學生（預設10堂）</h2>
-            <div class="info-box">🎁 新學生自動獲得 <strong>10 堂課</strong>，如需不同數量請於「新增/扣減課堂」調整。</div>
+            <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。</div>
             <div class="form-row">
-                <div class="form-group">
-                    <label>學生姓名</label>
-                    <input type="text" id="newStudentName" placeholder="例：李小華">
-                </div>
-                <div class="form-group">
-                    <label>班級</label>
-                    <select id="newStudentClass"></select>
-                </div>
+                <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
+                <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
                 <button class="btn btn-indigo" onclick="submitAddStudent()" style="width:100%;">新增學生</button>
             </div>
             <div id="addStudentMessage"></div>
         </div>
 
-        <!-- 4. 班級管理區塊（自動排序） -->
+        <!-- 班級管理（完整權限） -->
         <div id="classManage" class="section" style="display: none;">
             <h2>🏫 班級管理</h2>
             <div class="form-row">
-                <div class="form-group">
-                    <label>新增班級</label>
-                    <input type="text" id="newClassName" placeholder="例如：D1">
-                </div>
+                <div class="form-group"><label>新增班級</label><input type="text" id="newClassName" placeholder="D1"></div>
                 <button class="btn btn-primary" onclick="addNewClass()" style="width:100%;">新增班級</button>
             </div>
             <h3>現有班級</h3>
             <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-            <p style="color:#718096; font-size:0.8rem; margin-top:12px;">⚠️ 刪除班級不會刪除該班學生，僅移除選項。</p>
         </div>
 
-        <!-- 5. 清零請假次數（僅顯示有請假學生） -->
-        <div id="clearLeave" class="section" style="display: none;">
-            <h2>🧼 清零請假次數</h2>
+        <!-- 清零請假/租借（完整權限） -->
+        <div id="clear" class="section" style="display: none;">
+            <h2>🧹 清零請假次數 / 租借次數</h2>
             <div class="form-row">
-                <div class="form-group">
-                    <label>選擇學生</label>
-                    <select id="clearLeaveStudent"></select>
-                </div>
-                <button class="btn btn-danger" onclick="clearLeaveCount()" style="width:100%;">將請假次數歸零</button>
+                <div class="form-group"><label>選擇學生</label><select id="clearStudent"></select></div>
+                <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex:1;">清零請假</button>
+                <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
             </div>
-            <div id="clearLeaveMessage"></div>
-            <div style="margin-top:20px;">
-                <h3>📊 目前請假次數一覽</h3>
-                <div id="leaveStudentList"></div>
-            </div>
+            <div id="clearMessage"></div>
+            <h3>📊 目前請假/租借次數一覽</h3>
+            <div id="clearStudentList"></div>
         </div>
 
-        <!-- 6. 教練代請假（模糊搜尋） -->
+        <!-- 教練代請假（完整權限） -->
         <div id="coachLeave" class="section" style="display: none;">
             <h2>📝 教練代為請假</h2>
-            <div class="info-box">🔍 輸入姓名關鍵字，從下拉清單選擇學生。</div>
+            <div class="info-box">🔍 輸入姓名關鍵字選擇學生。</div>
             <div class="form-row">
                 <div class="form-group">
                     <label>🔍 搜尋學生</label>
@@ -359,31 +347,21 @@
                         <div id="coachLeaveDropdown" class="dropdown-list"></div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>班級</label>
-                    <input type="text" id="coachLeaveSelectedClass" readonly placeholder="選擇學生後自動帶入">
-                </div>
+                <div class="form-group"><label>班級</label><input type="text" id="coachLeaveSelectedClass" readonly></div>
                 <button class="btn btn-purple" onclick="submitCoachLeave()" style="width:100%;">提交請假</button>
             </div>
             <div id="coachLeaveMessage"></div>
-            <div style="margin-top:20px;">
-                <p style="color:#4a5568; font-size:0.85rem;">⚠️ 請假超過2次將自動扣減1堂課。</p>
-            </div>
         </div>
 
-        <!-- 全域訊息 -->
-        <div id="message" class="message" style="margin-top:20px;"></div>
+        <div id="message" class="message"></div>
     </div>
 
     <script>
-        // ========== 後端網址（最新部署）==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwphUH70vgTRbAi2x0UpBpKvEjyI2Qja4EIhjPdu14zuBaWHgha_Y-5i37FQW-IysXc/exec';
-
-        // ---------- 全域變數 ----------
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVogWqEvXJuXc1wXYQea1Q_tJS_m5G_cdrFaUrB9cSyakDdrJCPFb3gVEYlXH4fTWSMA/exec';
         let allStudents = [];
-        let userRole = 'full'; // 'full' 或 'limited'
+        let userRole = 'full';
 
-        // ---------- 登入（後端驗證，支援雙密碼權限）----------
+        // ---------- 登入 ----------
         async function login() {
             const pwd = document.getElementById('password').value;
             if (!pwd) return showLoginError('請輸入密碼');
@@ -392,72 +370,58 @@
                 const data = await res.json();
                 if (data.success) {
                     userRole = data.role || 'full';
-                    
                     document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('mainContent').style.display = 'block';
-                    
                     applyRoleRestrictions();
                     loadAllData();
                 } else {
                     showLoginError('密碼錯誤');
                 }
             } catch (e) {
-                showLoginError('連線失敗，請檢查網路');
+                showLoginError('連線失敗');
             }
         }
         function showLoginError(msg) {
             document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
         }
 
-        // ---------- 根據權限限制 UI ----------
         function applyRoleRestrictions() {
+            // 完整權限：顯示所有按鈕
+            const fullButtons = ['btnAddClasses', 'btnAddStudent', 'btnClassManage', 'btnClear', 'btnCoachLeave', 'btnPayment', 'btnTrial'];
+            // 受限權限：只顯示點名、租借、相片
+            const limitedButtons = ['btnAttendance', 'btnRental', 'btnPhoto'];
+
             if (userRole === 'full') {
-                document.getElementById('btnAddClasses').style.display = 'block';
-                document.getElementById('btnAddStudent').style.display = 'block';
-                document.getElementById('btnClassManage').style.display = 'block';
-                document.getElementById('btnClearLeave').style.display = 'block';
-                document.getElementById('btnCoachLeave').style.display = 'block';
-                document.getElementById('btnPayment').style.display = 'block';
+                fullButtons.forEach(id => document.getElementById(id).style.display = 'block');
+                limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 document.getElementById('resetAttendanceBtn').style.display = 'inline-block';
             } else {
-                document.getElementById('btnAddClasses').style.display = 'none';
-                document.getElementById('btnAddStudent').style.display = 'none';
-                document.getElementById('btnClassManage').style.display = 'none';
-                document.getElementById('btnClearLeave').style.display = 'none';
-                document.getElementById('btnCoachLeave').style.display = 'none';
-                document.getElementById('btnPayment').style.display = 'none';
+                fullButtons.forEach(id => document.getElementById(id).style.display = 'none');
+                limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 document.getElementById('resetAttendanceBtn').style.display = 'none';
-                
-                showSection('attendance');
+                showSection('attendance'); // 預設顯示點名
             }
         }
 
-        // ---------- 區塊切換（權限檢查）----------
         function showSection(sectionId) {
-            if (userRole === 'limited' && sectionId !== 'attendance') {
+            if (userRole === 'limited' && !['attendance', 'rental', 'photo'].includes(sectionId)) {
                 showError('您沒有權限使用此功能');
                 return;
             }
-
-            ['attendance','addClasses','addStudent','classManage','clearLeave','coachLeave'].forEach(id => {
+            const sections = ['attendance','rental','trial','addClasses','addStudent','classManage','clear','coachLeave'];
+            sections.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
+                if (el) el.style.display = id === sectionId ? 'block' : 'none';
             });
-            
-            const target = document.getElementById(sectionId);
-            if (target) target.style.display = 'block';
-            
-            if (sectionId === 'clearLeave') {
-                renderLeaveStudentList();
-            }
+            if (sectionId === 'clear') renderClearStudentList();
+            if (sectionId === 'trial') loadTrialList();
         }
 
-        // ---------- 初始化載入所有資料 ----------
         async function loadAllData() {
             await Promise.all([fetchAllStudents(), loadClassList()]);
             updateAttendanceList();
-            populateStudentSelects();
-            renderLeaveStudentList();
+            updateRentalList();
+            populateClearSelect();
         }
 
         async function fetchAllStudents() {
@@ -468,14 +432,13 @@
         }
 
         function sortClasses(classes) {
-            return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         }
 
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
             classes = sortClasses(classes);
-            renderClassList(classes);
             const newStudentSelect = document.getElementById('newStudentClass');
             if (newStudentSelect) {
                 newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
@@ -484,47 +447,7 @@
             return classes;
         }
 
-        function renderClassList(classes) {
-            const container = document.getElementById('classListContainer');
-            if (!container) return;
-            let html = '';
-            classes.forEach(c => {
-                html += `<span class="class-badge">${c} 
-                    <button onclick="deleteClass('${c}')" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer;">✕</button>
-                </span>`;
-            });
-            container.innerHTML = html || '尚無班級，請新增。';
-        }
-
-        async function addNewClass() {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
-            const className = document.getElementById('newClassName').value.trim();
-            if (!className) return showError('請輸入班級名稱');
-            const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(result.message);
-                document.getElementById('newClassName').value = '';
-                await loadClassList();
-            } else {
-                showError(result.message);
-            }
-        }
-
-        async function deleteClass(className) {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
-            if (!confirm(`確定刪除班級「${className}」？`)) return;
-            const res = await fetch(`${SCRIPT_URL}?action=deleteClass&className=${encodeURIComponent(className)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(result.message);
-                await loadClassList();
-            } else {
-                showError(result.message);
-            }
-        }
-
-        // ---------- 點名（防重複扣課）----------
+        // ---------- 點名（防重複）----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -537,11 +460,10 @@
             for (let className in grouped) {
                 html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
                 grouped[className].forEach(s => {
-                    // 檢查 localStorage 是否已點名（僅前端記憶，重置按鈕清除）
                     const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-                    const disabledAttr = isChecked ? 'disabled' : '';
+                    const disabled = isChecked ? 'disabled' : '';
                     const checkedClass = isChecked ? 'checked' : '';
-                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabledAttr}>${s.name}</button>`;
+                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${s.name}</button>`;
                 });
                 html += '</div>';
             }
@@ -550,65 +472,149 @@
 
         async function markAttendance(name) {
             const btn = document.querySelector(`.student-button[data-name="${name}"]`);
-            // 如果按鈕已禁用或已有checked類別，不執行
             if (btn && (btn.disabled || btn.classList.contains('checked'))) {
-                showError('此學生已完成點名，請勿重複扣課');
+                showError('此學生已完成點名');
                 return;
             }
-            
             const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
             const data = await res.json();
             if (data.success) {
                 if (btn) {
                     btn.classList.add('checked');
                     btn.disabled = true;
-                    // 儲存點名狀態到 localStorage，重置時清除
                     localStorage.setItem(`attendance_${name}`, 'checked');
                 }
                 showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
-                // 更新學生資料快取（剩餘堂數）
                 await fetchAllStudents();
-                // 更新其他區塊的學生下拉選單
-                populateStudentSelects();
+                populateClearSelect();
             } else {
                 showError(data.message || '點名失敗');
             }
         }
 
         function resetAttendance() {
-            if (userRole === 'limited') { 
-                showError('您沒有權限重置點名'); 
-                return; 
-            }
-            // 清除所有點名按鈕的 checked 狀態與 disabled
+            if (userRole === 'limited') { showError('無權限'); return; }
             document.querySelectorAll('.student-button.checked').forEach(b => {
                 b.classList.remove('checked');
                 b.disabled = false;
             });
-            // 清除 localStorage 中的點名記錄
-            allStudents.forEach(s => {
-                localStorage.removeItem(`attendance_${s.name}`);
-            });
-            showSuccess('點名狀態已重置，所有學生可再次點名');
+            allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
+            showSuccess('點名狀態已重置');
         }
 
-        // ---------- 新增/扣減課堂 - 模糊搜尋 ----------
+        // ---------- 租借裝備（所有教練可用）----------
+        function updateRentalList() {
+            const container = document.getElementById('rentalList');
+            if (!container) return;
+            const grouped = {};
+            allStudents.forEach(s => {
+                if (!grouped[s.class]) grouped[s.class] = [];
+                grouped[s.class].push(s);
+            });
+            let html = '';
+            for (let className in grouped) {
+                html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+                grouped[className].forEach(s => {
+                    html += `<button class="rental-button" data-name="${s.name}" onclick="addRental('${s.name}')">${s.name} (${s.rentalCount}次)</button>`;
+                });
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        async function addRental(name) {
+            const res = await fetch(`${SCRIPT_URL}?action=addRental&name=${encodeURIComponent(name)}`);
+            const data = await res.json();
+            if (data.success) {
+                showSuccess(`${name} 租借+1，總次數 ${data.rentals}`);
+                await fetchAllStudents();
+                updateRentalList();
+                populateClearSelect();
+            } else {
+                showError(data.error || '租借失敗');
+            }
+        }
+
+        // ---------- 試堂管理（完整權限）----------
+        async function loadTrialList() {
+            const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
+            const trials = await res.json();
+            const container = document.getElementById('trialList');
+            let html = '';
+            trials.forEach(t => {
+                html += `<div class="student-row">
+                    <span><strong>${t.name}</strong> ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅' : '❌'} ${t.note}</span>
+                    <div>
+                        <button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
+                        <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html || '無試堂學生';
+        }
+
+        async function addTrial() {
+            const data = {
+                name: document.getElementById('trialName').value,
+                date: document.getElementById('trialDate').value,
+                rentEquipment: document.getElementById('trialRent').value === 'true',
+                paid: document.getElementById('trialPaid').value === 'true',
+                note: document.getElementById('trialNote').value
+            };
+            if (!data.name || !data.date) return showError('姓名與日期必填');
+            const res = await fetch(`${SCRIPT_URL}?action=addTrialStudent&data=${encodeURIComponent(JSON.stringify(data))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('新增成功');
+                document.getElementById('trialName').value = '';
+                document.getElementById('trialDate').value = '';
+                document.getElementById('trialNote').value = '';
+                loadTrialList();
+            } else {
+                showError(result.error || '新增失敗');
+            }
+        }
+
+        window.editTrialDate = async function(name) {
+            const newDate = prompt('請輸入新日期 (YYYY-MM-DD)', '');
+            if (!newDate) return;
+            const updates = { date: newDate };
+            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('日期已更新');
+                loadTrialList();
+            } else {
+                showError(result.error);
+            }
+        };
+
+        window.markTrialPaid = async function(name) {
+            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('已標記收費');
+                loadTrialList();
+            } else {
+                showError(result.error);
+            }
+        };
+
+        // ---------- 新增/扣課（完整權限）----------
         const searchInput = document.getElementById('searchStudentInput');
         const dropdown = document.getElementById('studentDropdown');
         if (searchInput) {
             searchInput.addEventListener('input', function(e) {
-                const keyword = e.target.value.trim().toLowerCase();
-                if (keyword.length < 1) { dropdown.style.display = 'none'; return; }
-                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(keyword));
+                const kw = e.target.value.trim().toLowerCase();
+                if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
                 if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
                 let html = '';
-                filtered.forEach(s => {
-                    html += `<div class="dropdown-item" onclick="selectStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 剩${s.remainingClasses}堂</div>`;
-                });
+                filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 剩${s.remainingClasses}堂</div>`);
                 dropdown.innerHTML = html;
                 dropdown.style.display = 'block';
             });
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', e => {
                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
             });
         }
@@ -619,14 +625,12 @@
         };
 
         async function submitAddClasses() {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
+            if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('searchStudentInput').value.trim();
             const className = document.getElementById('selectedClass').value;
             const delta = parseInt(document.getElementById('addClassDelta').value);
-            const reason = document.getElementById('addClassReason').value.trim() || '教練手動調整';
-            if (!name) return showError('請選擇或輸入學生姓名');
-            if (!className) return showError('班級無法自動帶入，請重新搜尋');
-            if (isNaN(delta)) return showError('請輸入有效的課堂變動數字');
+            const reason = document.getElementById('addClassReason').value.trim() || '教練調整';
+            if (!name || !className || isNaN(delta)) return showError('請完成所有欄位');
             const payload = { name, class: className, classesChange: delta, reason };
             const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
             const result = await res.json();
@@ -637,20 +641,20 @@
                 document.getElementById('addClassDelta').value = '10';
                 document.getElementById('addClassReason').value = '';
                 await fetchAllStudents();
-                populateStudentSelects();
-                updateAttendanceList(); // 更新點名按鈕狀態
+                updateAttendanceList();
+                updateRentalList();
+                populateClearSelect();
             } else {
                 showError(result.message);
             }
         }
 
-        // ---------- 新增學生（預設10堂）----------
+        // ---------- 新增學生（完整權限）----------
         async function submitAddStudent() {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
+            if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('newStudentName').value.trim();
             const className = document.getElementById('newStudentClass').value;
-            if (!name) return showError('請輸入學生姓名');
-            if (!className) return showError('請選擇班級');
+            if (!name || !className) return showError('請填寫姓名與班級');
             const payload = { name, class: className, classes: 10 };
             const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}`);
             const result = await res.json();
@@ -659,27 +663,42 @@
                 document.getElementById('newStudentName').value = '';
                 document.getElementById('newStudentClass').value = '';
                 await fetchAllStudents();
-                populateStudentSelects();
                 updateAttendanceList();
+                updateRentalList();
+                populateClearSelect();
             } else {
                 showError(result.message || '新增失敗');
             }
         }
 
-        // ---------- 填充清零下拉（僅有請假學生）----------
-        function populateStudentSelects() {
-            const clearSelect = document.getElementById('clearLeaveStudent');
-            if (clearSelect) {
-                const leaveStudents = allStudents.filter(s => s.leaveCount > 0);
-                clearSelect.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
-                    leaveStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount}次</option>`).join('');
+        // ---------- 班級管理（完整權限）----------
+        async function addNewClass() {
+            if (userRole === 'limited') { showError('無權限'); return; }
+            const className = document.getElementById('newClassName').value.trim();
+            if (!className) return showError('請輸入班級名稱');
+            const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('newClassName').value = '';
+                loadClassList();
+            } else {
+                showError(result.message);
+            }
+        }
+
+        // ---------- 清零區塊 ----------
+        function populateClearSelect() {
+            const select = document.getElementById('clearStudent');
+            if (select) {
+                select.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
+                    allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount} 租借${s.rentalCount}</option>`).join('');
             }
         }
 
         async function clearLeaveCount() {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
-            const select = document.getElementById('clearLeaveStudent');
-            const name = select.value;
+            if (userRole === 'limited') { showError('無權限'); return; }
+            const name = document.getElementById('clearStudent').value;
             if (!name) return showError('請選擇學生');
             if (!confirm(`確定將 ${name} 的請假次數歸零？`)) return;
             const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
@@ -687,57 +706,85 @@
             if (result.success) {
                 showSuccess(`${name} 請假次數已清零`);
                 await fetchAllStudents();
-                populateStudentSelects();
-                renderLeaveStudentList();
+                populateClearSelect();
+                renderClearStudentList();
             } else {
-                showError(result.message || '清零失敗');
+                showError(result.error);
             }
         }
 
-        // ---------- 代請假 - 模糊搜尋 ----------
-        const coachLeaveSearchInput = document.getElementById('coachLeaveSearchInput');
-        const coachLeaveDropdown = document.getElementById('coachLeaveDropdown');
-        if (coachLeaveSearchInput) {
-            coachLeaveSearchInput.addEventListener('input', function(e) {
-                const keyword = e.target.value.trim().toLowerCase();
-                if (keyword.length < 1) { coachLeaveDropdown.style.display = 'none'; return; }
-                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(keyword));
-                if (filtered.length === 0) { coachLeaveDropdown.style.display = 'none'; return; }
-                let html = '';
-                filtered.forEach(s => {
-                    html += `<div class="dropdown-item" onclick="selectCoachLeaveStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 請假${s.leaveCount}次 剩${s.remainingClasses}堂</div>`;
-                });
-                coachLeaveDropdown.innerHTML = html;
-                coachLeaveDropdown.style.display = 'block';
+        async function clearRentalCount() {
+            if (userRole === 'limited') { showError('無權限'); return; }
+            const name = document.getElementById('clearStudent').value;
+            if (!name) return showError('請選擇學生');
+            if (!confirm(`確定將 ${name} 的租借次數歸零？`)) return;
+            const res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`${name} 租借次數已清零`);
+                await fetchAllStudents();
+                populateClearSelect();
+                renderClearStudentList();
+                updateRentalList();
+            } else {
+                showError(result.error);
+            }
+        }
+
+        function renderClearStudentList() {
+            const container = document.getElementById('clearStudentList');
+            if (!container) return;
+            let html = '';
+            allStudents.filter(s => s.leaveCount > 0 || s.rentalCount > 0).forEach(s => {
+                html += `<div class="student-row">
+                    <span><strong>${s.name}</strong> (${s.class})</span>
+                    <span><span class="leave-badge">請假 ${s.leaveCount}</span> <span class="rental-badge">租借 ${s.rentalCount}</span></span>
+                </div>`;
             });
-            document.addEventListener('click', function(e) {
-                if (!coachLeaveSearchInput.contains(e.target) && !coachLeaveDropdown.contains(e.target)) coachLeaveDropdown.style.display = 'none';
+            container.innerHTML = html || '無任何請假或租借記錄';
+        }
+
+        // ---------- 教練代請假（完整權限）----------
+        const coachSearch = document.getElementById('coachLeaveSearchInput');
+        const coachDropdown = document.getElementById('coachLeaveDropdown');
+        if (coachSearch) {
+            coachSearch.addEventListener('input', function(e) {
+                const kw = e.target.value.trim().toLowerCase();
+                if (kw.length < 1) { coachDropdown.style.display = 'none'; return; }
+                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
+                if (filtered.length === 0) { coachDropdown.style.display = 'none'; return; }
+                let html = '';
+                filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectCoachLeave('${s.name}', '${s.class}')">${s.name} (${s.class}) 請假${s.leaveCount}次</div>`);
+                coachDropdown.innerHTML = html;
+                coachDropdown.style.display = 'block';
+            });
+            document.addEventListener('click', e => {
+                if (!coachSearch.contains(e.target) && !coachDropdown.contains(e.target)) coachDropdown.style.display = 'none';
             });
         }
-        window.selectCoachLeaveStudent = function(name, className) {
+        window.selectCoachLeave = function(name, className) {
             document.getElementById('coachLeaveSearchInput').value = name;
             document.getElementById('coachLeaveSelectedClass').value = className;
-            coachLeaveDropdown.style.display = 'none';
+            coachDropdown.style.display = 'none';
         };
 
         async function submitCoachLeave() {
-            if (userRole === 'limited') { showError('您沒有權限'); return; }
+            if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('coachLeaveSearchInput').value.trim();
             const className = document.getElementById('coachLeaveSelectedClass').value;
-            if (!name) return showError('請選擇或輸入學生姓名');
-            if (!className) return showError('班級無法自動帶入，請重新搜尋');
+            if (!name || !className) return showError('請選擇學生');
             const student = allStudents.find(s => s.name === name);
-            let confirmMsg = `確定為 ${name} 提交請假？`;
-            if (student && student.leaveCount >= 2) confirmMsg += `\n⚠️ 該生已請假 ${student.leaveCount} 次，本次請假將扣減1堂課！`;
-            if (!confirm(confirmMsg)) return;
+            let msg = `確定為 ${name} 提交請假？`;
+            if (student && student.leaveCount >= 2) msg += '\n⚠️ 將扣1堂課！';
+            if (!confirm(msg)) return;
             const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}`);
             const result = await res.json();
             if (result.success) {
-                showSuccess(`${name} 請假成功！請假次數: ${result.leaveCount}，剩餘堂數: ${result.remaining}`);
+                showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
                 await fetchAllStudents();
-                populateStudentSelects();
-                renderLeaveStudentList();
                 updateAttendanceList();
+                populateClearSelect();
+                renderClearStudentList();
                 document.getElementById('coachLeaveSearchInput').value = '';
                 document.getElementById('coachLeaveSelectedClass').value = '';
             } else {
@@ -745,29 +792,14 @@
             }
         }
 
-        function renderLeaveStudentList() {
-            const container = document.getElementById('leaveStudentList');
-            if (!container) return;
-            let html = '';
-            allStudents.filter(s => s.leaveCount > 0).forEach(s => {
-                html += `<div class="student-row">
-                    <span><strong>${s.name}</strong> (${s.class}) 剩餘 ${s.remainingClasses} 堂</span>
-                    <span class="leave-badge">請假 ${s.leaveCount} 次</span>
-                </div>`;
-            });
-            if (html === '') html = '<p style="color:#718096;">目前無任何學生有請假記錄。</p>';
-            container.innerHTML = html;
-        }
-
+        // ---------- 訊息 ----------
         function showSuccess(msg) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.innerHTML = `<div class="success">✅ ${msg}</div>`;
-            setTimeout(() => msgDiv.innerHTML = '', 4000);
+            document.getElementById('message').innerHTML = `<div class="success">✅ ${msg}</div>`;
+            setTimeout(() => document.getElementById('message').innerHTML = '', 4000);
         }
         function showError(msg) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.innerHTML = `<div class="error">❌ ${msg}</div>`;
-            setTimeout(() => msgDiv.innerHTML = '', 4000);
+            document.getElementById('message').innerHTML = `<div class="error">❌ ${msg}</div>`;
+            setTimeout(() => document.getElementById('message').innerHTML = '', 4000);
         }
     </script>
 </body>
