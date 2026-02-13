@@ -740,16 +740,28 @@
             }
         }
 
-        // ---------- 改期（使用原生日期選擇器）----------
+        // ---------- 改期（修復手機無法彈出日期選擇器）----------
         window.editTrialDate = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
-            // 創建一個臨時的日期輸入元素
+            
+            // 創建一個隱藏的日期輸入元素
             const dateInput = document.createElement('input');
             dateInput.type = 'date';
             dateInput.style.position = 'fixed';
-            dateInput.style.top = '-100px';
-            dateInput.style.left = '-100px';
+            dateInput.style.top = '0';
+            dateInput.style.left = '0';
+            dateInput.style.opacity = '0';
+            dateInput.style.pointerEvents = 'none'; // 避免遮擋點擊
             document.body.appendChild(dateInput);
+            
+            // 使用 showPicker 方法（現代瀏覽器支持）
+            if (dateInput.showPicker) {
+                dateInput.showPicker();
+            } else {
+                // 降級方案：嘗試調用 click
+                dateInput.click();
+            }
+            
             dateInput.addEventListener('change', async function() {
                 const newDate = dateInput.value;
                 document.body.removeChild(dateInput);
@@ -765,7 +777,6 @@
                     showError(result.error);
                 }
             });
-            dateInput.click(); // 觸發選擇器
         };
 
         window.markTrialPaid = async function(name) {
