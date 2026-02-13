@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統V3.5</title>
+    <title>教練後台 · 輪滑課程系統v3.6</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -381,7 +381,7 @@
             <!-- 新增學生（完整權限） -->
             <div id="addStudent" class="section" style="display: none;">
                 <h2>👤 新增學生（預設10堂）</h2>
-                <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。</div>
+                <div class="info-box">🎁 新學生自動獲得 10 堂課，無需再額外新增課堂數。</div>
                 <div class="form-row">
                     <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
                     <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
@@ -638,12 +638,21 @@
             }
         }
 
+        // ---------- 取得 UTC+8 今天日期 ----------
+        function getTodayUTC8() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         // ---------- 試堂通知欄 ----------
         async function loadTrialAlerts() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
-            const today = new Date().toISOString().split('T')[0];
-            // 過濾：未付費 或 (已付費且日期>=今天)
+            const today = getTodayUTC8(); // 使用 UTC+8 日期
+            // 過濾：未付費 或 (已付費且日期 >= 今天)
             const filtered = trials.filter(t => {
                 if (!t.paid) return true;
                 else return t.date >= today;
@@ -658,7 +667,7 @@
             let html = '';
             filtered.forEach(t => {
                 const buttonHtml = (userRole === 'full' && !t.paid) 
-                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">該學生未付費，已交費按此</button>` 
+                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">該學生未交費，已交費請按此</button>` 
                     : (t.paid ? `<span class="paid-tag">✅已付費</span>` : `<button disabled>僅完整權限</button>`);
                 html += `<div class="trial-alert-item">
                     <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>
@@ -692,8 +701,13 @@
                     <span><strong>${t.name}</strong> ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'} ${t.note}</span>
                     <div>`;
                 if (userRole === 'full') {
-                    html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                             <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>`;
+                    // 已付費學生只顯示改期按鈕，未付費學生顯示改期+已收費按鈕
+                    if (t.paid) {
+                        html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
+                    } else {
+                        html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
+                                 <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰未收費，已收費按此</button>`;
+                    }
                 } else {
                     html += `<span>(僅完整權限可操作)</span>`;
                 }
@@ -726,20 +740,32 @@
             }
         }
 
+        // ---------- 改期（使用原生日期選擇器）----------
         window.editTrialDate = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
-            const newDate = prompt('請輸入新日期 (YYYY-MM-DD)', '');
-            if (!newDate) return;
-            const updates = { date: newDate };
-            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('日期已更新');
-                await loadTrialAlerts();
-                await loadTrialList();
-            } else {
-                showError(result.error);
-            }
+            // 創建一個臨時的日期輸入元素
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.style.position = 'fixed';
+            dateInput.style.top = '-100px';
+            dateInput.style.left = '-100px';
+            document.body.appendChild(dateInput);
+            dateInput.addEventListener('change', async function() {
+                const newDate = dateInput.value;
+                document.body.removeChild(dateInput);
+                if (!newDate) return;
+                const updates = { date: newDate };
+                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('日期已更新');
+                    await loadTrialAlerts();
+                    await loadTrialList();
+                } else {
+                    showError(result.error);
+                }
+            });
+            dateInput.click(); // 觸發選擇器
         };
 
         window.markTrialPaid = async function(name) {
