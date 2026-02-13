@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>輪滑課程系統 · 家長查詢</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             background: #f5f7fa;
@@ -48,7 +52,10 @@
             border: none;
             cursor: pointer;
         }
-        .coach-fab:hover { background: #2980b9; transform: scale(1.05); }
+        .coach-fab:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
         .search-area {
             background: #f0f4f8;
             padding: 18px 16px;
@@ -157,9 +164,18 @@
             font-weight: 600;
             white-space: nowrap;
         }
-        .badge.red { background: #fc8181; color: white; }
-        .badge.yellow { background: #f6e05e; color: #744210; }
-        .badge.green { background: #48bb78; color: white; }
+        .badge.red {
+            background: #fc8181;
+            color: white;
+        }
+        .badge.yellow {
+            background: #f6e05e;
+            color: #744210;
+        }
+        .badge.green {
+            background: #48bb78;
+            color: white;
+        }
         .warning-text {
             color: #c53030;
             font-size: 0.85rem;
@@ -181,15 +197,41 @@
             padding-top: 16px;
         }
         @media screen and (max-width: 480px) {
-            body { padding: 8px; padding-bottom: 80px; }
-            .container { padding: 16px 12px; }
-            h1 { font-size: 1.4rem; }
-            .coach-fab { bottom: 16px; right: 16px; padding: 12px 20px; font-size: 0.9rem; }
-            .student-tag { font-size: 0.85rem; padding: 6px 14px; }
-            .detail-card h2 { font-size: 1.2rem; flex-wrap: wrap; }
-            .info-label { width: 90px; font-size: 0.9rem; }
-            .info-value { font-size: 0.9rem; }
-            .record-table { font-size: 0.8rem; min-width: 450px; }
+            body {
+                padding: 8px;
+                padding-bottom: 80px;
+            }
+            .container {
+                padding: 16px 12px;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            .coach-fab {
+                bottom: 16px;
+                right: 16px;
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+            .student-tag {
+                font-size: 0.85rem;
+                padding: 6px 14px;
+            }
+            .detail-card h2 {
+                font-size: 1.2rem;
+                flex-wrap: wrap;
+            }
+            .info-label {
+                width: 90px;
+                font-size: 0.9rem;
+            }
+            .info-value {
+                font-size: 0.9rem;
+            }
+            .record-table {
+                font-size: 0.8rem;
+                min-width: 450px;
+            }
         }
     </style>
 </head>
@@ -206,7 +248,7 @@
         <div id="message" class="message"></div>
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。租借裝備每次 $20。</p>
-            <p>系統版本 3.4 By Thomas哥哥</p>
+            <p>系統版本 Version 3.5 By Thomas哥哥</p>
         </div>
     </div>
 
