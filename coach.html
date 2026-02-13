@@ -260,6 +260,22 @@
             border-radius: 8px;
             font-size: 0.9rem;
         }
+
+        /* 載入中動畫 */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media screen and (max-width: 480px) {
             body { padding: 8px; }
             .container { padding: 16px 12px; }
@@ -276,7 +292,7 @@
 </head>
 <body>
     <div id="loginForm">
-        <h2>🔐 教練專區, 家長誤入請關閉頁面~</h2>
+        <h2>🔐 教練專區</h2>
         <input type="password" id="password" placeholder="請輸入密碼" style="margin:20px 0; padding:14px;">
         <button class="btn btn-primary" onclick="login()" style="width:100%;">登入</button>
         <div id="loginMessage" style="margin-top:15px;"></div>
@@ -286,129 +302,138 @@
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
         <h1>⚙️ 教練後台 · 輪滑課程系統V3.5</h1>
 
-        <!-- 試堂通知欄 -->
-        <div id="trialAlert" class="trial-alert" style="display: none;">
-            <h3>📋 試堂提醒</h3>
-            <div id="trialAlertList"></div>
+        <!-- 載入中提示 -->
+        <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px; color: #4a5568;">系統載入中，請稍後...</p>
         </div>
 
-        <div id="buttonGrid" class="button-grid">
-            <button id="btnAttendance" class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
-            <button id="btnRental" class="btn btn-rental" onclick="showSection('rental')">🛞 租借裝備</button>
-            <button id="btnTrial" class="btn btn-indigo" onclick="showSection('trial')">🧪 試堂管理</button>
-            <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
-            <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
-            <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
-            <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 清零請假/租借</button>
-            <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
-            <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
-            <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
-        </div>
-
-        <!-- 點名區塊 -->
-        <div id="attendance" class="section" style="display: none;">
-            <h2>📌 點名 (扣課)</h2>
-            <div id="attendanceList"></div>
-            <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
-        </div>
-
-        <!-- 租借裝備區塊 -->
-        <div id="rental" class="section" style="display: none;">
-            <h2>🛞 裝備租借 (每次 $20)</h2>
-            <div id="rentalList"></div>
-        </div>
-
-        <!-- 試堂管理區塊 -->
-        <div id="trial" class="section" style="display: none;">
-            <h2>🧪 試堂管理</h2>
-            <div class="info-box">試堂學生僅記錄一堂，過期未付費會在上方通知欄提醒。</div>
-            <div class="form-row">
-                <div class="form-group"><label>姓名</label><input type="text" id="trialName"></div>
-                <div class="form-group"><label>試堂日期</label><input type="date" id="trialDate"></div>
-                <div class="form-group"><label>租借裝備</label><select id="trialRent"><option value="false">否</option><option value="true">是</option></select></div>
-                <div class="form-group"><label>已付費</label><select id="trialPaid"><option value="false">否</option><option value="true">是</option></select></div>
-                <div class="form-group"><label>備註</label><input type="text" id="trialNote"></div>
-                <button class="btn btn-indigo" onclick="addTrial()" style="width:100%;">新增試堂學生</button>
+        <!-- 應用內容（初始隱藏） -->
+        <div id="appContent" style="display: none;">
+            <!-- 試堂通知欄 -->
+            <div id="trialAlert" class="trial-alert" style="display: none;">
+                <h3>📋 試堂提醒</h3>
+                <div id="trialAlertList"></div>
             </div>
-            <h3>📋 試堂學生記錄</h3>
-            <div id="trialList"></div>
-        </div>
 
-        <!-- 新增/扣課（完整權限） -->
-        <div id="addClasses" class="section" style="display: none;">
-            <h2>➕ 新增 / 扣減課堂</h2>
-            <div class="info-box">💡 輸入姓名關鍵字選擇學生，班級自動帶入。</div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>🔍 搜尋學生</label>
-                    <div class="search-dropdown">
-                        <input type="text" id="searchStudentInput" placeholder="輸入姓名關鍵字" autocomplete="off">
-                        <div id="studentDropdown" class="dropdown-list"></div>
-                    </div>
+            <div id="buttonGrid" class="button-grid">
+                <button id="btnAttendance" class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
+                <button id="btnRental" class="btn btn-rental" onclick="showSection('rental')">🛞 租借裝備</button>
+                <button id="btnTrial" class="btn btn-indigo" onclick="showSection('trial')">🧪 試堂管理</button>
+                <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
+                <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
+                <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
+                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 清零請假/租借</button>
+                <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
+                <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
+                <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
+            </div>
+
+            <!-- 點名區塊 -->
+            <div id="attendance" class="section" style="display: none;">
+                <h2>📌 點名 (扣課)</h2>
+                <div id="attendanceList"></div>
+                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
+            </div>
+
+            <!-- 租借裝備區塊 -->
+            <div id="rental" class="section" style="display: none;">
+                <h2>🛞 裝備租借 (每次 $20)</h2>
+                <div id="rentalList"></div>
+            </div>
+
+            <!-- 試堂管理區塊 -->
+            <div id="trial" class="section" style="display: none;">
+                <h2>🧪 試堂管理</h2>
+                <div class="info-box">試堂學生僅記錄一堂，過期未付費會在上方通知欄提醒。</div>
+                <div class="form-row">
+                    <div class="form-group"><label>姓名</label><input type="text" id="trialName"></div>
+                    <div class="form-group"><label>試堂日期</label><input type="date" id="trialDate"></div>
+                    <div class="form-group"><label>租借裝備</label><select id="trialRent"><option value="false">否</option><option value="true">是</option></select></div>
+                    <div class="form-group"><label>已付費</label><select id="trialPaid"><option value="false">否</option><option value="true">是</option></select></div>
+                    <div class="form-group"><label>備註</label><input type="text" id="trialNote"></div>
+                    <button class="btn btn-indigo" onclick="addTrial()" style="width:100%;">新增試堂學生</button>
                 </div>
-                <div class="form-group"><label>班級</label><input type="text" id="selectedClass" readonly></div>
-                <div class="form-group"><label>課堂變動</label><input type="number" id="addClassDelta" value="10"></div>
-                <div class="form-group"><label>原因</label><textarea id="addClassReason" placeholder="續費10堂"></textarea></div>
-                <button class="btn btn-success" onclick="submitAddClasses()" style="width:100%;">確認更新</button>
+                <h3>📋 試堂學生記錄</h3>
+                <div id="trialList"></div>
             </div>
-            <div id="addClassesMessage"></div>
-        </div>
 
-        <!-- 新增學生（完整權限） -->
-        <div id="addStudent" class="section" style="display: none;">
-            <h2>👤 新增學生（預設10堂）</h2>
-            <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。</div>
-            <div class="form-row">
-                <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
-                <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
-                <button class="btn btn-indigo" onclick="submitAddStudent()" style="width:100%;">新增學生</button>
-            </div>
-            <div id="addStudentMessage"></div>
-        </div>
-
-        <!-- 班級管理（完整權限） -->
-        <div id="classManage" class="section" style="display: none;">
-            <h2>🏫 班級管理</h2>
-            <div class="form-row">
-                <div class="form-group"><label>新增班級</label><input type="text" id="newClassName" placeholder="D1"></div>
-                <button class="btn btn-primary" onclick="addNewClass()" style="width:100%;">新增班級</button>
-            </div>
-            <h3>現有班級</h3>
-            <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-        </div>
-
-        <!-- 清零請假/租借（完整權限） -->
-        <div id="clear" class="section" style="display: none;">
-            <h2>🧹 清零請假次數 / 租借次數</h2>
-            <div class="form-row">
-                <div class="form-group"><label>選擇學生</label><select id="clearStudent"></select></div>
-                <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex:1;">清零請假</button>
-                <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
-            </div>
-            <div id="clearMessage"></div>
-            <h3>📊 目前請假/租借次數一覽</h3>
-            <div id="clearStudentList"></div>
-        </div>
-
-        <!-- 教練代請假（完整權限） -->
-        <div id="coachLeave" class="section" style="display: none;">
-            <h2>📝 教練代為請假</h2>
-            <div class="info-box">🔍 輸入姓名關鍵字選擇學生。</div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>🔍 搜尋學生</label>
-                    <div class="search-dropdown">
-                        <input type="text" id="coachLeaveSearchInput" placeholder="輸入姓名關鍵字" autocomplete="off">
-                        <div id="coachLeaveDropdown" class="dropdown-list"></div>
+            <!-- 新增/扣課（完整權限） -->
+            <div id="addClasses" class="section" style="display: none;">
+                <h2>➕ 新增 / 扣減課堂</h2>
+                <div class="info-box">💡 輸入姓名關鍵字選擇學生，班級自動帶入。</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>🔍 搜尋學生</label>
+                        <div class="search-dropdown">
+                            <input type="text" id="searchStudentInput" placeholder="輸入姓名關鍵字" autocomplete="off">
+                            <div id="studentDropdown" class="dropdown-list"></div>
+                        </div>
                     </div>
+                    <div class="form-group"><label>班級</label><input type="text" id="selectedClass" readonly></div>
+                    <div class="form-group"><label>課堂變動</label><input type="number" id="addClassDelta" value="10"></div>
+                    <div class="form-group"><label>原因</label><textarea id="addClassReason" placeholder="續費10堂"></textarea></div>
+                    <button class="btn btn-success" onclick="submitAddClasses()" style="width:100%;">確認更新</button>
                 </div>
-                <div class="form-group"><label>班級</label><input type="text" id="coachLeaveSelectedClass" readonly></div>
-                <button class="btn btn-purple" onclick="submitCoachLeave()" style="width:100%;">提交請假</button>
+                <div id="addClassesMessage"></div>
             </div>
-            <div id="coachLeaveMessage"></div>
-        </div>
 
-        <div id="message" class="message"></div>
+            <!-- 新增學生（完整權限） -->
+            <div id="addStudent" class="section" style="display: none;">
+                <h2>👤 新增學生（預設10堂）</h2>
+                <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。</div>
+                <div class="form-row">
+                    <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
+                    <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
+                    <button class="btn btn-indigo" onclick="submitAddStudent()" style="width:100%;">新增學生</button>
+                </div>
+                <div id="addStudentMessage"></div>
+            </div>
+
+            <!-- 班級管理（完整權限） -->
+            <div id="classManage" class="section" style="display: none;">
+                <h2>🏫 班級管理</h2>
+                <div class="form-row">
+                    <div class="form-group"><label>新增班級</label><input type="text" id="newClassName" placeholder="D1"></div>
+                    <button class="btn btn-primary" onclick="addNewClass()" style="width:100%;">新增班級</button>
+                </div>
+                <h3>現有班級</h3>
+                <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+
+            <!-- 清零請假/租借（完整權限） -->
+            <div id="clear" class="section" style="display: none;">
+                <h2>🧹 清零請假次數 / 租借次數</h2>
+                <div class="form-row">
+                    <div class="form-group"><label>選擇學生</label><select id="clearStudent"></select></div>
+                    <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex:1;">清零請假</button>
+                    <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
+                </div>
+                <div id="clearMessage"></div>
+                <h3>📊 目前請假/租借次數一覽</h3>
+                <div id="clearStudentList"></div>
+            </div>
+
+            <!-- 教練代請假（完整權限） -->
+            <div id="coachLeave" class="section" style="display: none;">
+                <h2>📝 教練代為請假</h2>
+                <div class="info-box">🔍 輸入姓名關鍵字選擇學生。</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>🔍 搜尋學生</label>
+                        <div class="search-dropdown">
+                            <input type="text" id="coachLeaveSearchInput" placeholder="輸入姓名關鍵字" autocomplete="off">
+                            <div id="coachLeaveDropdown" class="dropdown-list"></div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>班級</label><input type="text" id="coachLeaveSelectedClass" readonly></div>
+                    <button class="btn btn-purple" onclick="submitCoachLeave()" style="width:100%;">提交請假</button>
+                </div>
+                <div id="coachLeaveMessage"></div>
+            </div>
+
+            <div id="message" class="message"></div>
+        </div> <!-- end appContent -->
     </div>
 
     <script>
@@ -427,8 +452,9 @@
                     userRole = data.role || 'full';
                     document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('mainContent').style.display = 'block';
-                    applyRoleRestrictions();
-                    loadAllData();
+                    document.getElementById('loadingSpinner').style.display = 'block';
+                    document.getElementById('appContent').style.display = 'none';
+                    await loadAllData(); // 等待所有資料載入
                 } else {
                     showLoginError('密碼錯誤');
                 }
@@ -440,6 +466,35 @@
             document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
         }
 
+        // ---------- 載入所有資料 ----------
+        async function loadAllData() {
+            try {
+                await Promise.all([fetchAllStudents(), loadClassList()]);
+                await loadTrialAlerts();   // 載入試堂通知欄
+                await loadTrialList();      // 載入試堂記錄列表
+
+                // 更新 UI
+                updateAttendanceList();
+                updateRentalList();
+                populateClearSelect();
+
+                // 隱藏載入中，顯示應用內容
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+
+                // 根據權限顯示按鈕和預設區塊
+                applyRoleRestrictions();
+                showSection('attendance'); // 預設顯示點名區
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loadingSpinner').innerHTML = `
+                    <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
+                    <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
+                `;
+            }
+        }
+
+        // ---------- 權限控制 ----------
         function applyRoleRestrictions() {
             const fullButtons = ['btnAddClasses', 'btnAddStudent', 'btnClassManage', 'btnClear', 'btnCoachLeave', 'btnPayment', 'btnTrial'];
             const limitedButtons = ['btnAttendance', 'btnRental', 'btnPhoto'];
@@ -451,10 +506,10 @@
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'none');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 document.getElementById('resetAttendanceBtn').style.display = 'none';
-                showSection('attendance');
             }
         }
 
+        // ---------- 區塊切換 ----------
         function showSection(sectionId) {
             if (userRole === 'limited' && !['attendance', 'rental', 'photo'].includes(sectionId)) {
                 showError('您沒有權限使用此功能');
@@ -469,15 +524,7 @@
             if (sectionId === 'trial') loadTrialList();
         }
 
-        async function loadAllData() {
-            await Promise.all([fetchAllStudents(), loadClassList()]);
-            updateAttendanceList();
-            updateRentalList();
-            populateClearSelect();
-            loadTrialAlerts();   // 載入試堂通知欄
-            loadTrialList();      // 載入試堂記錄列表
-        }
-
+        // ---------- 取得所有學生 ----------
         async function fetchAllStudents() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
             const data = await res.json();
@@ -485,10 +532,12 @@
             return data;
         }
 
+        // ---------- 班級排序 ----------
         function sortClasses(classes) {
             return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         }
 
+        // ---------- 取得班級列表 ----------
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
@@ -589,21 +638,16 @@
             }
         }
 
-        // ---------- 試堂通知欄（新版邏輯）----------
+        // ---------- 試堂通知欄 ----------
         async function loadTrialAlerts() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-            
-            // 過濾：顯示未付費的所有學生，以及已付費但日期 >= 今天的學生
+            const today = new Date().toISOString().split('T')[0];
+            // 過濾：未付費 或 (已付費且日期>=今天)
             const filtered = trials.filter(t => {
-                if (!t.paid) return true; // 未付費全部顯示
-                else {
-                    // 已付費且日期大於等於今天的也顯示
-                    return t.date >= today;
-                }
+                if (!t.paid) return true;
+                else return t.date >= today;
             });
-
             const alertDiv = document.getElementById('trialAlert');
             const alertList = document.getElementById('trialAlertList');
             if (filtered.length === 0) {
@@ -613,10 +657,8 @@
             alertDiv.style.display = 'block';
             let html = '';
             filtered.forEach(t => {
-                const paidClass = t.paid ? 'paid-tag' : '';
-                const paidText = t.paid ? '✅已付費' : '';
                 const buttonHtml = (userRole === 'full' && !t.paid) 
-                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">已交費</button>` 
+                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">該學生未付費，已交費按此</button>` 
                     : (t.paid ? `<span class="paid-tag">✅已付費</span>` : `<button disabled>僅完整權限</button>`);
                 html += `<div class="trial-alert-item">
                     <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>
@@ -626,15 +668,14 @@
             alertList.innerHTML = html;
         }
 
-        // 從通知欄標記已交費
         window.markTrialPaidFromAlert = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
             const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess(`${name} 已標記為已交費`);
-                await loadTrialAlerts();  // 重新載入通知欄
-                await loadTrialList();     // 重新載入試堂記錄列表
+                await loadTrialAlerts();
+                await loadTrialList();
             } else {
                 showError(result.error);
             }
@@ -714,7 +755,7 @@
             }
         };
 
-        // ---------- 新增/扣課（完整權限）----------
+        // ---------- 新增/扣課（模糊搜尋）----------
         const searchInput = document.getElementById('searchStudentInput');
         const dropdown = document.getElementById('studentDropdown');
         if (searchInput) {
@@ -763,7 +804,7 @@
             }
         }
 
-        // ---------- 新增學生（完整權限）----------
+        // ---------- 新增學生（預設10堂）----------
         async function submitAddStudent() {
             if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('newStudentName').value.trim();
@@ -785,7 +826,7 @@
             }
         }
 
-        // ---------- 班級管理（完整權限）----------
+        // ---------- 新增班級 ----------
         async function addNewClass() {
             if (userRole === 'limited') { showError('無權限'); return; }
             const className = document.getElementById('newClassName').value.trim();
@@ -801,7 +842,7 @@
             }
         }
 
-        // ---------- 清零區塊 ----------
+        // ---------- 填充清零下拉選單 ----------
         function populateClearSelect() {
             const select = document.getElementById('clearStudent');
             if (select) {
@@ -810,6 +851,7 @@
             }
         }
 
+        // ---------- 清零請假 ----------
         async function clearLeaveCount() {
             if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('clearStudent').value;
@@ -827,6 +869,7 @@
             }
         }
 
+        // ---------- 清零租借 ----------
         async function clearRentalCount() {
             if (userRole === 'limited') { showError('無權限'); return; }
             const name = document.getElementById('clearStudent').value;
@@ -845,6 +888,7 @@
             }
         }
 
+        // ---------- 顯示有請假/租借的學生列表 ----------
         function renderClearStudentList() {
             const container = document.getElementById('clearStudentList');
             if (!container) return;
@@ -858,7 +902,7 @@
             container.innerHTML = html || '無任何請假或租借記錄';
         }
 
-        // ---------- 教練代請假（完整權限）----------
+        // ---------- 教練代請假（模糊搜尋）----------
         const coachSearch = document.getElementById('coachLeaveSearchInput');
         const coachDropdown = document.getElementById('coachLeaveDropdown');
         if (coachSearch) {
@@ -906,7 +950,7 @@
             }
         }
 
-        // ---------- 訊息 ----------
+        // ---------- 訊息提示 ----------
         function showSuccess(msg) {
             document.getElementById('message').innerHTML = `<div class="success">✅ ${msg}</div>`;
             setTimeout(() => document.getElementById('message').innerHTML = '', 4000);
