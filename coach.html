@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v3.5</title>
+    <title>教練後台 · 輪滑課程系統v3.7</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -144,12 +144,31 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .student-button .class-count {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .student-button.zero-class {
+            background: #fc8181 !important;
+            color: white !important;
+        }
+        .student-button.zero-class .class-count {
+            background: rgba(255,255,255,0.2);
         }
         .student-button.checked {
             background: #48bb78 !important;
             color: white !important;
             opacity: 0.8;
             cursor: not-allowed;
+        }
+        .student-button.checked .class-count {
+            background: rgba(255,255,255,0.2);
         }
         .student-button:disabled {
             opacity: 0.6;
@@ -244,6 +263,20 @@
             flex-wrap: wrap;
             gap: 8px;
         }
+        .student-row .actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .student-row .btn-sm {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            background: #e2e8f0;
+        }
+        .student-row .btn-sm:hover { background: #cbd5e0; }
         .leave-badge, .rental-badge {
             padding: 4px 12px;
             border-radius: 30px;
@@ -284,9 +317,11 @@
             .btn { flex: 1 0 calc(50% - 8px); font-size: 0.85rem; padding: 10px 8px; }
             .section h2 { font-size: 1.2rem; }
             .form-group { flex: 1 1 100%; }
-            .student-button, .rental-button { font-size: 0.85rem; padding: 6px 14px; }
+            .student-button, .rental-button { font-size: 0.85rem; padding: 6px 12px; }
+            .student-button .class-count { font-size: 0.7rem; padding: 2px 6px; }
             .trial-alert-item { flex-direction: column; align-items: flex-start; }
             .trial-alert-item button { align-self: flex-end; }
+            .student-row .actions { justify-content: flex-end; width: 100%; }
         }
     </style>
 </head>
@@ -300,7 +335,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V3.5</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V3.7</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -440,6 +475,8 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVogWqEvXJuXc1wXYQea1Q_tJS_m5G_cdrFaUrB9cSyakDdrJCPFb3gVEYlXH4fTWSMA/exec';
         let allStudents = [];
         let userRole = 'full';
+        // 點名處理鎖，防止快速點擊重複提交
+        const processingAttendance = {};
 
         // ---------- 登入 ----------
         async function login() {
@@ -550,7 +587,7 @@
             return classes;
         }
 
-        // ---------- 點名（防重複）----------
+        // ---------- 點名（顯示剩餘堂數，防重複）----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -566,7 +603,11 @@
                     const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
                     const disabled = isChecked ? 'disabled' : '';
                     const checkedClass = isChecked ? 'checked' : '';
-                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${s.name}</button>`;
+                    // 根據剩餘堂數決定是否添加 zero-class
+                    const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+                    html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>
+                        ${s.name} <span class="class-count">${s.remainingClasses}堂</span>
+                    </button>`;
                 });
                 html += '</div>';
             }
@@ -574,24 +615,43 @@
         }
 
         async function markAttendance(name) {
+            // 如果該學生正在處理中，直接返回
+            if (processingAttendance[name]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
             const btn = document.querySelector(`.student-button[data-name="${name}"]`);
             if (btn && (btn.disabled || btn.classList.contains('checked'))) {
                 showError('此學生已完成點名');
                 return;
             }
-            const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
-            const data = await res.json();
-            if (data.success) {
-                if (btn) {
-                    btn.classList.add('checked');
-                    btn.disabled = true;
-                    localStorage.setItem(`attendance_${name}`, 'checked');
+
+            // 立即禁用按鈕並標記處理中
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('checked');
+                localStorage.setItem(`attendance_${name}`, 'checked');
+            }
+            processingAttendance[name] = true;
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
+                const data = await res.json();
+                if (data.success) {
+                    showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
+                    await fetchAllStudents();
+                    updateAttendanceList(); // 重新整理點名列表，更新剩餘堂數
+                    populateClearSelect();
+                } else {
+                    showError(data.message || '點名失敗');
+                    // 如果失敗，可以選擇將按鈕恢復？但為了防止重複，保持禁用，教練可手動重置
+                    // 我們可以保持 checked 狀態，因為後端可能沒扣到，但狀態已改，需重置才能再次點名
                 }
-                showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
-                await fetchAllStudents();
-                populateClearSelect();
-            } else {
-                showError(data.message || '點名失敗');
+            } catch (err) {
+                showError('網路錯誤，點名失敗');
+                // 同樣保持禁用
+            } finally {
+                delete processingAttendance[name];
             }
         }
 
@@ -690,7 +750,7 @@
             }
         };
 
-        // ---------- 試堂管理（記錄列表）----------
+        // ---------- 試堂管理（記錄列表，新增刪除/修改備註）----------
         async function loadTrialList() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
@@ -699,15 +759,17 @@
             trials.forEach(t => {
                 html += `<div class="student-row">
                     <span><strong>${t.name}</strong> ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'} ${t.note}</span>
-                    <div>`;
+                    <div class="actions">`;
                 if (userRole === 'full') {
-                    // 已付費學生只顯示改期按鈕，未付費學生顯示改期+已收費按鈕
                     if (t.paid) {
-                        html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
+                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
                     } else {
-                        html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                                 <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰未收費，已收費按此</button>`;
+                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
+                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>`;
                     }
+                    // 新增刪除和修改備註按鈕
+                    html += `<button class="btn-sm" onclick="editTrialNote('${t.name}')">✏️備註</button>
+                             <button class="btn-sm" onclick="deleteTrial('${t.name}')">❌刪除</button>`;
                 } else {
                     html += `<span>(僅完整權限可操作)</span>`;
                 }
@@ -716,6 +778,44 @@
             container.innerHTML = html || '無試堂學生';
         }
 
+        // ---------- 試堂管理功能：刪除、修改備註 ----------
+        window.deleteTrial = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
+            // 為了避免刪錯，可以加上日期確認，但此處簡單用姓名，可能需要更精確。我們可以讓用戶輸入日期或選擇。
+            // 這裡使用 prompt 讓用戶輸入日期以確認
+            const date = prompt(`請輸入 ${name} 的試堂日期 (YYYY-MM-DD) 以確認刪除：`);
+            if (!date) return;
+            if (!confirm(`確定刪除 ${name} 於 ${date} 的試堂記錄？`)) return;
+            const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('刪除成功');
+                await loadTrialAlerts();
+                await loadTrialList();
+            } else {
+                showError(result.error || '刪除失敗');
+            }
+        };
+
+        window.editTrialNote = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
+            const date = prompt(`請輸入 ${name} 的試堂日期 (YYYY-MM-DD)：`);
+            if (!date) return;
+            const newNote = prompt('請輸入新的備註：');
+            if (newNote === null) return; // 取消
+            const updates = { note: newNote };
+            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('備註已更新');
+                await loadTrialAlerts();
+                await loadTrialList();
+            } else {
+                showError(result.error || '更新失敗');
+            }
+        };
+
+        // ---------- 原有的試堂管理函數 ----------
         async function addTrial() {
             if (userRole !== 'full') { showError('無權限'); return; }
             const data = {
@@ -740,7 +840,6 @@
             }
         }
 
-        // ---------- 改期（修復手機無法彈出日期選擇器）----------
         window.editTrialDate = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
             
@@ -757,13 +856,12 @@
             tempInput.style.left = '0';
             tempInput.style.width = '100%';
             tempInput.style.height = '100%';
-            tempInput.style.opacity = '0.01'; // 幾乎透明但可點擊
+            tempInput.style.opacity = '0.01';
             tempInput.style.zIndex = '9999';
             tempInput.style.background = 'transparent';
             tempInput.style.border = 'none';
             document.body.appendChild(tempInput);
             
-            // 聚焦並嘗試彈出選擇器
             tempInput.focus();
             setTimeout(() => {
                 if (tempInput.showPicker) {
@@ -773,7 +871,6 @@
                 }
             }, 200);
             
-            // 監聽日期選擇事件
             tempInput.addEventListener('change', async function() {
                 const newDate = this.value;
                 document.body.removeChild(tempInput);
@@ -789,8 +886,6 @@
                     showError(result.error);
                 }
             });
-            
-            // 如果用戶觸發了取消（例如點擊背景），我們需要一種方式來清理。這裡使用一個全局點擊監聽，但為了避免干擾，我們不自動清理，而是當用戶點擊其他地方時，輸入框失去焦點，但不會自動移除。為了防止累積，我們可以在創建新輸入框前先移除舊的（已做）。同時可以考慮在失去焦點時延遲移除，但可能太複雜。此處暫不處理，因為選擇後一定會移除，未選擇則殘留一個透明輸入框，幾乎不影響使用。
         };
 
         window.markTrialPaid = async function(name) {
