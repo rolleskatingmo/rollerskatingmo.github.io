@@ -95,6 +95,13 @@
             flex: 1;
             font-size: 0.9rem;
         }
+        .trial-alert-item .paid-tag {
+            background: #48bb78;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
         .trial-alert-item button {
             background: #48bb78;
             color: white;
@@ -269,7 +276,7 @@
 </head>
 <body>
     <div id="loginForm">
-        <h2>🔐 教練專區</h2>
+        <h2>🔐 教練專區, 家長誤入請關閉頁面~</h2>
         <input type="password" id="password" placeholder="請輸入密碼" style="margin:20px 0; padding:14px;">
         <button class="btn btn-primary" onclick="login()" style="width:100%;">登入</button>
         <div id="loginMessage" style="margin-top:15px;"></div>
@@ -279,9 +286,9 @@
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
         <h1>⚙️ 教練後台 · 輪滑課程系統V3.5</h1>
 
-        <!-- 試堂通知欄 (預設隱藏，載入資料後若有不付費試堂則顯示) -->
+        <!-- 試堂通知欄 -->
         <div id="trialAlert" class="trial-alert" style="display: none;">
-            <h3>⚠️ 試堂提醒（未交費）</h3>
+            <h3>📋 試堂提醒</h3>
             <div id="trialAlertList"></div>
         </div>
 
@@ -582,29 +589,39 @@
             }
         }
 
-        // ---------- 試堂通知欄 ----------
+        // ---------- 試堂通知欄（新版邏輯）----------
         async function loadTrialAlerts() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
-            // 過濾未交費的學生
-            const unpaid = trials.filter(t => !t.paid);
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            // 過濾：顯示未付費的所有學生，以及已付費但日期 >= 今天的學生
+            const filtered = trials.filter(t => {
+                if (!t.paid) return true; // 未付費全部顯示
+                else {
+                    // 已付費且日期大於等於今天的也顯示
+                    return t.date >= today;
+                }
+            });
+
             const alertDiv = document.getElementById('trialAlert');
             const alertList = document.getElementById('trialAlertList');
-            if (unpaid.length === 0) {
+            if (filtered.length === 0) {
                 alertDiv.style.display = 'none';
                 return;
             }
             alertDiv.style.display = 'block';
             let html = '';
-            unpaid.forEach(t => {
+            filtered.forEach(t => {
+                const paidClass = t.paid ? 'paid-tag' : '';
+                const paidText = t.paid ? '✅已付費' : '';
+                const buttonHtml = (userRole === 'full' && !t.paid) 
+                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">已交費</button>` 
+                    : (t.paid ? `<span class="paid-tag">✅已付費</span>` : `<button disabled>僅完整權限</button>`);
                 html += `<div class="trial-alert-item">
-                    <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>`;
-                if (userRole === 'full') {
-                    html += `<button onclick="markTrialPaidFromAlert('${t.name}')">已交費</button>`;
-                } else {
-                    html += `<button disabled>僅完整權限</button>`;
-                }
-                html += `</div>`;
+                    <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>
+                    ${buttonHtml}
+                </div>`;
             });
             alertList.innerHTML = html;
         }
