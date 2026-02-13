@@ -66,7 +66,47 @@
         .btn-danger { background: #f56565; color: white; }
         .btn-purple { background: #9f7aea; color: white; }
         .btn-indigo { background: #667eea; color: white; }
-        .btn-rental { background: #38b2ac; color: white; } /* 租借按鈕新色 */
+        .btn-rental { background: #38b2ac; color: white; }
+
+        .trial-alert {
+            background: #fefcbf;
+            border: 1px solid #ecc94b;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+        }
+        .trial-alert h3 {
+            color: #744210;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .trial-alert-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ecc94b;
+        }
+        .trial-alert-item:last-child {
+            border-bottom: none;
+        }
+        .trial-alert-item span {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        .trial-alert-item button {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .trial-alert-item button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
         .section {
             background: #f7fafc;
@@ -222,6 +262,8 @@
             .section h2 { font-size: 1.2rem; }
             .form-group { flex: 1 1 100%; }
             .student-button, .rental-button { font-size: 0.85rem; padding: 6px 14px; }
+            .trial-alert-item { flex-direction: column; align-items: flex-start; }
+            .trial-alert-item button { align-self: flex-end; }
         }
     </style>
 </head>
@@ -235,7 +277,14 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V3.5</h1>
+
+        <!-- 試堂通知欄 (預設隱藏，載入資料後若有不付費試堂則顯示) -->
+        <div id="trialAlert" class="trial-alert" style="display: none;">
+            <h3>⚠️ 試堂提醒（未交費）</h3>
+            <div id="trialAlertList"></div>
+        </div>
+
         <div id="buttonGrid" class="button-grid">
             <button id="btnAttendance" class="btn btn-primary" onclick="showSection('attendance')">📋 點名</button>
             <button id="btnRental" class="btn btn-rental" onclick="showSection('rental')">🛞 租借裝備</button>
@@ -249,23 +298,23 @@
             <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
         </div>
 
-        <!-- 點名區塊（防重複） -->
+        <!-- 點名區塊 -->
         <div id="attendance" class="section" style="display: none;">
             <h2>📌 點名 (扣課)</h2>
             <div id="attendanceList"></div>
             <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
         </div>
 
-        <!-- 租借裝備區塊（所有教練可用） -->
+        <!-- 租借裝備區塊 -->
         <div id="rental" class="section" style="display: none;">
             <h2>🛞 裝備租借 (每次 $20)</h2>
             <div id="rentalList"></div>
         </div>
 
-        <!-- 試堂管理（僅完整權限） -->
+        <!-- 試堂管理區塊 -->
         <div id="trial" class="section" style="display: none;">
-            <h2>🧪 試堂學生管理</h2>
-            <div class="info-box">試堂學生僅記錄一堂，過期未付費會在家長首頁提醒。</div>
+            <h2>🧪 試堂管理</h2>
+            <div class="info-box">試堂學生僅記錄一堂，過期未付費會在上方通知欄提醒。</div>
             <div class="form-row">
                 <div class="form-group"><label>姓名</label><input type="text" id="trialName"></div>
                 <div class="form-group"><label>試堂日期</label><input type="date" id="trialDate"></div>
@@ -274,7 +323,7 @@
                 <div class="form-group"><label>備註</label><input type="text" id="trialNote"></div>
                 <button class="btn btn-indigo" onclick="addTrial()" style="width:100%;">新增試堂學生</button>
             </div>
-            <h3>現有試堂學生</h3>
+            <h3>📋 試堂學生記錄</h3>
             <div id="trialList"></div>
         </div>
 
@@ -385,11 +434,8 @@
         }
 
         function applyRoleRestrictions() {
-            // 完整權限：顯示所有按鈕
             const fullButtons = ['btnAddClasses', 'btnAddStudent', 'btnClassManage', 'btnClear', 'btnCoachLeave', 'btnPayment', 'btnTrial'];
-            // 受限權限：只顯示點名、租借、相片
             const limitedButtons = ['btnAttendance', 'btnRental', 'btnPhoto'];
-
             if (userRole === 'full') {
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
@@ -398,7 +444,7 @@
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'none');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 document.getElementById('resetAttendanceBtn').style.display = 'none';
-                showSection('attendance'); // 預設顯示點名
+                showSection('attendance');
             }
         }
 
@@ -421,6 +467,8 @@
             updateAttendanceList();
             updateRentalList();
             populateClearSelect();
+            loadTrialAlerts();   // 載入試堂通知欄
+            loadTrialList();      // 載入試堂記錄列表
         }
 
         async function fetchAllStudents() {
@@ -501,7 +549,7 @@
             showSuccess('點名狀態已重置');
         }
 
-        // ---------- 租借裝備（所有教練可用）----------
+        // ---------- 租借裝備 ----------
         function updateRentalList() {
             const container = document.getElementById('rentalList');
             if (!container) return;
@@ -534,7 +582,48 @@
             }
         }
 
-        // ---------- 試堂管理（完整權限）----------
+        // ---------- 試堂通知欄 ----------
+        async function loadTrialAlerts() {
+            const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
+            const trials = await res.json();
+            // 過濾未交費的學生
+            const unpaid = trials.filter(t => !t.paid);
+            const alertDiv = document.getElementById('trialAlert');
+            const alertList = document.getElementById('trialAlertList');
+            if (unpaid.length === 0) {
+                alertDiv.style.display = 'none';
+                return;
+            }
+            alertDiv.style.display = 'block';
+            let html = '';
+            unpaid.forEach(t => {
+                html += `<div class="trial-alert-item">
+                    <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>`;
+                if (userRole === 'full') {
+                    html += `<button onclick="markTrialPaidFromAlert('${t.name}')">已交費</button>`;
+                } else {
+                    html += `<button disabled>僅完整權限</button>`;
+                }
+                html += `</div>`;
+            });
+            alertList.innerHTML = html;
+        }
+
+        // 從通知欄標記已交費
+        window.markTrialPaidFromAlert = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
+            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`${name} 已標記為已交費`);
+                await loadTrialAlerts();  // 重新載入通知欄
+                await loadTrialList();     // 重新載入試堂記錄列表
+            } else {
+                showError(result.error);
+            }
+        };
+
+        // ---------- 試堂管理（記錄列表）----------
         async function loadTrialList() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
@@ -542,17 +631,21 @@
             let html = '';
             trials.forEach(t => {
                 html += `<div class="student-row">
-                    <span><strong>${t.name}</strong> ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅' : '❌'} ${t.note}</span>
-                    <div>
-                        <button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                        <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>
-                    </div>
-                </div>`;
+                    <span><strong>${t.name}</strong> ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'} ${t.note}</span>
+                    <div>`;
+                if (userRole === 'full') {
+                    html += `<button class="btn btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
+                             <button class="btn btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>`;
+                } else {
+                    html += `<span>(僅完整權限可操作)</span>`;
+                }
+                html += `</div></div>`;
             });
             container.innerHTML = html || '無試堂學生';
         }
 
         async function addTrial() {
+            if (userRole !== 'full') { showError('無權限'); return; }
             const data = {
                 name: document.getElementById('trialName').value,
                 date: document.getElementById('trialDate').value,
@@ -568,13 +661,15 @@
                 document.getElementById('trialName').value = '';
                 document.getElementById('trialDate').value = '';
                 document.getElementById('trialNote').value = '';
-                loadTrialList();
+                await loadTrialAlerts();
+                await loadTrialList();
             } else {
                 showError(result.error || '新增失敗');
             }
         }
 
         window.editTrialDate = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
             const newDate = prompt('請輸入新日期 (YYYY-MM-DD)', '');
             if (!newDate) return;
             const updates = { date: newDate };
@@ -582,18 +677,21 @@
             const result = await res.json();
             if (result.success) {
                 showSuccess('日期已更新');
-                loadTrialList();
+                await loadTrialAlerts();
+                await loadTrialList();
             } else {
                 showError(result.error);
             }
         };
 
         window.markTrialPaid = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
             const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess('已標記收費');
-                loadTrialList();
+                await loadTrialAlerts();
+                await loadTrialList();
             } else {
                 showError(result.error);
             }
@@ -803,4 +901,3 @@
     </script>
 </body>
 </html>
-
