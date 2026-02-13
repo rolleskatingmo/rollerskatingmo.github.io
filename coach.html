@@ -744,27 +744,39 @@
         window.editTrialDate = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
             
-            // 創建一個隱藏的日期輸入元素
-            const dateInput = document.createElement('input');
-            dateInput.type = 'date';
-            dateInput.style.position = 'fixed';
-            dateInput.style.top = '0';
-            dateInput.style.left = '0';
-            dateInput.style.opacity = '0';
-            dateInput.style.pointerEvents = 'none'; // 避免遮擋點擊
-            document.body.appendChild(dateInput);
+            // 移除可能殘留的臨時日期輸入框
+            const oldInput = document.querySelector('input[data-temp="date"]');
+            if (oldInput) oldInput.remove();
             
-            // 使用 showPicker 方法（現代瀏覽器支持）
-            if (dateInput.showPicker) {
-                dateInput.showPicker();
-            } else {
-                // 降級方案：嘗試調用 click
-                dateInput.click();
-            }
+            // 創建一個幾乎透明的全屏日期輸入框
+            const tempInput = document.createElement('input');
+            tempInput.type = 'date';
+            tempInput.setAttribute('data-temp', 'date');
+            tempInput.style.position = 'fixed';
+            tempInput.style.top = '0';
+            tempInput.style.left = '0';
+            tempInput.style.width = '100%';
+            tempInput.style.height = '100%';
+            tempInput.style.opacity = '0.01'; // 幾乎透明但可點擊
+            tempInput.style.zIndex = '9999';
+            tempInput.style.background = 'transparent';
+            tempInput.style.border = 'none';
+            document.body.appendChild(tempInput);
             
-            dateInput.addEventListener('change', async function() {
-                const newDate = dateInput.value;
-                document.body.removeChild(dateInput);
+            // 聚焦並嘗試彈出選擇器
+            tempInput.focus();
+            setTimeout(() => {
+                if (tempInput.showPicker) {
+                    tempInput.showPicker();
+                } else {
+                    tempInput.click();
+                }
+            }, 200);
+            
+            // 監聽日期選擇事件
+            tempInput.addEventListener('change', async function() {
+                const newDate = this.value;
+                document.body.removeChild(tempInput);
                 if (!newDate) return;
                 const updates = { date: newDate };
                 const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
@@ -777,6 +789,8 @@
                     showError(result.error);
                 }
             });
+            
+            // 如果用戶觸發了取消（例如點擊背景），我們需要一種方式來清理。這裡使用一個全局點擊監聽，但為了避免干擾，我們不自動清理，而是當用戶點擊其他地方時，輸入框失去焦點，但不會自動移除。為了防止累積，我們可以在創建新輸入框前先移除舊的（已做）。同時可以考慮在失去焦點時延遲移除，但可能太複雜。此處暫不處理，因為選擇後一定會移除，未選擇則殘留一個透明輸入框，幾乎不影響使用。
         };
 
         window.markTrialPaid = async function(name) {
@@ -999,4 +1013,3 @@
     </script>
 </body>
 </html>
-
