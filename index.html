@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>輪滑課程系統 · 家長查詢</title>
     <style>
-        /* ========== 全域變數與重置 ========== */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             background: #f5f7fa;
@@ -19,7 +14,7 @@
             line-height: 1.5;
             position: relative;
             min-height: 100vh;
-            padding-bottom: 80px; /* 為右下角固定按鈕留空間 */
+            padding-bottom: 80px;
         }
         .container {
             max-width: 100%;
@@ -35,7 +30,6 @@
             margin-top: 0;
             margin-bottom: 12px;
         }
-        /* 教練入口按鈕 - 固定右下角 */
         .coach-fab {
             position: fixed;
             bottom: 24px;
@@ -53,15 +47,8 @@
             display: inline-block;
             border: none;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
         }
-        .coach-fab:hover {
-            background: #2980b9;
-            transform: scale(1.05);
-        }
-        .coach-fab:active {
-            transform: scale(0.98);
-        }
+        .coach-fab:hover { background: #2980b9; transform: scale(1.05); }
         .search-area {
             background: #f0f4f8;
             padding: 18px 16px;
@@ -82,7 +69,6 @@
             border-radius: 40px;
             transition: 0.2s;
             -webkit-appearance: none;
-            appearance: none;
         }
         #searchInput:focus {
             border-color: #3498db;
@@ -105,7 +91,6 @@
             transition: 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             flex: 0 0 auto;
-            max-width: 100%;
             white-space: nowrap;
         }
         .student-tag:hover {
@@ -172,18 +157,9 @@
             font-weight: 600;
             white-space: nowrap;
         }
-        .badge.red {
-            background: #fc8181;
-            color: white;
-        }
-        .badge.yellow {
-            background: #f6e05e;
-            color: #744210;
-        }
-        .badge.green {
-            background: #48bb78;
-            color: white;
-        }
+        .badge.red { background: #fc8181; color: white; }
+        .badge.yellow { background: #f6e05e; color: #744210; }
+        .badge.green { background: #48bb78; color: white; }
         .warning-text {
             color: #c53030;
             font-size: 0.85rem;
@@ -204,82 +180,43 @@
             border-top: 1px solid #e2e8f0;
             padding-top: 16px;
         }
-
-        /* ========== 手機專用調整 ========== */
         @media screen and (max-width: 480px) {
-            body {
-                padding: 8px;
-                padding-bottom: 80px;
-            }
-            .container {
-                padding: 16px 12px;
-            }
-            h1 {
-                font-size: 1.4rem;
-            }
-            .coach-fab {
-                bottom: 16px;
-                right: 16px;
-                padding: 12px 20px;
-                font-size: 0.9rem;
-            }
-            .student-tag {
-                font-size: 0.85rem;
-                padding: 6px 14px;
-            }
-            .detail-card h2 {
-                font-size: 1.2rem;
-                flex-wrap: wrap;
-            }
-            .info-label {
-                width: 90px;
-                font-size: 0.9rem;
-            }
-            .info-value {
-                font-size: 0.9rem;
-            }
-            .record-table {
-                font-size: 0.8rem;
-                min-width: 450px;
-            }
-            .record-table th,
-            .record-table td {
-                padding: 8px 6px;
-            }
+            body { padding: 8px; padding-bottom: 80px; }
+            .container { padding: 16px 12px; }
+            h1 { font-size: 1.4rem; }
+            .coach-fab { bottom: 16px; right: 16px; padding: 12px 20px; font-size: 0.9rem; }
+            .student-tag { font-size: 0.85rem; padding: 6px 14px; }
+            .detail-card h2 { font-size: 1.2rem; flex-wrap: wrap; }
+            .info-label { width: 90px; font-size: 0.9rem; }
+            .info-value { font-size: 0.9rem; }
+            .record-table { font-size: 0.8rem; min-width: 450px; }
         }
     </style>
 </head>
 <body>
-    <!-- 教練入口按鈕 - 固定右下角 -->
     <a href="coach.html" class="coach-fab">教練入口 →</a>
-
     <div class="container">
         <h1>⚡ 輪滑課程系統 · 家長查詢</h1>
-
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
             <input type="text" id="searchInput" placeholder="例如：王小明" autocomplete="off">
             <div id="studentList" class="student-list"></div>
         </div>
-
         <div id="detailContainer" style="display: none;"></div>
         <div id="message" class="message"></div>
-
         <div class="footer">
-            <p>⚠️ 請假超過2次將自動扣減1堂課。如需更新資料請洽教練。</p>
-            <p>系統版本 3.4 · 由 Thomas 維護(冇錯就係Thomas哥哥)</p>
+            <p>⚠️ 請假超過2次將自動扣減1堂課。租借裝備每次 $20。</p>
+            <p>系統版本 3.4 By Thomas哥哥</p>
         </div>
     </div>
 
     <script>
-        // ========== 後端網址（請替換為您的部署網址）==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwphUH70vgTRbAi2x0UpBpKvEjyI2Qja4EIhjPdu14zuBaWHgha_Y-5i37FQW-IysXc/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVogWqEvXJuXc1wXYQea1Q_tJS_m5G_cdrFaUrB9cSyakDdrJCPFb3gVEYlXH4fTWSMA/exec';
 
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
         const detailContainer = document.getElementById('detailContainer');
         const messageDiv = document.getElementById('message');
-
         let searchTimer;
 
         searchInput.addEventListener('input', function(e) {
@@ -315,7 +252,7 @@
             students.forEach(s => {
                 const tag = document.createElement('span');
                 tag.className = 'student-tag';
-                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂`;
+                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂 租${s.rentalCount}次`;
                 tag.addEventListener('click', () => loadStudentDetail(s.name));
                 studentListDiv.appendChild(tag);
             });
@@ -371,6 +308,10 @@
                         <span class="info-value">${remainingDisplay}</span>
                     </div>
                     ${remainingWarning}
+                    <div class="info-row">
+                        <span class="info-label">租借裝備</span>
+                        <span class="info-value">${d.rentalCount} 次 (每次 $20)</span>
+                    </div>
             `;
 
             let allRecords = [
@@ -383,25 +324,15 @@
             if (allRecords.length === 0) {
                 html += `<p style="color:#718096;">尚無任何上課或請假記錄。</p>`;
             } else {
-                html += `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                html += `<div style="overflow-x: auto;">
                     <table class="record-table">
                         <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                         <tbody>`;
                 allRecords.slice(0, 30).forEach(rec => {
                     if (rec.type === '上課') {
-                        html += `<tr>
-                            <td>${rec.date}</td>
-                            <td>${rec.time || ''}</td>
-                            <td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px; font-size:0.75rem;">上課</span></td>
-                            <td>${rec.remainingClasses}</td>
-                        </tr>`;
+                        html += `<tr><td>${rec.date}</td><td>${rec.time || ''}</td><td><span style="background:#3182ce; color:white; padding:2px 10px; border-radius:20px;">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
                     } else {
-                        html += `<tr>
-                            <td>${rec.date}</td>
-                            <td>—</td>
-                            <td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px; font-size:0.75rem;">請假</span></td>
-                            <td>—</td>
-                        </tr>`;
+                        html += `<tr><td>${rec.date}</td><td>—</td><td><span style="background:#ecc94b; color:black; padding:2px 10px; border-radius:20px;">請假</span></td><td>—</td></tr>`;
                     }
                 });
                 html += `</tbody></table></div>`;
