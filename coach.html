@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v4.2</title>
+    <title>教練後台 · 輪滑課程系統v4.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -309,6 +309,35 @@
             font-size: 0.9rem;
         }
 
+        /* 折疊樣式 */
+        .class-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .class-header h3 {
+            margin: 0;
+        }
+        .class-header .toggle-icon {
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        .class-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .class-students {
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+        }
+        .class-students.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+        }
+
         /* 載入中動畫 */
         .spinner {
             border: 4px solid #f3f3f3;
@@ -391,6 +420,7 @@
             .trial-alert-item { flex-direction: column; align-items: flex-start; }
             .trial-alert-item button { align-self: flex-end; }
             .student-row .actions { justify-content: flex-end; width: 100%; }
+            .class-header { margin: 15px 0 5px; }
         }
     </style>
 </head>
@@ -404,7 +434,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V4.2</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V4.3</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -506,7 +536,7 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 學生備註/清零區塊 -->
+            <!-- 學生備註/清零區塊（含折疊功能） -->
             <div id="clear" class="section" style="display: none;">
                 <h2>📊 學生備註/清零</h2>
                 <!-- 清零操作置頂 -->
@@ -519,7 +549,7 @@
                     <button class="btn btn-rental" onclick="clearRentalCount()" style="flex: 1;">清零租借</button>
                 </div>
                 <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
-                <h3>📋 所有學生備註 (點擊按鈕編輯)</h3>
+                <h3>📋 所有學生備註 (點擊班級標題可折疊)</h3>
                 <div id="noteListByClass"></div>
             </div>
 
@@ -579,6 +609,9 @@
 
         let currentNoteCallback = null;
         let currentConfirmCallback = null;
+
+        // 折疊狀態存儲
+        let classCollapsed = {};
 
         // ---------- 登入 ----------
         async function login() {
@@ -1237,7 +1270,7 @@
             }
         }
 
-        // ---------- 按班級顯示備註一覽 ----------
+        // ---------- 按班級顯示備註一覽（含折疊）----------
         function renderNoteListByClass() {
             const container = document.getElementById('noteListByClass');
             if (!container) return;
@@ -1251,7 +1284,13 @@
             let html = '';
             const sortedClasses = sortClasses(Object.keys(grouped));
             sortedClasses.forEach(className => {
-                html += `<h3 style="margin: 20px 0 10px;">${className}班</h3>`;
+                const collapsed = classCollapsed[className] ? 'collapsed' : '';
+                const icon = classCollapsed[className] ? '▶' : '▼';
+                html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+                    <span class="toggle-icon">${icon}</span>
+                    <h3>${className}班</h3>
+                </div>`;
+                html += `<div class="class-students ${collapsed}" id="class-${className}">`;
                 grouped[className].forEach(s => {
                     html += `<div class="student-row">
                         <div class="details">
@@ -1267,9 +1306,16 @@
                     }
                     html += `</div>`;
                 });
+                html += `</div>`;
             });
             container.innerHTML = html || '無學生資料';
         }
+
+        // 折疊切換函數
+        window.toggleClass = function(className) {
+            classCollapsed[className] = !classCollapsed[className];
+            renderNoteListByClass(); // 重新渲染以更新圖標和折疊狀態
+        };
 
         // 學生備註編輯（使用自訂模態）
         window.openNoteModalForStudent = function(name) {
