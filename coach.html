@@ -1405,197 +1405,225 @@
         }
 
         // 清零請假（使用自訂確認）
-        window.clearStudentLeave = function(name, event) {
-            const btn = event.currentTarget;
-            const lockKey = `clearLeave_${name}`;
-            if (processing[lockKey]) {
-                showError('正在處理中，請稍後...');
+        // 清零請假（使用自訂確認，處理中狀態在確認對話框的確定按鈕上）
+window.clearStudentLeave = function(name, event) {
+    const btn = event.currentTarget;
+    const lockKey = `clearLeave_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    btn.disabled = true;
+    processing[lockKey] = true;
+
+    currentConfirmCallback = async () => {
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.querySelector('#confirmModal .cancel');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '處理中...';
+        cancelBtn.disabled = true;
+
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`${name} 請假次數已清零`);
+                await fetchAllStudents();
+                renderNoteListByClass();
+            } else {
+                showError(result.error);
+                btn.disabled = false;
+                delete processing[lockKey];
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '確定';
+                cancelBtn.disabled = false;
+                closeConfirmModal();
                 return;
             }
+        } catch (err) {
+            showError('網路錯誤');
+            btn.disabled = false;
+            delete processing[lockKey];
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '確定';
+            cancelBtn.disabled = false;
+            closeConfirmModal();
+            return;
+        }
+        closeConfirmModal();
+        delete processing[lockKey];
+    };
 
-            currentConfirmCallback = async () => {
-                processing[lockKey] = true;
-                btn.disabled = true;
-                btn.textContent = '處理中...';
+    document.getElementById('confirmTitle').textContent = '確認清零請假';
+    document.getElementById('confirmMessage').textContent = `確定將 ${name} 的請假次數歸零？`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+};
 
-                try {
-                    const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
-                    const result = await res.json();
-                    if (result.success) {
-                        showSuccess(`${name} 請假次數已清零`);
-                        await fetchAllStudents();
-                        renderNoteListByClass();
-                    } else {
-                        showError(result.error);
-                    }
-                } catch (err) {
-                    showError('網路錯誤');
-                } finally {
-                    delete processing[lockKey];
-                    btn.disabled = false;
-                    btn.textContent = '🧹清零請假';
-                    closeConfirmModal();
-                }
-            };
+// 清零租借（使用自訂確認，處理中狀態在確認對話框的確定按鈕上）
+window.clearStudentRental = function(name, event) {
+    const btn = event.currentTarget;
+    const lockKey = `clearRental_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    btn.disabled = true;
+    processing[lockKey] = true;
 
-            document.getElementById('confirmTitle').textContent = '確認清零請假';
-            document.getElementById('confirmMessage').textContent = `確定將 ${name} 的請假次數歸零？`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
-        };
+    currentConfirmCallback = async () => {
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.querySelector('#confirmModal .cancel');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '處理中...';
+        cancelBtn.disabled = true;
 
-        // 清零租借（使用自訂確認）
-        window.clearStudentRental = function(name, event) {
-            const btn = event.currentTarget;
-            const lockKey = `clearRental_${name}`;
-            if (processing[lockKey]) {
-                showError('正在處理中，請稍後...');
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`${name} 租借次數已清零`);
+                await fetchAllStudents();
+                renderNoteListByClass();
+                updateRentalList();
+            } else {
+                showError(result.error);
+                btn.disabled = false;
+                delete processing[lockKey];
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '確定';
+                cancelBtn.disabled = false;
+                closeConfirmModal();
                 return;
             }
+        } catch (err) {
+            showError('網路錯誤');
+            btn.disabled = false;
+            delete processing[lockKey];
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '確定';
+            cancelBtn.disabled = false;
+            closeConfirmModal();
+            return;
+        }
+        closeConfirmModal();
+        delete processing[lockKey];
+    };
 
-            currentConfirmCallback = async () => {
-                processing[lockKey] = true;
-                btn.disabled = true;
-                btn.textContent = '處理中...';
+    document.getElementById('confirmTitle').textContent = '確認清零租借';
+    document.getElementById('confirmMessage').textContent = `確定將 ${name} 的租借次數歸零？`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+};
 
-                try {
-                    const res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
-                    const result = await res.json();
-                    if (result.success) {
-                        showSuccess(`${name} 租借次數已清零`);
-                        await fetchAllStudents();
-                        renderNoteListByClass();
-                        updateRentalList();
-                    } else {
-                        showError(result.error);
-                    }
-                } catch (err) {
-                    showError('網路錯誤');
-                } finally {
-                    delete processing[lockKey];
-                    btn.disabled = false;
-                    btn.textContent = '🛞清零租借';
-                    closeConfirmModal();
-                }
-            };
+// 已續費（組合操作，處理中狀態在確認對話框的確定按鈕上）
+window.confirmRenewStudent = function(name, className) {
+    const lockKey = `renew_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    processing[lockKey] = true;
 
-            document.getElementById('confirmTitle').textContent = '確認清零租借';
-            document.getElementById('confirmMessage').textContent = `確定將 ${name} 的租借次數歸零？`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
-        };
+    currentConfirmCallback = async () => {
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.querySelector('#confirmModal .cancel');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '續費中...';
+        cancelBtn.disabled = true;
 
-        // 已續費（使用自訂確認）
-        window.confirmRenewStudent = function(name, className) {
-            const lockKey = `renew_${name}`;
-            if (processing[lockKey]) {
-                showError('正在處理中，請稍後...');
-                return;
-            }
+        try {
+            // 順序執行三個操作
+            let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
+            let result = await res.json();
+            if (!result.success) throw new Error(result.error || '清零請假失敗');
 
-            currentConfirmCallback = async () => {
-                processing[lockKey] = true;
+            res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
+            result = await res.json();
+            if (!result.success) throw new Error(result.error || '清零租借失敗');
 
-                const confirmBtn = document.getElementById('confirmBtn');
-                const cancelBtn = document.querySelector('#confirmModal .cancel');
-                confirmBtn.disabled = true;
-                confirmBtn.textContent = '續費中...';
-                cancelBtn.disabled = true;
+            const payload = { name, class: className, classesChange: 10, reason: '已續費' };
+            res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
+            result = await res.json();
+            if (!result.success) throw new Error(result.error || '增加課堂失敗');
 
-                try {
-                    // 順序執行三個操作
-                    let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
-                    let result = await res.json();
-                    if (!result.success) throw new Error(result.error || '清零請假失敗');
+            showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
+            await fetchAllStudents();
+            renderNoteListByClass();
+            updateRentalList();
+        } catch (err) {
+            showError(err.message);
+        } finally {
+            delete processing[lockKey];
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '確定';
+            cancelBtn.disabled = false;
+            closeConfirmModal();
+        }
+    };
 
-                    res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
-                    result = await res.json();
-                    if (!result.success) throw new Error(result.error || '清零租借失敗');
+    document.getElementById('confirmTitle').textContent = '確認續費';
+    document.getElementById('confirmMessage').textContent = `確定要為 ${name} 進行續費（清零請假、租借，並增加10堂課）嗎？`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+};
 
-                    const payload = { name, class: className, classesChange: 10, reason: '已續費' };
-                    res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
-                    result = await res.json();
-                    if (!result.success) throw new Error(result.error || '增加課堂失敗');
+// 刪除學生（兩階段確認，處理中狀態在確認對話框的確定按鈕上）
+window.confirmDeleteStudent = function(name) {
+    const lockKey = `deleteStudent_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
 
-                    showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
+    // 第一階段確認
+    currentConfirmCallback = async () => {
+        closeConfirmModal();
+
+        // 第二階段確認
+        currentConfirmCallback = async () => {
+            processing[lockKey] = true;
+
+            const confirmBtn = document.getElementById('confirmBtn');
+            const cancelBtn = document.querySelector('#confirmModal .cancel');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '刪除中...';
+            cancelBtn.disabled = true;
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=deleteStudent&name=${encodeURIComponent(name)}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(`${name} 已刪除`);
                     await fetchAllStudents();
                     renderNoteListByClass();
+                    updateAttendanceList();
                     updateRentalList();
-                } catch (err) {
-                    showError(err.message);
-                } finally {
-                    delete processing[lockKey];
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = '確定';
-                    cancelBtn.disabled = false;
-                    closeConfirmModal();
+                } else {
+                    showError(result.error || '刪除失敗');
                 }
-            };
-
-            document.getElementById('confirmTitle').textContent = '確認續費';
-            document.getElementById('confirmMessage').textContent = `確定要為 ${name} 進行續費（清零請假、租借，並增加10堂課）嗎？`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
-        };
-
-        // 刪除學生（兩階段確認）
-        window.confirmDeleteStudent = function(name) {
-            const lockKey = `deleteStudent_${name}`;
-            if (processing[lockKey]) {
-                showError('正在處理中，請稍後...');
-                return;
-            }
-
-            // 第一階段確認
-            currentConfirmCallback = async () => {
-                // 關閉第一個對話框
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                delete processing[lockKey];
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '確定';
+                cancelBtn.disabled = false;
                 closeConfirmModal();
-
-                // 第二階段確認（使用新的對話框）
-                currentConfirmCallback = async () => {
-                    processing[lockKey] = true;
-
-                    const confirmBtn = document.getElementById('confirmBtn');
-                    const cancelBtn = document.querySelector('#confirmModal .cancel');
-                    confirmBtn.disabled = true;
-                    confirmBtn.textContent = '刪除中...';
-                    cancelBtn.disabled = true;
-
-                    try {
-                        // 呼叫刪除學生的 API（後端需提供）
-                        const res = await fetch(`${SCRIPT_URL}?action=deleteStudent&name=${encodeURIComponent(name)}`);
-                        const result = await res.json();
-                        if (result.success) {
-                            showSuccess(`${name} 已刪除`);
-                            await fetchAllStudents();
-                            renderNoteListByClass();
-                            updateAttendanceList();
-                            updateRentalList();
-                        } else {
-                            showError(result.error || '刪除失敗');
-                        }
-                    } catch (err) {
-                        showError('網路錯誤');
-                    } finally {
-                        delete processing[lockKey];
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = '確定';
-                        cancelBtn.disabled = false;
-                        closeConfirmModal();
-                    }
-                };
-
-                document.getElementById('confirmTitle').textContent = '再次確認';
-                document.getElementById('confirmMessage').textContent = `真的要刪除 ${name} 嗎？此操作無法復原，僅能從備份還原。`;
-                document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-                document.getElementById('confirmModal').style.display = 'flex';
-            };
-
-            document.getElementById('confirmTitle').textContent = '確認刪除學生';
-            document.getElementById('confirmMessage').textContent = `確定要刪除 ${name}？該操作只能從備份逆轉。`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
+            }
         };
+
+        document.getElementById('confirmTitle').textContent = '再次確認';
+        document.getElementById('confirmMessage').textContent = `真的要刪除 ${name} 嗎？此操作無法復原，僅能從備份還原。`;
+        document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+        document.getElementById('confirmModal').style.display = 'flex';
+    };
+
+    document.getElementById('confirmTitle').textContent = '確認刪除學生';
+    document.getElementById('confirmMessage').textContent = `確定要刪除 ${name}？該操作只能從備份逆轉。`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+};
 
         // ---------- 自訂對話框控制 ----------
         function closeNoteModal() {
@@ -1704,5 +1732,6 @@
     </script>
 </body>
 </html>
+
 
 
