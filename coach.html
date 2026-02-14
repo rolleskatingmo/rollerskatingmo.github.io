@@ -299,6 +299,7 @@
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
+            justify-content: flex-end;
         }
         .student-row .btn-sm {
             padding: 4px 10px;
@@ -307,8 +308,14 @@
             border: none;
             cursor: pointer;
             background: #e2e8f0;
+            transition: 0.2s;
+            min-width: 70px;
         }
         .student-row .btn-sm:hover { background: #cbd5e0; }
+        .student-row .btn-sm:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .leave-badge, .rental-badge, .class-badge-stat {
             padding: 4px 12px;
             border-radius: 30px;
@@ -476,7 +483,7 @@
                 <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
                 <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
                 <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
-                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 清零/備註</button>
+                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">📋 學生資訊</button>
                 <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
                 <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
                 <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
@@ -555,20 +562,9 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 學生備註/清零區塊（含折疊功能） -->
+            <!-- 學生資訊區塊（原清零/備註區塊，已重構） -->
             <div id="clear" class="section" style="display: none;">
-                <h2>📊 學生備註/清零</h2>
-                <!-- 清零操作置頂 -->
-                <div class="form-row" style="margin-bottom: 20px;">
-                    <div class="form-group" style="flex: 2;">
-                        <label>選擇學生進行清零</label>
-                        <select id="clearStudent"></select>
-                    </div>
-                    <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex: 1;">清零請假</button>
-                    <button class="btn btn-rental" onclick="clearRentalCount()" style="flex: 1;">清零租借</button>
-                </div>
-                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
-                <h3>📋 所有學生備註 (點擊班級標題可折疊)</h3>
+                <h2>📋 學生資訊</h2>
                 <div id="noteListByClass"></div>
             </div>
 
@@ -601,12 +597,12 @@
             <input type="text" id="modalNoteInput" placeholder="請輸入新備註">
             <div class="modal-buttons">
                 <button class="cancel" onclick="closeNoteModal()">取消</button>
-                <button class="confirm" onclick="saveNote()">儲存</button>
+                <button class="confirm" id="saveNoteBtn" onclick="saveNote()">儲存</button>
             </div>
         </div>
     </div>
 
-    <!-- 自訂確認對話框（用於刪除確認） -->
+    <!-- 自訂確認對話框（用於刪除/續費確認） -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="confirmTitle">確認操作</h3>
@@ -626,9 +622,8 @@
         let userRole = 'full';
         const processing = {};
 
-        let currentNoteCallback = null;
-        let currentConfirmCallback = null;
-        let currentNoteStudentName = null; // 用於編輯學生備註
+        // 當前操作的學生或試堂記錄（用於備註編輯）
+        let currentNoteTarget = null; // { type: 'student'|'trial', name, date? }
 
         // 折疊狀態存儲
         let classCollapsed = {};
@@ -667,7 +662,6 @@
 
                 updateAttendanceList();
                 updateRentalList();
-                populateClearSelect();
                 renderNoteListByClass();
 
                 document.getElementById('loadingSpinner').style.display = 'none';
@@ -833,7 +827,6 @@
                     showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
                     await fetchAllStudents();
                     updateAttendanceList();
-                    populateClearSelect();
                     renderNoteListByClass();
                 } else {
                     showError(data.message || '點名失敗');
@@ -893,7 +886,6 @@
                     showSuccess(`${name} 租借+1，總次數 ${data.rentals}`);
                     await fetchAllStudents();
                     updateRentalList();
-                    populateClearSelect();
                     renderNoteListByClass();
                 } else {
                     showError(data.error || '租借失敗');
@@ -976,9 +968,9 @@
                     <div class="actions">`;
                 if (userRole === 'full') {
                     if (t.paid) {
-                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
+                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>`;
                     } else {
-                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
+                        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>
                                  <button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰已收費按此</button>`;
                     }
                     html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}', '${t.date}')">✏️備註</button>
@@ -991,21 +983,9 @@
             container.innerHTML = html || '無試堂學生';
         }
 
-        // 試堂：修改備註（使用自訂模態，傳遞 name 和 date）
+        // 試堂：開啟備註編輯（使用統一備註模態）
         window.openNoteModalForTrial = function(name, date) {
-            currentNoteCallback = async (newNote) => {
-                if (newNote === null) return;
-                const updates = { note: newNote };
-                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('備註已更新');
-                    await loadTrialAlerts();
-                    await loadTrialList();
-                } else {
-                    showError(result.error || '更新失敗');
-                }
-            };
+            currentNoteTarget = { type: 'trial', name, date };
             document.getElementById('modalNoteInput').value = '';
             document.getElementById('noteModal').style.display = 'flex';
         };
@@ -1099,7 +1079,8 @@
             }
         }
 
-        window.editTrialDate = async function(name) {
+        // 改期：需要原始日期
+        window.editTrialDate = async function(name, originalDate) {
             if (userRole !== 'full') { showError('無權限'); return; }
             
             const oldInput = document.querySelector('input[data-temp="date"]');
@@ -1133,7 +1114,8 @@
                 document.body.removeChild(tempInput);
                 if (!newDate) return;
                 const updates = { date: newDate };
-                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                // 需要同時傳遞原始日期以定位記錄
+                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(originalDate)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
                 const result = await res.json();
                 if (result.success) {
                     showSuccess('日期已更新');
@@ -1216,7 +1198,6 @@
                     await fetchAllStudents();
                     updateAttendanceList();
                     updateRentalList();
-                    populateClearSelect();
                     renderNoteListByClass();
                 } else {
                     showError(result.message);
@@ -1265,7 +1246,6 @@
                     await fetchAllStudents();
                     updateAttendanceList();
                     updateRentalList();
-                    populateClearSelect();
                     renderNoteListByClass();
                 } else {
                     showError(result.message || '新增失敗');
@@ -1281,16 +1261,7 @@
             }
         }
 
-        // ---------- 清零下拉選單 ----------
-        function populateClearSelect() {
-            const select = document.getElementById('clearStudent');
-            if (select) {
-                select.innerHTML = '<option value="">-- 選擇學生 --</option>' + 
-                    allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount} 租借${s.rentalCount}</option>`).join('');
-            }
-        }
-
-        // ---------- 按班級顯示備註一覽（含折疊、圖標、剩餘堂數）----------
+        // ---------- 學生資訊列表（含所有操作按鈕）----------
         function renderNoteListByClass() {
             const container = document.getElementById('noteListByClass');
             if (!container) return;
@@ -1334,6 +1305,9 @@
                     if (userRole === 'full') {
                         html += `<div class="actions">
                             <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>
+                            <button class="btn-sm" onclick="clearStudentLeave('${s.name}')">清零請假</button>
+                            <button class="btn-sm" onclick="clearStudentRental('${s.name}')">清零租借</button>
+                            <button class="btn-sm" onclick="confirmRenewStudent('${s.name}', '${s.class}')">已續費</button>
                         </div>`;
                     }
                     html += `</div>`;
@@ -1349,38 +1323,37 @@
             renderNoteListByClass(); // 重新渲染以更新圖標和折疊狀態
         };
 
-        // 學生備註編輯（使用自訂模態，修復無反應問題）
+        // 學生備註編輯
         window.openNoteModalForStudent = function(name) {
-            // 儲存當前要編輯的學生姓名
-            currentNoteStudentName = name;
+            currentNoteTarget = { type: 'student', name };
             const student = allStudents.find(s => s.name === name);
             document.getElementById('modalNoteInput').value = student?.note || '';
             document.getElementById('noteModal').style.display = 'flex';
         };
 
-        // 儲存備註（使用 currentNoteStudentName）
-        function saveNote() {
-            const newNote = document.getElementById('modalNoteInput').value.trim();
-            const name = currentNoteStudentName;
-            if (!name) {
+        // 儲存備註（通用）
+        async function saveNote() {
+            if (!currentNoteTarget) {
                 closeNoteModal();
                 return;
             }
-            // 加入防重鎖
-            if (processing[`note_${name}`]) {
+            const newNote = document.getElementById('modalNoteInput').value.trim();
+            const { type, name, date } = currentNoteTarget;
+            const lockKey = `note_${type}_${name}${date ? '_'+date : ''}`;
+            if (processing[lockKey]) {
                 showError('正在處理中，請稍後...');
                 return;
             }
-            processing[`note_${name}`] = true;
+            processing[lockKey] = true;
 
-            // 可選：顯示儲存中狀態（簡單禁用按鈕）
-            const confirmBtn = document.querySelector('#noteModal .confirm');
+            const saveBtn = document.getElementById('saveNoteBtn');
             const cancelBtn = document.querySelector('#noteModal .cancel');
-            confirmBtn.disabled = true;
+            saveBtn.disabled = true;
             cancelBtn.disabled = true;
+            saveBtn.textContent = '儲存中...';
 
-            (async () => {
-                try {
+            try {
+                if (type === 'student') {
                     const updates = { note: newNote };
                     const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
                     const result = await res.json();
@@ -1388,29 +1361,165 @@
                         showSuccess('備註已更新');
                         await fetchAllStudents();
                         renderNoteListByClass();
-                        populateClearSelect();
                     } else {
                         showError(result.error || '更新失敗');
                     }
-                } catch (err) {
-                    showError('網路錯誤');
-                } finally {
-                    delete processing[`note_${name}`];
-                    confirmBtn.disabled = false;
-                    cancelBtn.disabled = false;
-                    closeNoteModal();
+                } else if (type === 'trial') {
+                    const updates = { note: newNote };
+                    const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                    const result = await res.json();
+                    if (result.success) {
+                        showSuccess('備註已更新');
+                        await loadTrialAlerts();
+                        await loadTrialList();
+                    } else {
+                        showError(result.error || '更新失敗');
+                    }
                 }
-            })();
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                delete processing[lockKey];
+                saveBtn.disabled = false;
+                cancelBtn.disabled = false;
+                saveBtn.textContent = '儲存';
+                closeNoteModal();
+            }
         }
+
+        // 清零請假（學生資訊區）
+        window.clearStudentLeave = async function(name) {
+            const lockKey = `clearLeave_${name}`;
+            if (processing[lockKey]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+            if (!confirm(`確定將 ${name} 的請假次數歸零？`)) return;
+
+            processing[lockKey] = true;
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '處理中...';
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(`${name} 請假次數已清零`);
+                    await fetchAllStudents();
+                    renderNoteListByClass();
+                } else {
+                    showError(result.error);
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                delete processing[lockKey];
+                btn.disabled = false;
+                btn.textContent = '清零請假';
+            }
+        };
+
+        // 清零租借（學生資訊區）
+        window.clearStudentRental = async function(name) {
+            const lockKey = `clearRental_${name}`;
+            if (processing[lockKey]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+            if (!confirm(`確定將 ${name} 的租借次數歸零？`)) return;
+
+            processing[lockKey] = true;
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '處理中...';
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(`${name} 租借次數已清零`);
+                    await fetchAllStudents();
+                    renderNoteListByClass();
+                    updateRentalList();
+                } else {
+                    showError(result.error);
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                delete processing[lockKey];
+                btn.disabled = false;
+                btn.textContent = '清零租借';
+            }
+        };
+
+        // 已續費：組合操作（清零請假、清零租借、增加10堂）
+        window.confirmRenewStudent = function(name, className) {
+            const lockKey = `renew_${name}`;
+            if (processing[lockKey]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+
+            currentConfirmCallback = async () => {
+                processing[lockKey] = true;
+
+                const confirmBtn = document.getElementById('confirmBtn');
+                const cancelBtn = document.querySelector('#confirmModal .cancel');
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = '續費中...';
+                cancelBtn.disabled = true;
+
+                try {
+                    // 順序執行三個操作
+                    // 1. 清零請假
+                    let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
+                    let result = await res.json();
+                    if (!result.success) throw new Error(result.error || '清零請假失敗');
+
+                    // 2. 清零租借
+                    res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
+                    result = await res.json();
+                    if (!result.success) throw new Error(result.error || '清零租借失敗');
+
+                    // 3. 增加10堂課
+                    const payload = { name, class: className, classesChange: 10, reason: '已續費' };
+                    res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
+                    result = await res.json();
+                    if (!result.success) throw new Error(result.error || '增加課堂失敗');
+
+                    showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
+                    await fetchAllStudents();
+                    renderNoteListByClass();
+                    updateRentalList();
+                } catch (err) {
+                    showError(err.message);
+                } finally {
+                    delete processing[lockKey];
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '確定';
+                    cancelBtn.disabled = false;
+                    closeConfirmModal();
+                }
+            };
+
+            document.getElementById('confirmTitle').textContent = '確認續費';
+            document.getElementById('confirmMessage').textContent = `確定要為 ${name} 進行續費（清零請假、租借，並增加10堂課）嗎？`;
+            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+            document.getElementById('confirmModal').style.display = 'flex';
+        };
 
         // ---------- 自訂對話框控制 ----------
         function closeNoteModal() {
             document.getElementById('noteModal').style.display = 'none';
-            currentNoteStudentName = null;
-            // 確保按鈕狀態恢復
-            const confirmBtn = document.querySelector('#noteModal .confirm');
+            currentNoteTarget = null;
+            const saveBtn = document.getElementById('saveNoteBtn');
             const cancelBtn = document.querySelector('#noteModal .cancel');
-            if (confirmBtn) confirmBtn.disabled = false;
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '儲存';
+            }
             if (cancelBtn) cancelBtn.disabled = false;
         }
 
@@ -1422,43 +1531,6 @@
             confirmBtn.textContent = '確定';
             cancelBtn.disabled = false;
             currentConfirmCallback = null;
-        }
-
-        // ---------- 清零請假 ----------
-        async function clearLeaveCount() {
-            if (userRole === 'limited') { showError('無權限'); return; }
-            const name = document.getElementById('clearStudent').value;
-            if (!name) return showError('請選擇學生');
-            if (!confirm(`確定將 ${name} 的請假次數歸零？`)) return;
-            const res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(`${name} 請假次數已清零`);
-                await fetchAllStudents();
-                populateClearSelect();
-                renderNoteListByClass();
-            } else {
-                showError(result.error);
-            }
-        }
-
-        // ---------- 清零租借 ----------
-        async function clearRentalCount() {
-            if (userRole === 'limited') { showError('無權限'); return; }
-            const name = document.getElementById('clearStudent').value;
-            if (!name) return showError('請選擇學生');
-            if (!confirm(`確定將 ${name} 的租借次數歸零？`)) return;
-            const res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(`${name} 租借次數已清零`);
-                await fetchAllStudents();
-                populateClearSelect();
-                renderNoteListByClass();
-                updateRentalList();
-            } else {
-                showError(result.error);
-            }
         }
 
         // ---------- 教練代請假 ----------
@@ -1516,7 +1588,6 @@
                     showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
                     await fetchAllStudents();
                     updateAttendanceList();
-                    populateClearSelect();
                     renderNoteListByClass();
                     document.getElementById('coachLeaveSearchInput').value = '';
                     document.getElementById('coachLeaveSelectedClass').value = '';
