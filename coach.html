@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v3.9</title>
+    <title>教練後台 · 輪滑課程系統v4.0</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -404,7 +404,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V3.9</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V4.0</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -427,7 +427,7 @@
                 <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
                 <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
                 <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
-                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 學生備註/清零請假/租借</button>
+                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 清零/備註</button>
                 <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
                 <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
                 <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
@@ -506,16 +506,21 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 備註一覽 + 清零區塊 -->
+            <!-- 學生備註/清零區塊（重整後） -->
             <div id="clear" class="section" style="display: none;">
-                <h2>📊 備註一覽</h2>
-                <div id="noteListByClass"></div>
-                <div class="form-row" style="margin-top: 20px;">
-                    <div class="form-group"><label>選擇學生</label><select id="clearStudent"></select></div>
-                    <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex:1;">清零請假</button>
-                    <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
+                <h2>📊 學生備註/清零</h2>
+                <!-- 清零操作置頂 -->
+                <div class="form-row" style="margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 2;">
+                        <label>選擇學生進行清零</label>
+                        <select id="clearStudent"></select>
+                    </div>
+                    <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex: 1;">清零請假</button>
+                    <button class="btn btn-rental" onclick="clearRentalCount()" style="flex: 1;">清零租借</button>
                 </div>
-                <div id="clearMessage"></div>
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
+                <h3>📋 所有學生備註 (點擊按鈕編輯)</h3>
+                <div id="noteListByClass"></div>
             </div>
 
             <!-- 教練代請假區塊 -->
@@ -565,15 +570,13 @@
     </div>
 
     <script>
-        // ========== 後端網址（已更新為您提供的最新部署）==========
+        // ========== 後端網址 ==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY9xf8nROSS87JSeRiHvf6LJnlw6FtQCzsL2G5LEuGbh-GGTnFPDS6dns20FvcYtk-tQ/exec';
 
         let allStudents = [];
         let userRole = 'full';
-        // 處理鎖，防止快速點擊重複提交
         const processing = {};
 
-        // 自訂對話框狀態
         let currentNoteCallback = null;
         let currentConfirmCallback = null;
 
@@ -643,7 +646,6 @@
             }
         }
 
-        // ---------- 區塊切換 ----------
         function showSection(sectionId) {
             if (userRole === 'limited' && !['attendance', 'rental', 'photo'].includes(sectionId)) {
                 showError('您沒有權限使用此功能');
@@ -668,12 +670,10 @@
             return data;
         }
 
-        // ---------- 班級排序 ----------
         function sortClasses(classes) {
             return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         }
 
-        // ---------- 取得班級列表 ----------
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
@@ -937,7 +937,8 @@
 
         // 試堂：修改備註（使用自訂模態）
         window.openNoteModalForTrial = function(name, date) {
-            window.currentTrialForNote = { name, date };
+            // 可選：從現有資料中取得當前備註，預留給 modal 初始值
+            // 但我們不從後端即時獲取，可以讓用戶直接輸入
             currentNoteCallback = async (newNote) => {
                 if (newNote === null) return;
                 const updates = { note: newNote };
@@ -955,7 +956,7 @@
             document.getElementById('noteModal').style.display = 'flex';
         };
 
-        // 試堂：刪除確認（使用自訂確認，並傳遞日期）
+        // 試堂：刪除確認（使用自訂確認）
         window.confirmDeleteTrial = function(name, date) {
             const lockKey = `deleteTrial_${name}_${date}`;
             if (processing[lockKey]) {
@@ -1306,7 +1307,6 @@
 
         function closeConfirmModal() {
             document.getElementById('confirmModal').style.display = 'none';
-            // 重置按鈕狀態
             const confirmBtn = document.getElementById('confirmBtn');
             const cancelBtn = document.querySelector('#confirmModal .cancel');
             confirmBtn.disabled = false;
