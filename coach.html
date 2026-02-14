@@ -427,7 +427,7 @@
                 <button id="btnAddClasses" class="btn btn-success" onclick="showSection('addClasses')">➕ 新增/扣課</button>
                 <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
                 <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')">🏫 班級管理</button>
-                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 特別備註/清零請假/租借</button>
+                <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">🧹 學生備註/清零請假/租借</button>
                 <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
                 <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
                 <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
@@ -565,7 +565,9 @@
     </div>
 
     <script>
+        // ========== 後端網址（已更新為您提供的最新部署）==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY9xf8nROSS87JSeRiHvf6LJnlw6FtQCzsL2G5LEuGbh-GGTnFPDS6dns20FvcYtk-tQ/exec';
+
         let allStudents = [];
         let userRole = 'full';
         // 處理鎖，防止快速點擊重複提交
@@ -923,8 +925,8 @@
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
                                  <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費請按此</button>`;
                     }
-                    html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}')">✏️備註</button>
-                             <button class="btn-sm" onclick="confirmDeleteTrial('${t.name}')">❌刪除</button>`;
+                    html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}', '${t.date}')">✏️備註</button>
+                             <button class="btn-sm" onclick="confirmDeleteTrial('${t.name}', '${t.date}')">❌刪除</button>`;
                 } else {
                     html += `<span>(僅完整權限可操作)</span>`;
                 }
@@ -934,7 +936,8 @@
         }
 
         // 試堂：修改備註（使用自訂模態）
-        window.openNoteModalForTrial = function(name) {
+        window.openNoteModalForTrial = function(name, date) {
+            window.currentTrialForNote = { name, date };
             currentNoteCallback = async (newNote) => {
                 if (newNote === null) return;
                 const updates = { note: newNote };
@@ -952,20 +955,44 @@
             document.getElementById('noteModal').style.display = 'flex';
         };
 
-        // 試堂：刪除確認（使用自訂確認）
-        window.confirmDeleteTrial = function(name) {
+        // 試堂：刪除確認（使用自訂確認，並傳遞日期）
+        window.confirmDeleteTrial = function(name, date) {
+            const lockKey = `deleteTrial_${name}_${date}`;
+            if (processing[lockKey]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+
             currentConfirmCallback = async () => {
-                const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}`);
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('刪除成功');
-                    await loadTrialAlerts();
-                    await loadTrialList();
-                } else {
-                    showError(result.error || '刪除失敗');
+                processing[lockKey] = true;
+
+                const confirmBtn = document.getElementById('confirmBtn');
+                const cancelBtn = document.querySelector('#confirmModal .cancel');
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = '刪除中...';
+                cancelBtn.disabled = true;
+
+                try {
+                    const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
+                    const result = await res.json();
+                    if (result.success) {
+                        showSuccess('刪除成功');
+                        await loadTrialAlerts();
+                        await loadTrialList();
+                    } else {
+                        showError(result.error || '刪除失敗');
+                    }
+                } catch (err) {
+                    showError('網路錯誤');
+                } finally {
+                    delete processing[lockKey];
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '確定';
+                    cancelBtn.disabled = false;
+                    closeConfirmModal();
                 }
-                closeConfirmModal();
             };
+
             document.getElementById('confirmTitle').textContent = '確認刪除';
             document.getElementById('confirmMessage').textContent = `確定要刪除 ${name} 的試堂記錄嗎？`;
             document.getElementById('confirmBtn').onclick = currentConfirmCallback;
@@ -1213,7 +1240,6 @@
             const container = document.getElementById('noteListByClass');
             if (!container) return;
             
-            // 按班級分組
             const grouped = {};
             allStudents.forEach(s => {
                 if (!grouped[s.class]) grouped[s.class] = [];
@@ -1280,6 +1306,12 @@
 
         function closeConfirmModal() {
             document.getElementById('confirmModal').style.display = 'none';
+            // 重置按鈕狀態
+            const confirmBtn = document.getElementById('confirmBtn');
+            const cancelBtn = document.querySelector('#confirmModal .cancel');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '確定';
+            cancelBtn.disabled = false;
             currentConfirmCallback = null;
         }
 
@@ -1405,4 +1437,3 @@
     </script>
 </body>
 </html>
-
