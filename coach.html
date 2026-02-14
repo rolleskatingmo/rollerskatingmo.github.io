@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v4.1</title>
+    <title>教練後台 · 輪滑課程系統v4.2</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -404,7 +404,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V4.1</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V4.2</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -506,7 +506,7 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 學生備註/清零區塊（重整後） -->
+            <!-- 學生備註/清零區塊 -->
             <div id="clear" class="section" style="display: none;">
                 <h2>📊 學生備註/清零</h2>
                 <!-- 清零操作置頂 -->
@@ -570,8 +570,8 @@
     </div>
 
     <script>
-        // ========== 後端網址（請確保與您的部署一致）==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyAOJVYfAWotXHvLNt4-xPzV8o8nxWFs5zdNfDiZAavnDXYxAiEQ5rB42hKTL-4VJpTtg/exec';
+        // ========== 後端網址（已更新）==========
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzRZ6bwnmcAe3AamPAUcIEnLDf_rbUgiAhTMaUvhL-Uf2Ut9bojGWVNSQZ_QE5wjaCOSA/exec';
 
         let allStudents = [];
         let userRole = 'full';
@@ -888,7 +888,7 @@
             let html = '';
             filtered.forEach(t => {
                 const buttonHtml = (userRole === 'full' && !t.paid) 
-                    ? `<button onclick="markTrialPaidFromAlert('${t.name}')">該學生未交費，已交費請按此</button>` 
+                    ? `<button onclick="markTrialPaidFromAlert('${t.name}', '${t.date}')">該學生未交費，已交費請按此</button>` 
                     : (t.paid ? `<span class="paid-tag">✅已付費</span>` : `<button disabled>僅完整權限</button>`);
                 html += `<div class="trial-alert-item">
                     <span>${t.name} | ${t.date} | ${t.rentEquipment ? '🛞租借' : ''} | ${t.note}</span>
@@ -898,16 +898,16 @@
             alertList.innerHTML = html;
         }
 
-        window.markTrialPaidFromAlert = async function(name) {
+        window.markTrialPaidFromAlert = async function(name, date) {
             if (userRole !== 'full') { showError('無權限'); return; }
-            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
+            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess(`${name} 已標記為已交費`);
                 await loadTrialAlerts();
                 await loadTrialList();
             } else {
-                showError(result.error);
+                showError(result.error || '標記失敗');
             }
         };
 
@@ -926,9 +926,8 @@
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
                     } else {
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費按此</button>`;
+                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰已收費按此</button>`;
                     }
-                    // 修改備註：傳遞 name 和 date
                     html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}', '${t.date}')">✏️備註</button>
                              <button class="btn-sm" onclick="confirmDeleteTrial('${t.name}', '${t.date}')">❌刪除</button>`;
                 } else {
@@ -944,7 +943,6 @@
             currentNoteCallback = async (newNote) => {
                 if (newNote === null) return;
                 const updates = { note: newNote };
-                // 同時傳遞 name 和 date，確保唯一性
                 const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
                 const result = await res.json();
                 if (result.success) {
@@ -1094,16 +1092,16 @@
             });
         };
 
-        window.markTrialPaid = async function(name) {
+        window.markTrialPaid = async function(name, date) {
             if (userRole !== 'full') { showError('無權限'); return; }
-            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}`);
+            const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess('已標記收費');
                 await loadTrialAlerts();
                 await loadTrialList();
             } else {
-                showError(result.error);
+                showError(result.error || '標記失敗');
             }
         };
 
@@ -1440,4 +1438,3 @@
     </script>
 </body>
 </html>
-
