@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v4.3</title>
+    <title>教練後台 · 輪滑課程系統v4.5</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -270,6 +270,25 @@
             flex: 1;
             min-width: 200px;
         }
+        .student-row .details .name-with-icons {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .student-row .details .name-with-icons .icons {
+            display: flex;
+            gap: 4px;
+        }
+        .student-row .details .icons span {
+            font-size: 1rem;
+        }
+        .student-row .details .stats {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
         .student-row .details .note {
             font-size: 0.8rem;
             color: #718096;
@@ -290,16 +309,16 @@
             background: #e2e8f0;
         }
         .student-row .btn-sm:hover { background: #cbd5e0; }
-        .leave-badge, .rental-badge {
+        .leave-badge, .rental-badge, .class-badge-stat {
             padding: 4px 12px;
             border-radius: 30px;
             font-size: 0.8rem;
             font-weight: 600;
             display: inline-block;
-            margin-right: 6px;
         }
         .leave-badge { background: #f56565; color: white; }
         .rental-badge { background: #38b2ac; color: white; }
+        .class-badge-stat { background: #4299e1; color: white; }
         .info-box {
             background: #ebf8ff;
             border-left: 4px solid #4299e1;
@@ -434,7 +453,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V4.3</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V4.5</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -609,6 +628,7 @@
 
         let currentNoteCallback = null;
         let currentConfirmCallback = null;
+        let currentNoteStudentName = null; // 用於編輯學生備註
 
         // 折疊狀態存儲
         let classCollapsed = {};
@@ -1270,7 +1290,7 @@
             }
         }
 
-        // ---------- 按班級顯示備註一覽（含折疊）----------
+        // ---------- 按班級顯示備註一覽（含折疊、圖標、剩餘堂數）----------
         function renderNoteListByClass() {
             const container = document.getElementById('noteListByClass');
             if (!container) return;
@@ -1292,11 +1312,23 @@
                 </div>`;
                 html += `<div class="class-students ${collapsed}" id="class-${className}">`;
                 grouped[className].forEach(s => {
+                    // 圖標判斷
+                    const icons = [];
+                    if (s.remainingClasses <= 0) icons.push('🔴');
+                    if (s.leaveCount >= 2) icons.push('🟡');
+                    const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
+
                     html += `<div class="student-row">
                         <div class="details">
-                            <strong>${s.name}</strong>
-                            <span class="leave-badge">請假 ${s.leaveCount}</span>
-                            <span class="rental-badge">租借 ${s.rentalCount}</span>
+                            <div class="name-with-icons">
+                                ${iconsHtml}
+                                <strong>${s.name}</strong>
+                            </div>
+                            <div class="stats">
+                                <span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>
+                                <span class="leave-badge">請假 ${s.leaveCount}</span>
+                                <span class="rental-badge">租借 ${s.rentalCount}</span>
+                            </div>
                             ${s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>'}
                         </div>`;
                     if (userRole === 'full') {
@@ -1317,39 +1349,69 @@
             renderNoteListByClass(); // 重新渲染以更新圖標和折疊狀態
         };
 
-        // 學生備註編輯（使用自訂模態）
+        // 學生備註編輯（使用自訂模態，修復無反應問題）
         window.openNoteModalForStudent = function(name) {
+            // 儲存當前要編輯的學生姓名
+            currentNoteStudentName = name;
             const student = allStudents.find(s => s.name === name);
-            currentNoteCallback = async (newNote) => {
-                if (newNote === null) return;
-                const updates = { note: newNote };
-                const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('備註已更新');
-                    await fetchAllStudents();
-                    renderNoteListByClass();
-                    populateClearSelect();
-                } else {
-                    showError(result.error || '更新失敗');
-                }
-            };
             document.getElementById('modalNoteInput').value = student?.note || '';
             document.getElementById('noteModal').style.display = 'flex';
         };
 
+        // 儲存備註（使用 currentNoteStudentName）
+        function saveNote() {
+            const newNote = document.getElementById('modalNoteInput').value.trim();
+            const name = currentNoteStudentName;
+            if (!name) {
+                closeNoteModal();
+                return;
+            }
+            // 加入防重鎖
+            if (processing[`note_${name}`]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+            processing[`note_${name}`] = true;
+
+            // 可選：顯示儲存中狀態（簡單禁用按鈕）
+            const confirmBtn = document.querySelector('#noteModal .confirm');
+            const cancelBtn = document.querySelector('#noteModal .cancel');
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+
+            (async () => {
+                try {
+                    const updates = { note: newNote };
+                    const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                    const result = await res.json();
+                    if (result.success) {
+                        showSuccess('備註已更新');
+                        await fetchAllStudents();
+                        renderNoteListByClass();
+                        populateClearSelect();
+                    } else {
+                        showError(result.error || '更新失敗');
+                    }
+                } catch (err) {
+                    showError('網路錯誤');
+                } finally {
+                    delete processing[`note_${name}`];
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                    closeNoteModal();
+                }
+            })();
+        }
+
         // ---------- 自訂對話框控制 ----------
         function closeNoteModal() {
             document.getElementById('noteModal').style.display = 'none';
-            currentNoteCallback = null;
-        }
-
-        function saveNote() {
-            const newNote = document.getElementById('modalNoteInput').value.trim();
-            closeNoteModal();
-            if (currentNoteCallback) {
-                currentNoteCallback(newNote);
-            }
+            currentNoteStudentName = null;
+            // 確保按鈕狀態恢復
+            const confirmBtn = document.querySelector('#noteModal .confirm');
+            const cancelBtn = document.querySelector('#noteModal .cancel');
+            if (confirmBtn) confirmBtn.disabled = false;
+            if (cancelBtn) cancelBtn.disabled = false;
         }
 
         function closeConfirmModal() {
