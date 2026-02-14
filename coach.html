@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v3.8</title>
+    <title>教練後台 · 輪滑課程系統v3.9</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -67,35 +67,6 @@
         .btn-purple { background: #9f7aea; color: white; }
         .btn-indigo { background: #667eea; color: white; }
         .btn-rental { background: #38b2ac; color: white; }
-
-        .notification-banner {
-            background: #bee3f8;
-            border: 1px solid #3182ce;
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .notification-banner .message {
-            flex: 1;
-            font-size: 0.95rem;
-        }
-        .notification-banner .edit-area {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-        .notification-banner input {
-            flex: 1;
-            padding: 8px 12px;
-            border-radius: 30px;
-            border: 1px solid #cbd5e0;
-        }
 
         .trial-alert {
             background: #fefcbf;
@@ -353,6 +324,60 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* 自訂模態對話框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 90%;
+            width: 350px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+        .modal-content h3 {
+            margin-bottom: 16px;
+            color: #2d3748;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-buttons .confirm {
+            background: #48bb78;
+            color: white;
+        }
+        .modal-buttons .cancel {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
         @media screen and (max-width: 480px) {
             body { padding: 8px; }
             .container { padding: 16px 12px; }
@@ -379,7 +404,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V3.8</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V3.9</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -389,15 +414,6 @@
 
         <!-- 應用內容（初始隱藏） -->
         <div id="appContent" style="display: none;">
-            <!-- 教練通知欄 -->
-            <div id="notificationBanner" class="notification-banner" style="display: none;">
-                <div id="notificationMessage" class="message"></div>
-                <div id="notificationEdit" class="edit-area" style="display: none;">
-                    <input type="text" id="notificationInput" placeholder="輸入通知內容...">
-                    <button class="btn btn-primary" onclick="publishNotification()">發布</button>
-                </div>
-            </div>
-
             <!-- 試堂通知欄 -->
             <div id="trialAlert" class="trial-alert" style="display: none;">
                 <h3>📋 試堂提醒</h3>
@@ -424,7 +440,7 @@
                 <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px;">重置點名狀態</button>
             </div>
 
-            <!-- 租借裝備區塊（防重複） -->
+            <!-- 租借裝備區塊 -->
             <div id="rental" class="section" style="display: none;">
                 <h2>🛞 裝備租借 (每次 $20)</h2>
                 <div id="rentalList"></div>
@@ -446,7 +462,7 @@
                 <div id="trialList"></div>
             </div>
 
-            <!-- 新增/扣課（完整權限） -->
+            <!-- 新增/扣課區塊 -->
             <div id="addClasses" class="section" style="display: none;">
                 <h2>➕ 新增 / 扣減課堂</h2>
                 <div class="info-box">💡 輸入姓名關鍵字選擇學生，班級自動帶入。</div>
@@ -466,7 +482,7 @@
                 <div id="addClassesMessage"></div>
             </div>
 
-            <!-- 新增學生（完整權限，含特別備註） -->
+            <!-- 新增學生區塊（含特別備註） -->
             <div id="addStudent" class="section" style="display: none;">
                 <h2>👤 新增學生（預設10堂）</h2>
                 <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。特別備註僅完整權限可見。</div>
@@ -479,7 +495,7 @@
                 <div id="addStudentMessage"></div>
             </div>
 
-            <!-- 班級管理（完整權限） -->
+            <!-- 班級管理區塊 -->
             <div id="classManage" class="section" style="display: none;">
                 <h2>🏫 班級管理</h2>
                 <div class="form-row">
@@ -490,20 +506,19 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 清零請假/租借（完整權限，含特別備註顯示與編輯） -->
+            <!-- 備註一覽 + 清零區塊 -->
             <div id="clear" class="section" style="display: none;">
-                <h2>🧹 清零請假次數 / 租借次數</h2>
-                <div class="form-row">
+                <h2>📊 備註一覽</h2>
+                <div id="noteListByClass"></div>
+                <div class="form-row" style="margin-top: 20px;">
                     <div class="form-group"><label>選擇學生</label><select id="clearStudent"></select></div>
                     <button class="btn btn-danger" onclick="clearLeaveCount()" style="flex:1;">清零請假</button>
                     <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
                 </div>
                 <div id="clearMessage"></div>
-                <h3>📊 學生請假/租借/備註一覽</h3>
-                <div id="clearStudentList"></div>
             </div>
 
-            <!-- 教練代請假（完整權限） -->
+            <!-- 教練代請假區塊 -->
             <div id="coachLeave" class="section" style="display: none;">
                 <h2>📝 教練代為請假</h2>
                 <div class="info-box">🔍 輸入姓名關鍵字選擇學生。</div>
@@ -525,12 +540,40 @@
         </div> <!-- end appContent -->
     </div>
 
+    <!-- 自訂模態對話框（用於編輯備註） -->
+    <div id="noteModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✏️ 編輯備註</h3>
+            <input type="text" id="modalNoteInput" placeholder="請輸入新備註">
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeNoteModal()">取消</button>
+                <button class="confirm" onclick="saveNote()">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂確認對話框（用於刪除確認） -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="confirmTitle">確認操作</h3>
+            <p id="confirmMessage">確定要執行此操作嗎？</p>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeConfirmModal()">取消</button>
+                <button class="confirm" id="confirmBtn">確定</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY9xf8nROSS87JSeRiHvf6LJnlw6FtQCzsL2G5LEuGbh-GGTnFPDS6dns20FvcYtk-tQ/exec';
         let allStudents = [];
         let userRole = 'full';
         // 處理鎖，防止快速點擊重複提交
         const processing = {};
+
+        // 自訂對話框狀態
+        let currentNoteCallback = null;
+        let currentConfirmCallback = null;
 
         // ---------- 登入 ----------
         async function login() {
@@ -563,11 +606,11 @@
                 await Promise.all([fetchAllStudents(), loadClassList()]);
                 await loadTrialAlerts();
                 await loadTrialList();
-                await loadNotification(); // 載入通知
 
                 updateAttendanceList();
                 updateRentalList();
                 populateClearSelect();
+                renderNoteListByClass();
 
                 document.getElementById('loadingSpinner').style.display = 'none';
                 document.getElementById('appContent').style.display = 'block';
@@ -590,61 +633,11 @@
             if (userRole === 'full') {
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
-                // 重置點名按鈕所有人都顯示
                 document.getElementById('resetAttendanceBtn').style.display = 'inline-block';
-                // 通知欄顯示編輯按鈕
-                showNotificationEdit(true);
             } else {
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'none');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
-                document.getElementById('resetAttendanceBtn').style.display = 'inline-block'; // 下放給受限用戶
-                showNotificationEdit(false);
-            }
-        }
-
-        // ---------- 通知功能 ----------
-        async function loadNotification() {
-            const res = await fetch(`${SCRIPT_URL}?action=getNotification`);
-            const data = await res.json();
-            const banner = document.getElementById('notificationBanner');
-            const messageDiv = document.getElementById('notificationMessage');
-            if (data.notification) {
-                messageDiv.textContent = data.notification;
-                banner.style.display = 'flex';
-            } else {
-                banner.style.display = 'none';
-            }
-        }
-
-        function showNotificationEdit(canEdit) {
-            const banner = document.getElementById('notificationBanner');
-            const messageDiv = document.getElementById('notificationMessage');
-            const editDiv = document.getElementById('notificationEdit');
-            if (canEdit) {
-                messageDiv.style.display = 'none';
-                editDiv.style.display = 'flex';
-                // 載入當前通知到輸入框
-                fetch(`${SCRIPT_URL}?action=getNotification`)
-                    .then(res => res.json())
-                    .then(data => {
-                        document.getElementById('notificationInput').value = data.notification || '';
-                    });
-            } else {
-                messageDiv.style.display = 'block';
-                editDiv.style.display = 'none';
-            }
-        }
-
-        async function publishNotification() {
-            const text = document.getElementById('notificationInput').value.trim();
-            if (!text) return showError('請輸入通知內容');
-            const res = await fetch(`${SCRIPT_URL}?action=setNotification&text=${encodeURIComponent(text)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('通知已發布');
-                await loadNotification();
-            } else {
-                showError(result.error || '發布失敗');
+                document.getElementById('resetAttendanceBtn').style.display = 'inline-block';
             }
         }
 
@@ -659,7 +652,9 @@
                 const el = document.getElementById(id);
                 if (el) el.style.display = id === sectionId ? 'block' : 'none';
             });
-            if (sectionId === 'clear') renderClearStudentList();
+            if (sectionId === 'clear') {
+                renderNoteListByClass();
+            }
             if (sectionId === 'trial') loadTrialList();
         }
 
@@ -730,7 +725,7 @@
             }
         }
 
-        // ---------- 點名（防重複、顯示堂數）----------
+        // ---------- 點名 ----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -781,9 +776,9 @@
                     await fetchAllStudents();
                     updateAttendanceList();
                     populateClearSelect();
+                    renderNoteListByClass();
                 } else {
                     showError(data.message || '點名失敗');
-                    // 可選擇恢復按鈕？但為了安全，保持禁用，教練可手動重置
                 }
             } catch (err) {
                 showError('網路錯誤，點名失敗');
@@ -793,7 +788,6 @@
         }
 
         function resetAttendance() {
-            // 已下放給所有權限
             document.querySelectorAll('.student-button.checked').forEach(b => {
                 b.classList.remove('checked');
                 b.disabled = false;
@@ -802,7 +796,7 @@
             showSuccess('點名狀態已重置');
         }
 
-        // ---------- 租借裝備（防重複）----------
+        // ---------- 租借裝備 ----------
         function updateRentalList() {
             const container = document.getElementById('rentalList');
             if (!container) return;
@@ -842,6 +836,7 @@
                     await fetchAllStudents();
                     updateRentalList();
                     populateClearSelect();
+                    renderNoteListByClass();
                 } else {
                     showError(data.error || '租借失敗');
                     if (btn) {
@@ -911,7 +906,7 @@
             }
         };
 
-        // ---------- 試堂管理（記錄列表，含刪除/修改備註友好彈窗）----------
+        // ---------- 試堂管理（記錄列表）----------
         async function loadTrialList() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
@@ -926,10 +921,10 @@
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
                     } else {
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>`;
+                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費請按此</button>`;
                     }
-                    html += `<button class="btn-sm" onclick="editTrialNote('${t.name}')">✏️備註</button>
-                             <button class="btn-sm" onclick="deleteTrial('${t.name}')">❌刪除</button>`;
+                    html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}')">✏️備註</button>
+                             <button class="btn-sm" onclick="confirmDeleteTrial('${t.name}')">❌刪除</button>`;
                 } else {
                     html += `<span>(僅完整權限可操作)</span>`;
                 }
@@ -938,38 +933,43 @@
             container.innerHTML = html || '無試堂學生';
         }
 
-        // 修改備註：改用一次 prompt
-        window.editTrialNote = async function(name) {
-            if (userRole !== 'full') { showError('無權限'); return; }
-            const newNote = prompt('請輸入新的備註：');
-            if (newNote === null) return;
-            const updates = { note: newNote };
-            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('備註已更新');
-                await loadTrialAlerts();
-                await loadTrialList();
-            } else {
-                showError(result.error || '更新失敗');
-            }
+        // 試堂：修改備註（使用自訂模態）
+        window.openNoteModalForTrial = function(name) {
+            currentNoteCallback = async (newNote) => {
+                if (newNote === null) return;
+                const updates = { note: newNote };
+                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('備註已更新');
+                    await loadTrialAlerts();
+                    await loadTrialList();
+                } else {
+                    showError(result.error || '更新失敗');
+                }
+            };
+            document.getElementById('modalNoteInput').value = '';
+            document.getElementById('noteModal').style.display = 'flex';
         };
 
-        // 刪除試堂：改用一次 prompt 輸入日期確認
-        window.deleteTrial = async function(name) {
-            if (userRole !== 'full') { showError('無權限'); return; }
-            const date = prompt(`請輸入 ${name} 的試堂日期 (YYYY-MM-DD) 以確認刪除：`);
-            if (!date) return;
-            if (!confirm(`確定刪除 ${name} 於 ${date} 的試堂記錄？`)) return;
-            const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('刪除成功');
-                await loadTrialAlerts();
-                await loadTrialList();
-            } else {
-                showError(result.error || '刪除失敗');
-            }
+        // 試堂：刪除確認（使用自訂確認）
+        window.confirmDeleteTrial = function(name) {
+            currentConfirmCallback = async () => {
+                const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('刪除成功');
+                    await loadTrialAlerts();
+                    await loadTrialList();
+                } else {
+                    showError(result.error || '刪除失敗');
+                }
+                closeConfirmModal();
+            };
+            document.getElementById('confirmTitle').textContent = '確認刪除';
+            document.getElementById('confirmMessage').textContent = `確定要刪除 ${name} 的試堂記錄嗎？`;
+            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+            document.getElementById('confirmModal').style.display = 'flex';
         };
 
         async function addTrial() {
@@ -1076,7 +1076,7 @@
             }
         };
 
-        // ---------- 新增/扣課（模糊搜尋）----------
+        // ---------- 新增/扣課 ----------
         const searchInput = document.getElementById('searchStudentInput');
         const dropdown = document.getElementById('studentDropdown');
         if (searchInput) {
@@ -1135,6 +1135,7 @@
                     updateAttendanceList();
                     updateRentalList();
                     populateClearSelect();
+                    renderNoteListByClass();
                 } else {
                     showError(result.message);
                 }
@@ -1149,7 +1150,7 @@
             }
         }
 
-        // ---------- 新增學生（含特別備註，預設10堂）----------
+        // ---------- 新增學生（含特別備註）----------
         async function submitAddStudent() {
             if (userRole === 'limited') { showError('無權限'); return; }
             if (processing.addStudent) {
@@ -1166,12 +1167,12 @@
             try {
                 const name = document.getElementById('newStudentName').value.trim();
                 const className = document.getElementById('newStudentClass').value;
-                const note = document.getElementById('newStudentNote').value.trim(); // 特別備註
+                const note = document.getElementById('newStudentNote').value.trim();
                 if (!name || !className) {
                     showError('請填寫姓名與班級');
                     return;
                 }
-                const payload = { name, class: className, classes: 10, note }; // 傳送備註
+                const payload = { name, class: className, classes: 10, note };
                 const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}`);
                 const result = await res.json();
                 if (result.success) {
@@ -1183,6 +1184,7 @@
                     updateAttendanceList();
                     updateRentalList();
                     populateClearSelect();
+                    renderNoteListByClass();
                 } else {
                     showError(result.message || '新增失敗');
                 }
@@ -1197,7 +1199,7 @@
             }
         }
 
-        // ---------- 填充清零下拉選單 ----------
+        // ---------- 清零下拉選單 ----------
         function populateClearSelect() {
             const select = document.getElementById('clearStudent');
             if (select) {
@@ -1206,47 +1208,80 @@
             }
         }
 
-        // ---------- 顯示學生列表（含特別備註）----------
-        function renderClearStudentList() {
-            const container = document.getElementById('clearStudentList');
+        // ---------- 按班級顯示備註一覽 ----------
+        function renderNoteListByClass() {
+            const container = document.getElementById('noteListByClass');
             if (!container) return;
-            let html = '';
+            
+            // 按班級分組
+            const grouped = {};
             allStudents.forEach(s => {
-                // 顯示所有學生，不僅是有請假/租借的
-                html += `<div class="student-row">
-                    <div class="details">
-                        <strong>${s.name}</strong> (${s.class}) 
-                        <span class="leave-badge">請假 ${s.leaveCount}</span> 
-                        <span class="rental-badge">租借 ${s.rentalCount}</span>
-                        ${s.note ? `<div class="note">📝 備註：${s.note}</div>` : ''}
-                    </div>`;
-                if (userRole === 'full') {
-                    html += `<div class="actions">
-                        <button class="btn-sm" onclick="editStudentNote('${s.name}')">✏️編輯備註</button>
-                    </div>`;
-                }
-                html += `</div>`;
+                if (!grouped[s.class]) grouped[s.class] = [];
+                grouped[s.class].push(s);
             });
-            container.innerHTML = html || '無任何學生';
+
+            let html = '';
+            const sortedClasses = sortClasses(Object.keys(grouped));
+            sortedClasses.forEach(className => {
+                html += `<h3 style="margin: 20px 0 10px;">${className}班</h3>`;
+                grouped[className].forEach(s => {
+                    html += `<div class="student-row">
+                        <div class="details">
+                            <strong>${s.name}</strong>
+                            <span class="leave-badge">請假 ${s.leaveCount}</span>
+                            <span class="rental-badge">租借 ${s.rentalCount}</span>
+                            ${s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>'}
+                        </div>`;
+                    if (userRole === 'full') {
+                        html += `<div class="actions">
+                            <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                });
+            });
+            container.innerHTML = html || '無學生資料';
         }
 
-        // 編輯學生特別備註（僅完整權限）
-        window.editStudentNote = async function(name) {
-            if (userRole !== 'full') { showError('無權限'); return; }
-            const newNote = prompt('請輸入新的特別備註：');
-            if (newNote === null) return;
-            const updates = { note: newNote };
-            const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('備註已更新');
-                await fetchAllStudents();
-                renderClearStudentList();
-                populateClearSelect();
-            } else {
-                showError(result.error || '更新失敗');
-            }
+        // 學生備註編輯（使用自訂模態）
+        window.openNoteModalForStudent = function(name) {
+            const student = allStudents.find(s => s.name === name);
+            currentNoteCallback = async (newNote) => {
+                if (newNote === null) return;
+                const updates = { note: newNote };
+                const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('備註已更新');
+                    await fetchAllStudents();
+                    renderNoteListByClass();
+                    populateClearSelect();
+                } else {
+                    showError(result.error || '更新失敗');
+                }
+            };
+            document.getElementById('modalNoteInput').value = student?.note || '';
+            document.getElementById('noteModal').style.display = 'flex';
         };
+
+        // ---------- 自訂對話框控制 ----------
+        function closeNoteModal() {
+            document.getElementById('noteModal').style.display = 'none';
+            currentNoteCallback = null;
+        }
+
+        function saveNote() {
+            const newNote = document.getElementById('modalNoteInput').value.trim();
+            closeNoteModal();
+            if (currentNoteCallback) {
+                currentNoteCallback(newNote);
+            }
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            currentConfirmCallback = null;
+        }
 
         // ---------- 清零請假 ----------
         async function clearLeaveCount() {
@@ -1260,7 +1295,7 @@
                 showSuccess(`${name} 請假次數已清零`);
                 await fetchAllStudents();
                 populateClearSelect();
-                renderClearStudentList();
+                renderNoteListByClass();
             } else {
                 showError(result.error);
             }
@@ -1278,14 +1313,14 @@
                 showSuccess(`${name} 租借次數已清零`);
                 await fetchAllStudents();
                 populateClearSelect();
-                renderClearStudentList();
+                renderNoteListByClass();
                 updateRentalList();
             } else {
                 showError(result.error);
             }
         }
 
-        // ---------- 教練代請假（防重複）----------
+        // ---------- 教練代請假 ----------
         const coachSearch = document.getElementById('coachLeaveSearchInput');
         const coachDropdown = document.getElementById('coachLeaveDropdown');
         if (coachSearch) {
@@ -1341,7 +1376,7 @@
                     await fetchAllStudents();
                     updateAttendanceList();
                     populateClearSelect();
-                    renderClearStudentList();
+                    renderNoteListByClass();
                     document.getElementById('coachLeaveSearchInput').value = '';
                     document.getElementById('coachLeaveSelectedClass').value = '';
                 } else {
