@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v4.0</title>
+    <title>教練後台 · 輪滑課程系統v4.1</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -404,7 +404,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V4.0</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V4.1</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -570,7 +570,7 @@
     </div>
 
     <script>
-        // ========== 後端網址 ==========
+        // ========== 後端網址（請確保與您的部署一致）==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY9xf8nROSS87JSeRiHvf6LJnlw6FtQCzsL2G5LEuGbh-GGTnFPDS6dns20FvcYtk-tQ/exec';
 
         let allStudents = [];
@@ -646,6 +646,7 @@
             }
         }
 
+        // ---------- 區塊切換 ----------
         function showSection(sectionId) {
             if (userRole === 'limited' && !['attendance', 'rental', 'photo'].includes(sectionId)) {
                 showError('您沒有權限使用此功能');
@@ -670,10 +671,12 @@
             return data;
         }
 
+        // ---------- 班級排序 ----------
         function sortClasses(classes) {
             return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         }
 
+        // ---------- 取得班級列表 ----------
         async function loadClassList() {
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
@@ -923,8 +926,9 @@
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>`;
                     } else {
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
-                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費請按此</button>`;
+                                 <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費按此</button>`;
                     }
+                    // 修改備註：傳遞 name 和 date
                     html += `<button class="btn-sm" onclick="openNoteModalForTrial('${t.name}', '${t.date}')">✏️備註</button>
                              <button class="btn-sm" onclick="confirmDeleteTrial('${t.name}', '${t.date}')">❌刪除</button>`;
                 } else {
@@ -935,14 +939,13 @@
             container.innerHTML = html || '無試堂學生';
         }
 
-        // 試堂：修改備註（使用自訂模態）
+        // 試堂：修改備註（使用自訂模態，傳遞 name 和 date）
         window.openNoteModalForTrial = function(name, date) {
-            // 可選：從現有資料中取得當前備註，預留給 modal 初始值
-            // 但我們不從後端即時獲取，可以讓用戶直接輸入
             currentNoteCallback = async (newNote) => {
                 if (newNote === null) return;
                 const updates = { note: newNote };
-                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                // 同時傳遞 name 和 date，確保唯一性
+                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
                 const result = await res.json();
                 if (result.success) {
                     showSuccess('備註已更新');
@@ -956,7 +959,7 @@
             document.getElementById('noteModal').style.display = 'flex';
         };
 
-        // 試堂：刪除確認（使用自訂確認）
+        // 試堂：刪除確認（傳遞 name 和 date，加入防重鎖）
         window.confirmDeleteTrial = function(name, date) {
             const lockKey = `deleteTrial_${name}_${date}`;
             if (processing[lockKey]) {
@@ -995,7 +998,7 @@
             };
 
             document.getElementById('confirmTitle').textContent = '確認刪除';
-            document.getElementById('confirmMessage').textContent = `確定要刪除 ${name} 的試堂記錄嗎？`;
+            document.getElementById('confirmMessage').textContent = `確定要刪除 ${name} 於 ${date} 的試堂記錄嗎？`;
             document.getElementById('confirmBtn').onclick = currentConfirmCallback;
             document.getElementById('confirmModal').style.display = 'flex';
         };
