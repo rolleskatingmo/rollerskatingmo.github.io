@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v3.7</title>
+    <title>教練後台 · 輪滑課程系統v3.8</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -67,6 +67,35 @@
         .btn-purple { background: #9f7aea; color: white; }
         .btn-indigo { background: #667eea; color: white; }
         .btn-rental { background: #38b2ac; color: white; }
+
+        .notification-banner {
+            background: #bee3f8;
+            border: 1px solid #3182ce;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .notification-banner .message {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+        .notification-banner .edit-area {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        .notification-banner input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1px solid #cbd5e0;
+        }
 
         .trial-alert {
             background: #fefcbf;
@@ -132,6 +161,8 @@
             border-radius: 30px;
             margin: 0 6px 6px 0;
             font-size: 0.85rem;
+            max-width: 100%;
+            word-break: break-word;
         }
 
         .student-button, .rental-button {
@@ -170,7 +201,8 @@
         .student-button.checked .class-count {
             background: rgba(255,255,255,0.2);
         }
-        .student-button:disabled {
+        .student-button:disabled,
+        .rental-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
@@ -263,6 +295,16 @@
             flex-wrap: wrap;
             gap: 8px;
         }
+        .student-row .details {
+            flex: 1;
+            min-width: 200px;
+        }
+        .student-row .details .note {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 4px;
+            word-break: break-word;
+        }
         .student-row .actions {
             display: flex;
             gap: 6px;
@@ -282,6 +324,8 @@
             border-radius: 30px;
             font-size: 0.8rem;
             font-weight: 600;
+            display: inline-block;
+            margin-right: 6px;
         }
         .leave-badge { background: #f56565; color: white; }
         .rental-badge { background: #38b2ac; color: white; }
@@ -327,7 +371,7 @@
 </head>
 <body>
     <div id="loginForm">
-        <h2>🔐 教練專區</h2>
+        <h2>🔐 教練專區，家長誤入請關閉頁面</h2>
         <input type="password" id="password" placeholder="請輸入密碼" style="margin:20px 0; padding:14px;">
         <button class="btn btn-primary" onclick="login()" style="width:100%;">登入</button>
         <div id="loginMessage" style="margin-top:15px;"></div>
@@ -335,7 +379,7 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V3.7</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V3.8</h1>
 
         <!-- 載入中提示 -->
         <div id="loadingSpinner" style="text-align: center; padding: 40px; display: none;">
@@ -345,6 +389,15 @@
 
         <!-- 應用內容（初始隱藏） -->
         <div id="appContent" style="display: none;">
+            <!-- 教練通知欄 -->
+            <div id="notificationBanner" class="notification-banner" style="display: none;">
+                <div id="notificationMessage" class="message"></div>
+                <div id="notificationEdit" class="edit-area" style="display: none;">
+                    <input type="text" id="notificationInput" placeholder="輸入通知內容...">
+                    <button class="btn btn-primary" onclick="publishNotification()">發布</button>
+                </div>
+            </div>
+
             <!-- 試堂通知欄 -->
             <div id="trialAlert" class="trial-alert" style="display: none;">
                 <h3>📋 試堂提醒</h3>
@@ -368,10 +421,10 @@
             <div id="attendance" class="section" style="display: none;">
                 <h2>📌 點名 (扣課)</h2>
                 <div id="attendanceList"></div>
-                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; display:none;">重置點名狀態</button>
+                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px;">重置點名狀態</button>
             </div>
 
-            <!-- 租借裝備區塊 -->
+            <!-- 租借裝備區塊（防重複） -->
             <div id="rental" class="section" style="display: none;">
                 <h2>🛞 裝備租借 (每次 $20)</h2>
                 <div id="rentalList"></div>
@@ -413,13 +466,14 @@
                 <div id="addClassesMessage"></div>
             </div>
 
-            <!-- 新增學生（完整權限） -->
+            <!-- 新增學生（完整權限，含特別備註） -->
             <div id="addStudent" class="section" style="display: none;">
                 <h2>👤 新增學生（預設10堂）</h2>
-                <div class="info-box">🎁 新學生自動獲得 10 堂課，無需再額外新增課堂數。</div>
+                <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。特別備註僅完整權限可見。</div>
                 <div class="form-row">
                     <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
                     <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
+                    <div class="form-group"><label>特別備註</label><input type="text" id="newStudentNote" placeholder="選填，僅教練查看"></div>
                     <button class="btn btn-indigo" onclick="submitAddStudent()" style="width:100%;">新增學生</button>
                 </div>
                 <div id="addStudentMessage"></div>
@@ -436,7 +490,7 @@
                 <div id="classListContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
-            <!-- 清零請假/租借（完整權限） -->
+            <!-- 清零請假/租借（完整權限，含特別備註顯示與編輯） -->
             <div id="clear" class="section" style="display: none;">
                 <h2>🧹 清零請假次數 / 租借次數</h2>
                 <div class="form-row">
@@ -445,7 +499,7 @@
                     <button class="btn btn-rental" onclick="clearRentalCount()" style="flex:1;">清零租借</button>
                 </div>
                 <div id="clearMessage"></div>
-                <h3>📊 目前請假/租借次數一覽</h3>
+                <h3>📊 學生請假/租借/備註一覽</h3>
                 <div id="clearStudentList"></div>
             </div>
 
@@ -475,8 +529,8 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVogWqEvXJuXc1wXYQea1Q_tJS_m5G_cdrFaUrB9cSyakDdrJCPFb3gVEYlXH4fTWSMA/exec';
         let allStudents = [];
         let userRole = 'full';
-        // 點名處理鎖，防止快速點擊重複提交
-        const processingAttendance = {};
+        // 處理鎖，防止快速點擊重複提交
+        const processing = {};
 
         // ---------- 登入 ----------
         async function login() {
@@ -491,7 +545,7 @@
                     document.getElementById('mainContent').style.display = 'block';
                     document.getElementById('loadingSpinner').style.display = 'block';
                     document.getElementById('appContent').style.display = 'none';
-                    await loadAllData(); // 等待所有資料載入
+                    await loadAllData();
                 } else {
                     showLoginError('密碼錯誤');
                 }
@@ -507,21 +561,19 @@
         async function loadAllData() {
             try {
                 await Promise.all([fetchAllStudents(), loadClassList()]);
-                await loadTrialAlerts();   // 載入試堂通知欄
-                await loadTrialList();      // 載入試堂記錄列表
+                await loadTrialAlerts();
+                await loadTrialList();
+                await loadNotification(); // 載入通知
 
-                // 更新 UI
                 updateAttendanceList();
                 updateRentalList();
                 populateClearSelect();
 
-                // 隱藏載入中，顯示應用內容
                 document.getElementById('loadingSpinner').style.display = 'none';
                 document.getElementById('appContent').style.display = 'block';
 
-                // 根據權限顯示按鈕和預設區塊
                 applyRoleRestrictions();
-                showSection('attendance'); // 預設顯示點名區
+                showSection('attendance');
             } catch (error) {
                 console.error(error);
                 document.getElementById('loadingSpinner').innerHTML = `
@@ -538,11 +590,61 @@
             if (userRole === 'full') {
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'block');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
+                // 重置點名按鈕所有人都顯示
                 document.getElementById('resetAttendanceBtn').style.display = 'inline-block';
+                // 通知欄顯示編輯按鈕
+                showNotificationEdit(true);
             } else {
                 fullButtons.forEach(id => document.getElementById(id).style.display = 'none');
                 limitedButtons.forEach(id => document.getElementById(id).style.display = 'block');
-                document.getElementById('resetAttendanceBtn').style.display = 'none';
+                document.getElementById('resetAttendanceBtn').style.display = 'inline-block'; // 下放給受限用戶
+                showNotificationEdit(false);
+            }
+        }
+
+        // ---------- 通知功能 ----------
+        async function loadNotification() {
+            const res = await fetch(`${SCRIPT_URL}?action=getNotification`);
+            const data = await res.json();
+            const banner = document.getElementById('notificationBanner');
+            const messageDiv = document.getElementById('notificationMessage');
+            if (data.notification) {
+                messageDiv.textContent = data.notification;
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function showNotificationEdit(canEdit) {
+            const banner = document.getElementById('notificationBanner');
+            const messageDiv = document.getElementById('notificationMessage');
+            const editDiv = document.getElementById('notificationEdit');
+            if (canEdit) {
+                messageDiv.style.display = 'none';
+                editDiv.style.display = 'flex';
+                // 載入當前通知到輸入框
+                fetch(`${SCRIPT_URL}?action=getNotification`)
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('notificationInput').value = data.notification || '';
+                    });
+            } else {
+                messageDiv.style.display = 'block';
+                editDiv.style.display = 'none';
+            }
+        }
+
+        async function publishNotification() {
+            const text = document.getElementById('notificationInput').value.trim();
+            if (!text) return showError('請輸入通知內容');
+            const res = await fetch(`${SCRIPT_URL}?action=setNotification&text=${encodeURIComponent(text)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('通知已發布');
+                await loadNotification();
+            } else {
+                showError(result.error || '發布失敗');
             }
         }
 
@@ -579,6 +681,7 @@
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
             classes = sortClasses(classes);
+            renderClassList(classes);
             const newStudentSelect = document.getElementById('newStudentClass');
             if (newStudentSelect) {
                 newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
@@ -587,7 +690,47 @@
             return classes;
         }
 
-        // ---------- 點名（顯示剩餘堂數，防重複）----------
+        function renderClassList(classes) {
+            const container = document.getElementById('classListContainer');
+            if (!container) return;
+            let html = '';
+            classes.forEach(c => {
+                html += `<span class="class-badge">${c} 
+                    <button onclick="deleteClass('${c}')" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer;">✕</button>
+                </span>`;
+            });
+            container.innerHTML = html || '尚無班級，請新增。';
+        }
+
+        async function addNewClass() {
+            if (userRole === 'limited') { showError('無權限'); return; }
+            const className = document.getElementById('newClassName').value.trim();
+            if (!className) return showError('請輸入班級名稱');
+            const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                document.getElementById('newClassName').value = '';
+                loadClassList();
+            } else {
+                showError(result.message);
+            }
+        }
+
+        async function deleteClass(className) {
+            if (userRole === 'limited') { showError('無權限'); return; }
+            if (!confirm(`確定刪除班級「${className}」？`)) return;
+            const res = await fetch(`${SCRIPT_URL}?action=deleteClass&className=${encodeURIComponent(className)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(result.message);
+                loadClassList();
+            } else {
+                showError(result.message);
+            }
+        }
+
+        // ---------- 點名（防重複、顯示堂數）----------
         function updateAttendanceList() {
             const container = document.getElementById('attendanceList');
             if (!container) return;
@@ -603,7 +746,6 @@
                     const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
                     const disabled = isChecked ? 'disabled' : '';
                     const checkedClass = isChecked ? 'checked' : '';
-                    // 根據剩餘堂數決定是否添加 zero-class
                     const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
                     html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>
                         ${s.name} <span class="class-count">${s.remainingClasses}堂</span>
@@ -615,8 +757,7 @@
         }
 
         async function markAttendance(name) {
-            // 如果該學生正在處理中，直接返回
-            if (processingAttendance[name]) {
+            if (processing[`attendance_${name}`]) {
                 showError('正在處理中，請稍後...');
                 return;
             }
@@ -625,14 +766,12 @@
                 showError('此學生已完成點名');
                 return;
             }
-
-            // 立即禁用按鈕並標記處理中
             if (btn) {
                 btn.disabled = true;
                 btn.classList.add('checked');
                 localStorage.setItem(`attendance_${name}`, 'checked');
             }
-            processingAttendance[name] = true;
+            processing[`attendance_${name}`] = true;
 
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}`);
@@ -640,23 +779,21 @@
                 if (data.success) {
                     showSuccess(`${name} 出席完成，剩餘 ${data.remaining} 堂`);
                     await fetchAllStudents();
-                    updateAttendanceList(); // 重新整理點名列表，更新剩餘堂數
+                    updateAttendanceList();
                     populateClearSelect();
                 } else {
                     showError(data.message || '點名失敗');
-                    // 如果失敗，可以選擇將按鈕恢復？但為了防止重複，保持禁用，教練可手動重置
-                    // 我們可以保持 checked 狀態，因為後端可能沒扣到，但狀態已改，需重置才能再次點名
+                    // 可選擇恢復按鈕？但為了安全，保持禁用，教練可手動重置
                 }
             } catch (err) {
                 showError('網路錯誤，點名失敗');
-                // 同樣保持禁用
             } finally {
-                delete processingAttendance[name];
+                delete processing[`attendance_${name}`];
             }
         }
 
         function resetAttendance() {
-            if (userRole === 'limited') { showError('無權限'); return; }
+            // 已下放給所有權限
             document.querySelectorAll('.student-button.checked').forEach(b => {
                 b.classList.remove('checked');
                 b.disabled = false;
@@ -665,7 +802,7 @@
             showSuccess('點名狀態已重置');
         }
 
-        // ---------- 租借裝備 ----------
+        // ---------- 租借裝備（防重複）----------
         function updateRentalList() {
             const container = document.getElementById('rentalList');
             if (!container) return;
@@ -686,15 +823,40 @@
         }
 
         async function addRental(name) {
-            const res = await fetch(`${SCRIPT_URL}?action=addRental&name=${encodeURIComponent(name)}`);
-            const data = await res.json();
-            if (data.success) {
-                showSuccess(`${name} 租借+1，總次數 ${data.rentals}`);
-                await fetchAllStudents();
-                updateRentalList();
-                populateClearSelect();
-            } else {
-                showError(data.error || '租借失敗');
+            if (processing[`rental_${name}`]) {
+                showError('正在處理中，請稍後...');
+                return;
+            }
+            const btn = document.querySelector(`.rental-button[data-name="${name}"]`);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = `${name} (處理中)`;
+            }
+            processing[`rental_${name}`] = true;
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=addRental&name=${encodeURIComponent(name)}`);
+                const data = await res.json();
+                if (data.success) {
+                    showSuccess(`${name} 租借+1，總次數 ${data.rentals}`);
+                    await fetchAllStudents();
+                    updateRentalList();
+                    populateClearSelect();
+                } else {
+                    showError(data.error || '租借失敗');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = `${name} (${allStudents.find(s => s.name === name)?.rentalCount || 0}次)`;
+                    }
+                }
+            } catch (err) {
+                showError('網路錯誤');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = `${name} (${allStudents.find(s => s.name === name)?.rentalCount || 0}次)`;
+                }
+            } finally {
+                delete processing[`rental_${name}`];
             }
         }
 
@@ -711,8 +873,7 @@
         async function loadTrialAlerts() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
-            const today = getTodayUTC8(); // 使用 UTC+8 日期
-            // 過濾：未付費 或 (已付費且日期 >= 今天)
+            const today = getTodayUTC8();
             const filtered = trials.filter(t => {
                 if (!t.paid) return true;
                 else return t.date >= today;
@@ -750,7 +911,7 @@
             }
         };
 
-        // ---------- 試堂管理（記錄列表，新增刪除/修改備註）----------
+        // ---------- 試堂管理（記錄列表，含刪除/修改備註友好彈窗）----------
         async function loadTrialList() {
             const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
             const trials = await res.json();
@@ -767,7 +928,6 @@
                         html += `<button class="btn-sm" onclick="editTrialDate('${t.name}')">📅改期</button>
                                  <button class="btn-sm" onclick="markTrialPaid('${t.name}')">💰已收費</button>`;
                     }
-                    // 新增刪除和修改備註按鈕
                     html += `<button class="btn-sm" onclick="editTrialNote('${t.name}')">✏️備註</button>
                              <button class="btn-sm" onclick="deleteTrial('${t.name}')">❌刪除</button>`;
                 } else {
@@ -778,11 +938,26 @@
             container.innerHTML = html || '無試堂學生';
         }
 
-        // ---------- 試堂管理功能：刪除、修改備註 ----------
+        // 修改備註：改用一次 prompt
+        window.editTrialNote = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
+            const newNote = prompt('請輸入新的備註：');
+            if (newNote === null) return;
+            const updates = { note: newNote };
+            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('備註已更新');
+                await loadTrialAlerts();
+                await loadTrialList();
+            } else {
+                showError(result.error || '更新失敗');
+            }
+        };
+
+        // 刪除試堂：改用一次 prompt 輸入日期確認
         window.deleteTrial = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
-            // 為了避免刪錯，可以加上日期確認，但此處簡單用姓名，可能需要更精確。我們可以讓用戶輸入日期或選擇。
-            // 這裡使用 prompt 讓用戶輸入日期以確認
             const date = prompt(`請輸入 ${name} 的試堂日期 (YYYY-MM-DD) 以確認刪除：`);
             if (!date) return;
             if (!confirm(`確定刪除 ${name} 於 ${date} 的試堂記錄？`)) return;
@@ -797,57 +972,57 @@
             }
         };
 
-        window.editTrialNote = async function(name) {
-            if (userRole !== 'full') { showError('無權限'); return; }
-            const date = prompt(`請輸入 ${name} 的試堂日期 (YYYY-MM-DD)：`);
-            if (!date) return;
-            const newNote = prompt('請輸入新的備註：');
-            if (newNote === null) return; // 取消
-            const updates = { note: newNote };
-            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('備註已更新');
-                await loadTrialAlerts();
-                await loadTrialList();
-            } else {
-                showError(result.error || '更新失敗');
-            }
-        };
-
-        // ---------- 原有的試堂管理函數 ----------
         async function addTrial() {
             if (userRole !== 'full') { showError('無權限'); return; }
-            const data = {
-                name: document.getElementById('trialName').value,
-                date: document.getElementById('trialDate').value,
-                rentEquipment: document.getElementById('trialRent').value === 'true',
-                paid: document.getElementById('trialPaid').value === 'true',
-                note: document.getElementById('trialNote').value
-            };
-            if (!data.name || !data.date) return showError('姓名與日期必填');
-            const res = await fetch(`${SCRIPT_URL}?action=addTrialStudent&data=${encodeURIComponent(JSON.stringify(data))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('新增成功');
-                document.getElementById('trialName').value = '';
-                document.getElementById('trialDate').value = '';
-                document.getElementById('trialNote').value = '';
-                await loadTrialAlerts();
-                await loadTrialList();
-            } else {
-                showError(result.error || '新增失敗');
+            if (processing.addTrial) {
+                showError('正在新增中，請稍後...');
+                return;
+            }
+            const btn = document.querySelector('#trial .btn-indigo');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '新增中...';
+            }
+            processing.addTrial = true;
+
+            try {
+                const data = {
+                    name: document.getElementById('trialName').value,
+                    date: document.getElementById('trialDate').value,
+                    rentEquipment: document.getElementById('trialRent').value === 'true',
+                    paid: document.getElementById('trialPaid').value === 'true',
+                    note: document.getElementById('trialNote').value
+                };
+                if (!data.name || !data.date) return showError('姓名與日期必填');
+                const res = await fetch(`${SCRIPT_URL}?action=addTrialStudent&data=${encodeURIComponent(JSON.stringify(data))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('新增成功');
+                    document.getElementById('trialName').value = '';
+                    document.getElementById('trialDate').value = '';
+                    document.getElementById('trialNote').value = '';
+                    await loadTrialAlerts();
+                    await loadTrialList();
+                } else {
+                    showError(result.error || '新增失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '新增試堂學生';
+                }
+                delete processing.addTrial;
             }
         }
 
         window.editTrialDate = async function(name) {
             if (userRole !== 'full') { showError('無權限'); return; }
             
-            // 移除可能殘留的臨時日期輸入框
             const oldInput = document.querySelector('input[data-temp="date"]');
             if (oldInput) oldInput.remove();
             
-            // 創建一個幾乎透明的全屏日期輸入框
             const tempInput = document.createElement('input');
             tempInput.type = 'date';
             tempInput.setAttribute('data-temp', 'date');
@@ -927,64 +1102,98 @@
 
         async function submitAddClasses() {
             if (userRole === 'limited') { showError('無權限'); return; }
-            const name = document.getElementById('searchStudentInput').value.trim();
-            const className = document.getElementById('selectedClass').value;
-            const delta = parseInt(document.getElementById('addClassDelta').value);
-            const reason = document.getElementById('addClassReason').value.trim() || '教練調整';
-            if (!name || !className || isNaN(delta)) return showError('請完成所有欄位');
-            const payload = { name, class: className, classesChange: delta, reason };
-            const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(result.message);
-                document.getElementById('searchStudentInput').value = '';
-                document.getElementById('selectedClass').value = '';
-                document.getElementById('addClassDelta').value = '10';
-                document.getElementById('addClassReason').value = '';
-                await fetchAllStudents();
-                updateAttendanceList();
-                updateRentalList();
-                populateClearSelect();
-            } else {
-                showError(result.message);
+            if (processing.addClasses) {
+                showError('正在處理中...');
+                return;
+            }
+            const btn = document.querySelector('#addClasses .btn-success');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '處理中...';
+            }
+            processing.addClasses = true;
+
+            try {
+                const name = document.getElementById('searchStudentInput').value.trim();
+                const className = document.getElementById('selectedClass').value;
+                const delta = parseInt(document.getElementById('addClassDelta').value);
+                const reason = document.getElementById('addClassReason').value.trim() || '教練調整';
+                if (!name || !className || isNaN(delta)) {
+                    showError('請完成所有欄位');
+                    return;
+                }
+                const payload = { name, class: className, classesChange: delta, reason };
+                const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(result.message);
+                    document.getElementById('searchStudentInput').value = '';
+                    document.getElementById('selectedClass').value = '';
+                    document.getElementById('addClassDelta').value = '10';
+                    document.getElementById('addClassReason').value = '';
+                    await fetchAllStudents();
+                    updateAttendanceList();
+                    updateRentalList();
+                    populateClearSelect();
+                } else {
+                    showError(result.message);
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '確認更新';
+                }
+                delete processing.addClasses;
             }
         }
 
-        // ---------- 新增學生（預設10堂）----------
+        // ---------- 新增學生（含特別備註，預設10堂）----------
         async function submitAddStudent() {
             if (userRole === 'limited') { showError('無權限'); return; }
-            const name = document.getElementById('newStudentName').value.trim();
-            const className = document.getElementById('newStudentClass').value;
-            if (!name || !className) return showError('請填寫姓名與班級');
-            const payload = { name, class: className, classes: 10 };
-            const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(`學生 ${name} 新增成功！已獲得 10 堂課。`);
-                document.getElementById('newStudentName').value = '';
-                document.getElementById('newStudentClass').value = '';
-                await fetchAllStudents();
-                updateAttendanceList();
-                updateRentalList();
-                populateClearSelect();
-            } else {
-                showError(result.message || '新增失敗');
+            if (processing.addStudent) {
+                showError('正在新增中...');
+                return;
             }
-        }
+            const btn = document.querySelector('#addStudent .btn-indigo');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '新增中...';
+            }
+            processing.addStudent = true;
 
-        // ---------- 新增班級 ----------
-        async function addNewClass() {
-            if (userRole === 'limited') { showError('無權限'); return; }
-            const className = document.getElementById('newClassName').value.trim();
-            if (!className) return showError('請輸入班級名稱');
-            const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(result.message);
-                document.getElementById('newClassName').value = '';
-                loadClassList();
-            } else {
-                showError(result.message);
+            try {
+                const name = document.getElementById('newStudentName').value.trim();
+                const className = document.getElementById('newStudentClass').value;
+                const note = document.getElementById('newStudentNote').value.trim(); // 特別備註
+                if (!name || !className) {
+                    showError('請填寫姓名與班級');
+                    return;
+                }
+                const payload = { name, class: className, classes: 10, note }; // 傳送備註
+                const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(`學生 ${name} 新增成功！已獲得 10 堂課。`);
+                    document.getElementById('newStudentName').value = '';
+                    document.getElementById('newStudentClass').value = '';
+                    document.getElementById('newStudentNote').value = '';
+                    await fetchAllStudents();
+                    updateAttendanceList();
+                    updateRentalList();
+                    populateClearSelect();
+                } else {
+                    showError(result.message || '新增失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '新增學生';
+                }
+                delete processing.addStudent;
             }
         }
 
@@ -996,6 +1205,48 @@
                     allStudents.map(s => `<option value="${s.name}">${s.name} (${s.class}) 請假${s.leaveCount} 租借${s.rentalCount}</option>`).join('');
             }
         }
+
+        // ---------- 顯示學生列表（含特別備註）----------
+        function renderClearStudentList() {
+            const container = document.getElementById('clearStudentList');
+            if (!container) return;
+            let html = '';
+            allStudents.forEach(s => {
+                // 顯示所有學生，不僅是有請假/租借的
+                html += `<div class="student-row">
+                    <div class="details">
+                        <strong>${s.name}</strong> (${s.class}) 
+                        <span class="leave-badge">請假 ${s.leaveCount}</span> 
+                        <span class="rental-badge">租借 ${s.rentalCount}</span>
+                        ${s.note ? `<div class="note">📝 備註：${s.note}</div>` : ''}
+                    </div>`;
+                if (userRole === 'full') {
+                    html += `<div class="actions">
+                        <button class="btn-sm" onclick="editStudentNote('${s.name}')">✏️編輯備註</button>
+                    </div>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html || '無任何學生';
+        }
+
+        // 編輯學生特別備註（僅完整權限）
+        window.editStudentNote = async function(name) {
+            if (userRole !== 'full') { showError('無權限'); return; }
+            const newNote = prompt('請輸入新的特別備註：');
+            if (newNote === null) return;
+            const updates = { note: newNote };
+            const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('備註已更新');
+                await fetchAllStudents();
+                renderClearStudentList();
+                populateClearSelect();
+            } else {
+                showError(result.error || '更新失敗');
+            }
+        };
 
         // ---------- 清零請假 ----------
         async function clearLeaveCount() {
@@ -1034,21 +1285,7 @@
             }
         }
 
-        // ---------- 顯示有請假/租借的學生列表 ----------
-        function renderClearStudentList() {
-            const container = document.getElementById('clearStudentList');
-            if (!container) return;
-            let html = '';
-            allStudents.filter(s => s.leaveCount > 0 || s.rentalCount > 0).forEach(s => {
-                html += `<div class="student-row">
-                    <span><strong>${s.name}</strong> (${s.class})</span>
-                    <span><span class="leave-badge">請假 ${s.leaveCount}</span> <span class="rental-badge">租借 ${s.rentalCount}</span></span>
-                </div>`;
-            });
-            container.innerHTML = html || '無任何請假或租借記錄';
-        }
-
-        // ---------- 教練代請假（模糊搜尋）----------
+        // ---------- 教練代請假（防重複）----------
         const coachSearch = document.getElementById('coachLeaveSearchInput');
         const coachDropdown = document.getElementById('coachLeaveDropdown');
         if (coachSearch) {
@@ -1074,25 +1311,50 @@
 
         async function submitCoachLeave() {
             if (userRole === 'limited') { showError('無權限'); return; }
-            const name = document.getElementById('coachLeaveSearchInput').value.trim();
-            const className = document.getElementById('coachLeaveSelectedClass').value;
-            if (!name || !className) return showError('請選擇學生');
-            const student = allStudents.find(s => s.name === name);
-            let msg = `確定為 ${name} 提交請假？`;
-            if (student && student.leaveCount >= 2) msg += '\n⚠️ 將扣1堂課！';
-            if (!confirm(msg)) return;
-            const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
-                await fetchAllStudents();
-                updateAttendanceList();
-                populateClearSelect();
-                renderClearStudentList();
-                document.getElementById('coachLeaveSearchInput').value = '';
-                document.getElementById('coachLeaveSelectedClass').value = '';
-            } else {
-                showError(result.error || '請假失敗');
+            if (processing.coachLeave) {
+                showError('正在處理中...');
+                return;
+            }
+            const btn = document.querySelector('#coachLeave .btn-purple');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '處理中...';
+            }
+            processing.coachLeave = true;
+
+            try {
+                const name = document.getElementById('coachLeaveSearchInput').value.trim();
+                const className = document.getElementById('coachLeaveSelectedClass').value;
+                if (!name || !className) {
+                    showError('請選擇學生');
+                    return;
+                }
+                const student = allStudents.find(s => s.name === name);
+                let msg = `確定為 ${name} 提交請假？`;
+                if (student && student.leaveCount >= 2) msg += '\n⚠️ 將扣1堂課！';
+                if (!confirm(msg)) return;
+
+                const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
+                    await fetchAllStudents();
+                    updateAttendanceList();
+                    populateClearSelect();
+                    renderClearStudentList();
+                    document.getElementById('coachLeaveSearchInput').value = '';
+                    document.getElementById('coachLeaveSelectedClass').value = '';
+                } else {
+                    showError(result.error || '請假失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '提交請假';
+                }
+                delete processing.coachLeave;
             }
         }
 
