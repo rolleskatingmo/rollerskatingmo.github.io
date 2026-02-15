@@ -458,6 +458,70 @@
             .student-row .actions { justify-content: flex-end; width: 100%; }
             .class-header { margin: 15px 0 5px; }
         }
+                /* ===== 新增美化樣式 ===== */
+        .btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #4299e1 !important;
+            box-shadow: 0 0 0 3px rgba(66,153,225,0.2);
+            outline: none;
+        }
+        .modal-content {
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .class-badge {
+            transition: all 0.2s ease;
+        }
+        .class-badge:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        .student-row {
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        .student-row:hover {
+            background: #f0f4fa;
+            border-left-color: #4299e1;
+        }
+        #changePasswordBtn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #changePasswordBtn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .message {
+            transition: opacity 0.3s ease;
+            position: sticky;
+            bottom: 20px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -2106,6 +2170,7 @@
     </script>
 </body>
 </html>
+
 
 
 
