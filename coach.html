@@ -783,7 +783,7 @@
         }
 
         // ---------- 權限控制 ----------
-        f        function applyRoleRestrictions() {
+            function applyRoleRestrictions() {
             const isAdmin = currentUser.role === 'full'; 
             document.getElementById('btnAddClasses').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('btnAddStudent').style.display = isAdmin ? 'block' : 'none';
@@ -2106,6 +2106,7 @@
     </script>
 </body>
 </html>
+
 
 
 
