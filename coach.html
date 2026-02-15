@@ -613,8 +613,17 @@
                             <option value="full">完整權限</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>授權班級 (逗號分隔，留空=全部)</label><input type="text" id="newAuthClasses" placeholder="A1,B2"></div>
-                    <button class="btn btn-success" onclick="addUser()" style="width:100%;">新增用戶</button>
+                    <div class="form-group">
+                        <label>授權班級 (點擊班級按鈕選取)</label>
+                        <div id="classSelectionContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-sm" onclick="clearAllSelectedClasses()">清除所有</button>
+                            <span id="selectedClassesDisplay" style="font-size:0.85rem; color:#4a5568; align-self:center;"></span>
+                        </div>
+                        <!-- 隱藏輸入框儲存選中的班級（以逗號分隔） -->
+                        <input type="hidden" id="newAuthClasses" value="">
+                    </div>
+                    <button class="btn btn-success" id="addUserBtn" onclick="addUser()" style="width:100%;">新增用戶</button>
                 </div>
                 <h3>📋 現有用戶</h3>
                 <div id="userList"></div>
@@ -661,7 +670,15 @@
                 <option value="limited">普通權限</option>
                 <option value="full">完整權限</option>
             </select>
-            <input type="text" id="editAuthClasses" placeholder="授權班級 (逗號分隔)">
+            <div class="form-group">
+                <label>授權班級</label>
+                <div id="editClassSelectionContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-sm" onclick="clearEditSelectedClasses()">清除所有</button>
+                    <span id="editSelectedClassesDisplay" style="font-size:0.85rem; color:#4a5568; align-self:center;"></span>
+                </div>
+                <input type="hidden" id="editAuthClasses" value="">
+            </div>
             <div class="modal-buttons">
                 <button class="cancel" onclick="closeEditUserModal()">取消</button>
                 <button class="confirm" onclick="saveUserEdit()">儲存</button>
@@ -681,12 +698,19 @@
         let currentNoteTarget = null;
         let currentConfirmCallback = null;
         let classCollapsed = {};
-
+        let allClasses = []; // 儲存所有班級名稱
+        let selectedClasses = new Set(); // 當前選中的班級（新增用戶或編輯用戶時使用）
         // ---------- 登入 ----------
         async function login() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             if (!username || !password) return showLoginError('請輸入用戶名與密碼');
+
+            const loginBtn = document.querySelector('#loginForm .btn-primary');
+            const originalText = loginBtn.textContent;
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登入中...';
+
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
                 const data = await res.json();
@@ -707,6 +731,9 @@
                 }
             } catch (e) {
                 showLoginError('連線失敗');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = originalText;
             }
         }
         function showLoginError(msg) {
@@ -794,13 +821,50 @@
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
             classes = sortClasses(classes);
+            allClasses = classes; // 儲存全域
             renderClassList(classes);
             const newStudentSelect = document.getElementById('newStudentClass');
             if (newStudentSelect) {
                 newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
                     classes.map(c => `<option value="${c}">${c}</option>`).join('');
             }
+            // 初始化班級選擇器
+            renderClassSelection();
             return classes;
+        }
+                function renderClassSelection() {
+            const container = document.getElementById('classSelectionContainer');
+            if (!container) return;
+            let html = '';
+            allClasses.forEach(className => {
+                const isSelected = selectedClasses.has(className);
+                html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleClassSelection('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+            });
+            container.innerHTML = html;
+            updateSelectedClassesDisplay();
+        }
+
+        function toggleClassSelection(className) {
+            if (selectedClasses.has(className)) {
+                selectedClasses.delete(className);
+            } else {
+                selectedClasses.add(className);
+            }
+            renderClassSelection();
+        }
+
+        function clearAllSelectedClasses() {
+            selectedClasses.clear();
+            renderClassSelection();
+        }
+
+        function updateSelectedClassesDisplay() {
+            const displaySpan = document.getElementById('selectedClassesDisplay');
+            const hiddenInput = document.getElementById('newAuthClasses');
+            if (!displaySpan || !hiddenInput) return;
+            const classesArray = Array.from(selectedClasses);
+            displaySpan.textContent = classesArray.length ? `已選：${classesArray.join(', ')}` : '尚未選取任何班級';
+            hiddenInput.value = classesArray.join(',');
         }
 
         function renderClassList(classes) {
@@ -1780,56 +1844,125 @@
             const username = document.getElementById('newUsername').value.trim();
             const password = document.getElementById('newPassword').value.trim();
             const role = document.getElementById('newRole').value;
-            const authClasses = document.getElementById('newAuthClasses').value.trim();
+            // 從隱藏輸入取得選中的班級
+            const authClasses = document.getElementById('newAuthClasses').value;
             if (!username || !password) { showError('請填寫用戶名與密碼'); return; }
+            
+            const addBtn = document.getElementById('addUserBtn');
+            const originalText = addBtn.textContent;
+            addBtn.disabled = true;
+            addBtn.textContent = '新增中...';
+
             const data = {
                 username,
                 password,
                 role,
                 authorizedClasses: authClasses || '*'
             };
-            const res = await fetch(`${SCRIPT_URL}?action=addUser&data=${encodeURIComponent(JSON.stringify(data))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('用戶新增成功');
-                document.getElementById('newUsername').value = '';
-                document.getElementById('newPassword').value = '123456';
-                document.getElementById('newAuthClasses').value = '';
-                loadUserList();
-            } else {
-                showError(result.error || '新增失敗');
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=addUser&data=${encodeURIComponent(JSON.stringify(data))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('用戶新增成功');
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '123456';
+                    selectedClasses.clear();
+                    renderClassSelection();
+                    loadUserList();
+                } else {
+                    showError(result.error || '新增失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = originalText;
             }
         }
 
-        function openEditUserModal(username, password, role, authClasses) {
+              function openEditUserModal(username, password, role, authClasses) {
             document.getElementById('editUsername').value = username;
             document.getElementById('editPassword').value = '';
             document.getElementById('editRole').value = role;
-            document.getElementById('editAuthClasses').value = authClasses === '*' ? '' : authClasses;
+
+            // 解析授權班級
+            selectedClasses.clear();
+            if (authClasses !== '*') {
+                authClasses.split(',').forEach(c => {
+                    if (c.trim()) selectedClasses.add(c.trim());
+                });
+            }
+            renderEditClassSelection(); // 需要在編輯模態框內也顯示班級選擇
+
             document.getElementById('editUserModal').style.display = 'flex';
         }
 
-        function closeEditUserModal() {
-            document.getElementById('editUserModal').style.display = 'none';
+        function renderEditClassSelection() {
+            const container = document.getElementById('editClassSelectionContainer');
+            if (!container) return;
+            let html = '';
+            allClasses.forEach(className => {
+                const isSelected = selectedClasses.has(className);
+                html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClassSelection('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+            });
+            container.innerHTML = html;
+            updateEditSelectedClassesDisplay();
+        }
+
+        function toggleEditClassSelection(className) {
+            if (selectedClasses.has(className)) {
+                selectedClasses.delete(className);
+            } else {
+                selectedClasses.add(className);
+            }
+            renderEditClassSelection();
+        }
+
+        function clearEditSelectedClasses() {
+            selectedClasses.clear();
+            renderEditClassSelection();
+        }
+
+        function updateEditSelectedClassesDisplay() {
+            const displaySpan = document.getElementById('editSelectedClassesDisplay');
+            const hiddenInput = document.getElementById('editAuthClasses');
+            if (!displaySpan || !hiddenInput) return;
+            const classesArray = Array.from(selectedClasses);
+            displaySpan.textContent = classesArray.length ? `已選：${classesArray.join(', ')}` : '尚未選取任何班級';
+            hiddenInput.value = classesArray.join(',');
         }
 
         async function saveUserEdit() {
             const username = document.getElementById('editUsername').value;
             const password = document.getElementById('editPassword').value.trim();
             const role = document.getElementById('editRole').value;
-            const authClasses = document.getElementById('editAuthClasses').value.trim();
+            const authClasses = document.getElementById('editAuthClasses').value;
+
             const updates = {};
             if (password) updates.password = password;
             updates.role = role;
             updates.authorizedClasses = authClasses || '*';
-            const res = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
-            if (result.success) {
-                showSuccess('用戶資料已更新');
-                closeEditUserModal();
-                loadUserList();
-            } else {
-                showError(result.error || '更新失敗');
+
+            const saveBtn = document.querySelector('#editUserModal .confirm');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '儲存中...';
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('用戶資料已更新');
+                    closeEditUserModal();
+                    loadUserList();
+                } else {
+                    showError(result.error || '更新失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
             }
         }
 
@@ -1890,3 +2023,4 @@
     </script>
 </body>
 </html>
+
