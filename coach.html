@@ -142,6 +142,7 @@
             font-size: 0.85rem;
             max-width: 100%;
             word-break: break-word;
+            transition: 0.2s;
         }
 
         .student-button, .rental-button {
@@ -405,7 +406,7 @@
             border-radius: 24px;
             padding: 24px;
             max-width: 90%;
-            width: 400px;
+            width: 500px;
             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
         }
         .modal-content h3 {
@@ -687,7 +688,7 @@
     </div>
 
     <script>
-        // ========== 後端網址（請確認是否正確）==========
+        // ========== 後端網址 ==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjticozu0iM49Vg17qW3QpJFlvhs2wa04YKtkuCCc0gudsM9X1361D8uk3TF_tn_pG6Q/exec';
 
         let allStudents = [];
@@ -698,8 +699,11 @@
         let currentNoteTarget = null;
         let currentConfirmCallback = null;
         let classCollapsed = {};
-        let allClasses = []; // 儲存所有班級名稱
-        let selectedClasses = new Set(); // 當前選中的班級（新增用戶或編輯用戶時使用）
+
+        // 班級選擇相關
+        let allClasses = [];
+        let selectedClasses = new Set(); // 用於新增用戶或編輯用戶時選中的班級
+
         // ---------- 登入 ----------
         async function login() {
             const username = document.getElementById('username').value.trim();
@@ -768,7 +772,6 @@
         // ---------- 權限控制 ----------
         function applyRoleRestrictions() {
             const isAdmin = currentUser.role === 'full' && currentUser.username === 'admin';
-            // 顯示/隱藏功能按鈕
             document.getElementById('btnAddClasses').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('btnAddStudent').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
@@ -800,7 +803,12 @@
                 renderNoteListByClass();
             }
             if (sectionId === 'trial') loadTrialList();
-            if (sectionId === 'userManage' && isAdmin) loadUserList();
+            if (sectionId === 'userManage' && isAdmin) {
+                // 重置選中的班級
+                selectedClasses.clear();
+                renderClassSelection();
+                loadUserList();
+            }
         }
 
         // ---------- 取得所有學生 ----------
@@ -821,7 +829,7 @@
             const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
             let classes = await res.json();
             classes = sortClasses(classes);
-            allClasses = classes; // 儲存全域
+            allClasses = classes;
             renderClassList(classes);
             const newStudentSelect = document.getElementById('newStudentClass');
             if (newStudentSelect) {
@@ -831,40 +839,6 @@
             // 初始化班級選擇器
             renderClassSelection();
             return classes;
-        }
-                function renderClassSelection() {
-            const container = document.getElementById('classSelectionContainer');
-            if (!container) return;
-            let html = '';
-            allClasses.forEach(className => {
-                const isSelected = selectedClasses.has(className);
-                html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleClassSelection('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
-            });
-            container.innerHTML = html;
-            updateSelectedClassesDisplay();
-        }
-
-        function toggleClassSelection(className) {
-            if (selectedClasses.has(className)) {
-                selectedClasses.delete(className);
-            } else {
-                selectedClasses.add(className);
-            }
-            renderClassSelection();
-        }
-
-        function clearAllSelectedClasses() {
-            selectedClasses.clear();
-            renderClassSelection();
-        }
-
-        function updateSelectedClassesDisplay() {
-            const displaySpan = document.getElementById('selectedClassesDisplay');
-            const hiddenInput = document.getElementById('newAuthClasses');
-            if (!displaySpan || !hiddenInput) return;
-            const classesArray = Array.from(selectedClasses);
-            displaySpan.textContent = classesArray.length ? `已選：${classesArray.join(', ')}` : '尚未選取任何班級';
-            hiddenInput.value = classesArray.join(',');
         }
 
         function renderClassList(classes) {
@@ -1405,7 +1379,7 @@
             }
         }
 
-        // ---------- 學生資訊列表（含所有操作按鈕）----------
+        // ---------- 學生資訊列表 ----------
         function renderNoteListByClass() {
             const container = document.getElementById('noteListByClass');
             if (!container) return;
@@ -1817,6 +1791,42 @@
             }
         }
 
+        // ---------- 班級選擇器函數 ----------
+        function renderClassSelection() {
+            const container = document.getElementById('classSelectionContainer');
+            if (!container) return;
+            let html = '';
+            allClasses.forEach(className => {
+                const isSelected = selectedClasses.has(className);
+                html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleClassSelection('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+            });
+            container.innerHTML = html;
+            updateSelectedClassesDisplay();
+        }
+
+        function toggleClassSelection(className) {
+            if (selectedClasses.has(className)) {
+                selectedClasses.delete(className);
+            } else {
+                selectedClasses.add(className);
+            }
+            renderClassSelection();
+        }
+
+        function clearAllSelectedClasses() {
+            selectedClasses.clear();
+            renderClassSelection();
+        }
+
+        function updateSelectedClassesDisplay() {
+            const displaySpan = document.getElementById('selectedClassesDisplay');
+            const hiddenInput = document.getElementById('newAuthClasses');
+            if (!displaySpan || !hiddenInput) return;
+            const classesArray = Array.from(selectedClasses);
+            displaySpan.textContent = classesArray.length ? `已選：${classesArray.join(', ')}` : '尚未選取任何班級';
+            hiddenInput.value = classesArray.join(',');
+        }
+
         // ---------- 用戶管理函數 ----------
         async function loadUserList() {
             if (!isAdmin()) return;
@@ -1844,8 +1854,13 @@
             const username = document.getElementById('newUsername').value.trim();
             const password = document.getElementById('newPassword').value.trim();
             const role = document.getElementById('newRole').value;
-            // 從隱藏輸入取得選中的班級
-            const authClasses = document.getElementById('newAuthClasses').value;
+            
+            const classesArray = Array.from(selectedClasses);
+            let authClasses = classesArray.join(',');
+            if (classesArray.length === allClasses.length) {
+                authClasses = '*';
+            }
+
             if (!username || !password) { showError('請填寫用戶名與密碼'); return; }
             
             const addBtn = document.getElementById('addUserBtn');
@@ -1857,7 +1872,7 @@
                 username,
                 password,
                 role,
-                authorizedClasses: authClasses || '*'
+                authorizedClasses: authClasses
             };
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=addUser&data=${encodeURIComponent(JSON.stringify(data))}`);
@@ -1880,20 +1895,20 @@
             }
         }
 
-              function openEditUserModal(username, password, role, authClasses) {
+        function openEditUserModal(username, password, role, authClasses) {
             document.getElementById('editUsername').value = username;
             document.getElementById('editPassword').value = '';
             document.getElementById('editRole').value = role;
 
-            // 解析授權班級
             selectedClasses.clear();
-            if (authClasses !== '*') {
+            if (authClasses === '*') {
+                allClasses.forEach(c => selectedClasses.add(c));
+            } else {
                 authClasses.split(',').forEach(c => {
                     if (c.trim()) selectedClasses.add(c.trim());
                 });
             }
-            renderEditClassSelection(); // 需要在編輯模態框內也顯示班級選擇
-
+            renderEditClassSelection();
             document.getElementById('editUserModal').style.display = 'flex';
         }
 
@@ -1936,12 +1951,17 @@
             const username = document.getElementById('editUsername').value;
             const password = document.getElementById('editPassword').value.trim();
             const role = document.getElementById('editRole').value;
-            const authClasses = document.getElementById('editAuthClasses').value;
+            
+            const classesArray = Array.from(selectedClasses);
+            let authClasses = classesArray.join(',');
+            if (classesArray.length === allClasses.length) {
+                authClasses = '*';
+            }
 
             const updates = {};
             if (password) updates.password = password;
             updates.role = role;
-            updates.authorizedClasses = authClasses || '*';
+            updates.authorizedClasses = authClasses;
 
             const saveBtn = document.querySelector('#editUserModal .confirm');
             const originalText = saveBtn.textContent;
@@ -1964,6 +1984,11 @@
                 saveBtn.disabled = false;
                 saveBtn.textContent = originalText;
             }
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+            selectedClasses.clear(); // 清除暫存，避免影響新增
         }
 
         function confirmDeleteUser(username) {
@@ -2023,4 +2048,3 @@
     </script>
 </body>
 </html>
-
