@@ -458,6 +458,70 @@
             .student-row .actions { justify-content: flex-end; width: 100%; }
             .class-header { margin: 15px 0 5px; }
         }
+                /* ===== 新增美化樣式 ===== */
+        .btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #4299e1 !important;
+            box-shadow: 0 0 0 3px rgba(66,153,225,0.2);
+            outline: none;
+        }
+        .modal-content {
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .class-badge {
+            transition: all 0.2s ease;
+        }
+        .class-badge:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        .student-row {
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        .student-row:hover {
+            background: #f0f4fa;
+            border-left-color: #4299e1;
+        }
+        #changePasswordBtn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #changePasswordBtn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .message {
+            transition: opacity 0.3s ease;
+            position: sticky;
+            bottom: 20px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -473,6 +537,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div class="nav-link"><a href="index.html">← 返回家長入口</a></div>
             <div class="user-info" id="userInfoDisplay"></div>
+            <button class="btn-sm" id="changePasswordBtn" onclick="openChangePasswordModal()" style="margin-left:10px;">🔑 修改密碼</button>
         </div>
         <h1>⚙️ 教練後台 · 輪滑課程系統V5.0</h1>
 
@@ -686,7 +751,19 @@
             </div>
         </div>
     </div>
-
+    <!-- 修改密碼模態框 -->
+    <div id="changePasswordModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🔑 修改密碼</h3>
+            <input type="password" id="oldPassword" placeholder="舊密碼" style="margin-bottom:10px;">
+            <input type="password" id="newPassword1" placeholder="新密碼" style="margin-bottom:10px;">
+            <input type="password" id="newPassword2" placeholder="確認新密碼" style="margin-bottom:20px;">
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeChangePasswordModal()">取消</button>
+                <button class="confirm" onclick="submitChangePassword()">確認修改</button>
+            </div>
+        </div>
+    </div>
     <script>
         // ========== 後端網址 ==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-7WJ6M7VU3HkpwvSUHq0ODNbW49Ro2LbXh285V0MMN0M500rEzknLqfWxUKpJ0ZUV_A/exec';
@@ -1838,7 +1915,8 @@
                 html += `<div class="student-row">
                     <div class="details">
                         <strong>${u.username}</strong> (${u.role === 'full' ? '完整權限' : '普通權限'})<br>
-                        <span style="font-size:0.85rem;">班級: ${u.authorizedClasses === '*' ? '全部' : u.authorizedClasses}</span>
+                        <span style="font-size:0.85rem;">班級: ${u.authorizedClasses === '*' ? '全部' : u.authorizedClasses}</span><br>
+                        <span style="font-size:0.85rem;">密碼: ${u.password}</span>
                     </div>
                     <div class="actions">
                         <button class="btn-sm" onclick="openEditUserModal('${u.username}', '${u.password}', '${u.role}', '${u.authorizedClasses}')">✏️編輯</button>
@@ -1848,7 +1926,51 @@
             });
             container.innerHTML = html || '尚無用戶';
         }
+                // ---------- 修改密碼 ----------
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'flex';
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword1').value = '';
+            document.getElementById('newPassword2').value = '';
+        }
 
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+        }
+
+        async function submitChangePassword() {
+            const oldPwd = document.getElementById('oldPassword').value.trim();
+            const newPwd1 = document.getElementById('newPassword1').value.trim();
+            const newPwd2 = document.getElementById('newPassword2').value.trim();
+
+            if (!oldPwd || !newPwd1 || !newPwd2) {
+                showError('請填寫所有欄位');
+                return;
+            }
+            if (newPwd1 !== newPwd2) {
+                showError('兩次新密碼不一致');
+                return;
+            }
+
+            // 先驗證舊密碼
+            const verifyRes = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(currentUser.username)}&password=${encodeURIComponent(oldPwd)}`);
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+                showError('舊密碼錯誤');
+                return;
+            }
+
+            // 更新密碼
+            const updates = { password: newPwd1 };
+            const updateRes = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(currentUser.username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const updateData = await updateRes.json();
+            if (updateData.success) {
+                showSuccess('密碼修改成功');
+                closeChangePasswordModal();
+            } else {
+                showError(updateData.error || '修改失敗');
+            }
+        }
         async function addUser() {
             if (!isAdmin()) return;
             const username = document.getElementById('newUsername').value.trim();
@@ -2048,4 +2170,5 @@
     </script>
 </body>
 </html>
+
 
