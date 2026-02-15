@@ -847,8 +847,8 @@
         }
 
         // ---------- 權限控制 ----------
-        function applyRoleRestrictions() {
-            const isAdmin = currentUser.role === 'full' && currentUser.username === 'admin';
+        f        function applyRoleRestrictions() {
+            const isAdmin = currentUser.role === 'full'; 
             document.getElementById('btnAddClasses').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('btnAddStudent').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
@@ -866,7 +866,7 @@
         // ---------- 區塊切換 ----------
         function showSection(sectionId) {
             if (!currentUser) return;
-            const isAdmin = currentUser.role === 'full' && currentUser.username === 'admin';
+            const isAdmin = currentUser.role === 'full'; 
             if (!isAdmin && !['attendance', 'rental', 'photo'].includes(sectionId)) {
                 showError('您沒有權限使用此功能');
                 return;
@@ -2156,7 +2156,7 @@
 
         // ---------- 工具函數 ----------
         function isAdmin() {
-            return currentUser && currentUser.role === 'full' && currentUser.username === 'admin';
+            return currentUser && currentUser.role === 'full';
         }
 
         function showSuccess(msg) {
@@ -2170,5 +2170,6 @@
     </script>
 </body>
 </html>
+
 
 
