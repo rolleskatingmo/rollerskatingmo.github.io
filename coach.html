@@ -566,7 +566,8 @@
                 <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
                 <button id="btnUserManage" class="btn btn-primary" onclick="showSection('userManage')" style="background:#6b46c1;">👥 用戶管理</button>
                 <button id="btnPayment" class="btn" onclick="window.open('https://forms.gle/g5Azi2V5J3XwgXm2A', '_blank')">💰 交費</button>
-                <button id="btnPhoto" class="btn" onclick="window.open('https://docs.google.com/forms/d/e/.../viewform', '_blank')">📸 課堂相片</button>
+                <button id="btnPhoto" class="btn" onclick="document.getElementById('photoUploadInput').click();">📸 上傳相片</button>
+                <input type="file" id="photoUploadInput" accept="image/*" style="display: none;">
             </div>
 
             <!-- 點名區塊 -->
@@ -766,7 +767,7 @@
     </div>
     <script>
         // ========== 後端網址 ==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-7WJ6M7VU3HkpwvSUHq0ODNbW49Ro2LbXh285V0MMN0M500rEzknLqfWxUKpJ0ZUV_A/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUmhEcJx3tJ1gBAYDSsOEDnXcx_SiaQ_dPaCh5QisDzcXvfax7t5ObgVPs0ogythgXxw/exec';
 
         let allStudents = [];
         let currentUser = null; // { username, role, authorizedClasses }
@@ -780,7 +781,47 @@
         // 班級選擇相關
         let allClasses = [];
         let selectedClasses = new Set(); // 用於新增用戶或編輯用戶時選中的班級
+        // ---------- 上傳課堂相片（使用 base64）----------
+        document.getElementById('photoUploadInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
+            // 顯示上傳中訊息
+            const originalBtnText = document.getElementById('btnPhoto').textContent;
+            document.getElementById('btnPhoto').disabled = true;
+            document.getElementById('btnPhoto').textContent = '上傳中...';
+
+            // 將圖片轉為 base64
+            const reader = new FileReader();
+            reader.onload = async function(readerEvent) {
+                const base64Data = readerEvent.target.result;
+
+                try {
+                    const res = await fetch(`${SCRIPT_URL}?action=uploadPhoto`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({
+                            imageData: base64Data,
+                            fileName: file.name,
+                            uploader: currentUser?.username || 'unknown'
+                        })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        showSuccess('相片上傳成功！');
+                    } else {
+                        showError(result.error || '上傳失敗');
+                    }
+                } catch (err) {
+                    showError('網路錯誤，上傳失敗');
+                } finally {
+                    document.getElementById('btnPhoto').disabled = false;
+                    document.getElementById('btnPhoto').textContent = originalBtnText;
+                    document.getElementById('photoUploadInput').value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
         // ---------- 登入 ----------
         async function login() {
             const username = document.getElementById('username').value.trim();
@@ -2170,6 +2211,7 @@
     </script>
 </body>
 </html>
+
 
 
 
