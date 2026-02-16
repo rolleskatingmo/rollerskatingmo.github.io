@@ -1093,20 +1093,36 @@ function applyRoleRestrictions() {
         }
 
         // ---------- 取得班級列表 ----------
-        async function loadClassList() {
-            const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
-            let classes = await res.json();
-            classes = sortClasses(classes);
-            allClasses = classes;
-            renderClassList(classes);
-            const newStudentSelect = document.getElementById('newStudentClass');
-            if (newStudentSelect) {
-                newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
-                    classes.map(c => `<option value="${c}">${c}</option>`).join('');
-            }
-            renderClassSelection();
-            return classes;
+async function loadClassList() {
+    const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
+    let classes = await res.json();
+    classes = sortClasses(classes);
+    
+    // 根據當前用戶角色過濾班級（非管理員僅顯示授權班級）
+    if (currentUser && currentUser.role !== 'admin') {
+        const allowed = getAuthorizedClasses();
+        if (allowed !== '*') {
+            classes = classes.filter(c => allowed.includes(c));
         }
+    }
+    
+    allClasses = classes;
+    
+    // 更新班級列表顯示（用於班級管理區塊）
+    renderClassList(classes);
+    
+    // 更新新增學生下拉選單
+    const newStudentSelect = document.getElementById('newStudentClass');
+    if (newStudentSelect) {
+        newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
+            classes.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    
+    // 更新用戶管理中的班級選擇器（僅管理員可見，但無害）
+    renderClassSelection();
+    
+    return classes;
+}
 
         function renderClassList(classes) {
             const container = document.getElementById('classListContainer');
@@ -2867,6 +2883,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
