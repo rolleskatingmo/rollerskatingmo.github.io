@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.4</title>
+    <title>教練後台 · 課程系統v5.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -1473,6 +1473,7 @@ function renderNotificationBody() {
 
         // 快速續費（管理員/教練使用）
 async function quickRenew(name, className) {
+    // 權限檢查：僅管理員和教練可操作
     if (currentUser.role !== 'admin' && currentUser.role !== 'coach') {
         showError('無權限');
         return;
@@ -1487,35 +1488,39 @@ async function quickRenew(name, className) {
     showLoadingSpinner('續費處理中...');
 
     try {
-        // 1. 清零請假、租借，增加10堂課
+        // 1. 清零請假次數
         let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
         let result = await res.json();
         if (!result.success) throw new Error(result.error || '清零請假失敗');
 
+        // 2. 清零租借次數
         res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
         result = await res.json();
         if (!result.success) throw new Error(result.error || '清零租借失敗');
 
+        // 3. 增加10堂課
         const payload = { name, class: className, classesChange: 10, reason: '已續費' };
         res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
         result = await res.json();
         if (!result.success) throw new Error(result.error || '增加課堂失敗');
 
-        // 2. 標記該學生所有待處理繳費記錄為已處理
+        // 4. 標記該學生所有待處理繳費記錄為已處理（傳遞時間和學生姓名）
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
         for (let p of pendingForStudent) {
-            console.log('標記繳費記錄為已處理：', p.time);
-            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}`);
+            console.log('標記繳費記錄：', p.time, p.studentName);
+            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
             const markResult = await markRes.json();
             if (!markResult.success) {
                 console.warn('標記失敗：', markResult.error);
                 // 可選：顯示警告但不中斷流程
+            } else {
+                console.log('標記成功');
             }
         }
 
         showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
 
-        // 3. 重新載入所有資料並更新通知
+        // 5. 重新載入所有資料並更新通知
         await fetchAllStudents();
         await loadPaymentNotifications();  // 此函數內部會呼叫 renderNotificationBody
         renderNoteListByClass();
@@ -2848,6 +2853,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
