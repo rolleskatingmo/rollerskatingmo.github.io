@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.5</title>
+    <title>教練後台 · 課程系統v5.4</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -563,6 +563,54 @@
             .student-row .actions { justify-content: flex-end; width: 100%; }
             .class-header { margin: 15px 0 5px; }
         }
+        /* 通用按鈕樣式優化 */
+.btn, .btn-sm, .student-button, .rental-button, .class-badge[onclick] {
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn:hover, .btn-sm:hover, .student-button:hover:not(:disabled), .rental-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn:active, .btn-sm:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.btn:disabled, .btn-sm:disabled, .student-button:disabled, .rental-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 主要按鈕顏色強化 */
+.btn-primary { background: #4299e1; color: white; }
+.btn-success { background: #48bb78; color: white; }
+.btn-warning { background: #ed8936; color: white; }
+.btn-danger { background: #f56565; color: white; }
+.btn-purple { background: #9f7aea; color: white; }
+.btn-indigo { background: #667eea; color: white; }
+.btn-rental { background: #38b2ac; color: white; }
+
+/* 通知欄中的小按鈕 */
+.notification-item .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 20px;
+    background: #e2e8f0;
+    color: #2d3748;
+    min-width: 60px;
+}
+
+.notification-item .btn-sm:hover {
+    background: #cbd5e0;
+}
     </style>
 </head>
 <body>
@@ -1436,7 +1484,6 @@ async function quickRenew(name, className) {
         return;
     }
     processing[lockKey] = true;
-
     showLoadingSpinner('續費處理中...');
 
     try {
@@ -1457,16 +1504,23 @@ async function quickRenew(name, className) {
         // 2. 標記該學生所有待處理繳費記錄為已處理
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
         for (let p of pendingForStudent) {
-            await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}`);
+            console.log('標記繳費記錄為已處理：', p.time);
+            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}`);
+            const markResult = await markRes.json();
+            if (!markResult.success) {
+                console.warn('標記失敗：', markResult.error);
+                // 可選：顯示警告但不中斷流程
+            }
         }
 
         showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
 
-        // 3. 重新載入資料
+        // 3. 重新載入所有資料並更新通知
         await fetchAllStudents();
-        await loadPaymentNotifications();
+        await loadPaymentNotifications();  // 此函數內部會呼叫 renderNotificationBody
         renderNoteListByClass();
         updateRentalList();
+
     } catch (err) {
         showError(err.message);
     } finally {
@@ -2794,6 +2848,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
