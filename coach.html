@@ -2430,44 +2430,47 @@ document.getElementById('paymentUploadInput').addEventListener('change', functio
     openPaymentStudentModal();
 });
 
-        function openPaymentStudentModal(prefillName = '') {
-            document.getElementById('paymentStudentSearch').value = prefillName;
-            document.getElementById('paymentSelectedClass').value = '';
-            document.getElementById('paymentDate').value = getTodayUTC8();
-            document.getElementById('paymentStudentModal').style.display = 'flex';
-            setupPaymentSearch();
-        }
+function openPaymentStudentModal(prefillName = '') {
+    document.getElementById('paymentStudentSearch').value = prefillName;
+    document.getElementById('paymentSelectedClass').value = '';
+    document.getElementById('paymentDate').value = getTodayUTC8();
+    document.getElementById('paymentStudentModal').style.display = 'flex';
+    setupPaymentSearch();
+}
 
-        function closePaymentModal() {
-            document.getElementById('paymentStudentModal').style.display = 'none';
-            selectedPaymentFile = null;
-        }
+function closePaymentModal() {
+    document.getElementById('paymentStudentModal').style.display = 'none';
+    // 不清空 selectedPaymentFile
+}
 
-        function setupPaymentSearch() {
-            const searchInput = document.getElementById('paymentStudentSearch');
-            const dropdown = document.getElementById('paymentStudentDropdown');
-            searchInput.addEventListener('input', function(e) {
-                const kw = e.target.value.trim().toLowerCase();
-                if (kw.length < 1) { dropdown.style.display = 'none'; return; }
-                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
-                if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
-                let html = '';
-                filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectPaymentStudent('${s.name}', '${s.class}')">${s.name} (${s.class})</div>`);
-                dropdown.innerHTML = html;
-                dropdown.style.display = 'block';
-            });
-            document.addEventListener('click', e => {
-                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
-            });
-        }
+function setupPaymentSearch() {
+    const searchInput = document.getElementById('paymentStudentSearch');
+    const dropdown = document.getElementById('paymentStudentDropdown');
+    // 移除舊監聽，避免重複
+    const newInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newInput, searchInput);
+    newInput.addEventListener('input', function(e) {
+        const kw = e.target.value.trim().toLowerCase();
+        if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
+        if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+        let html = '';
+        filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectPaymentStudent('${s.name}', '${s.class}')">${s.name} (${s.class})</div>`);
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+    });
+    document.addEventListener('click', function(e) {
+        if (!newInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+    });
+}
 
-        window.selectPaymentStudent = function(name, className) {
-            document.getElementById('paymentStudentSearch').value = name;
-            document.getElementById('paymentSelectedClass').value = className;
-            selectedPaymentStudent = name;
-            selectedPaymentClass = className;
-            document.getElementById('paymentStudentDropdown').style.display = 'none';
-        };
+window.selectPaymentStudent = function(name, className) {
+    document.getElementById('paymentStudentSearch').value = name;
+    document.getElementById('paymentSelectedClass').value = className;
+    selectedPaymentStudent = name;
+    selectedPaymentClass = className;
+    document.getElementById('paymentStudentDropdown').style.display = 'none';
+};;
 
 function confirmPaymentUpload() {
     const student = selectedPaymentStudent || document.getElementById('paymentStudentSearch').value.trim();
@@ -2546,39 +2549,49 @@ async function uploadPaymentPhoto(studentName, className, paymentDate) {
 }
 
         // ---------- 課堂相片上傳 ----------
-        document.getElementById('photoUploadInput').addEventListener('change', function(e) {
-            selectedPhotoFile = e.target.files[0];
-            if (!selectedPhotoFile) return;
-            openClassSelectModal();
-        });
+document.getElementById('photoUploadInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) {
+        showError('請選擇圖片檔案');
+        return;
+    }
+    if (!file.type.startsWith('image/')) {
+        showError('請選擇圖片格式的檔案');
+        this.value = '';
+        return;
+    }
+    selectedPhotoFile = file;
+    console.log('已選擇相片：', file.name);
+    openClassSelectModal();
+});
 
-        function openClassSelectModal() {
-            const select = document.getElementById('photoClassSelect');
-            select.innerHTML = '<option value="">-- 請選擇班級 --</option>';
-            const allowedClasses = getAuthorizedClasses();
-            let classList = allowedClasses === '*' ? allClasses : allowedClasses;
-            classList.forEach(className => {
-                const option = document.createElement('option');
-                option.value = className;
-                option.textContent = className;
-                select.appendChild(option);
-            });
-            document.getElementById('classSelectModal').style.display = 'flex';
-        }
+function openClassSelectModal() {
+    const select = document.getElementById('photoClassSelect');
+    select.innerHTML = '<option value="">-- 請選擇班級 --</option>';
+    const allowedClasses = getAuthorizedClasses();
+    let classList = allowedClasses === '*' ? allClasses : allowedClasses;
+    classList.forEach(className => {
+        const option = document.createElement('option');
+        option.value = className;
+        option.textContent = className;
+        select.appendChild(option);
+    });
+    document.getElementById('classSelectModal').style.display = 'flex';
+}
 
-        function closeClassSelectModal() {
-            document.getElementById('classSelectModal').style.display = 'none';
-            selectedPhotoFile = null;
-        }
+function closeClassSelectModal() {
+    document.getElementById('classSelectModal').style.display = 'none';
+    // 注意：不清空 selectedPhotoFile，讓用戶可重新選擇班級
+}
 
-        function confirmClassSelection() {
+function confirmClassSelection() {
     const selectedClass = document.getElementById('photoClassSelect').value;
     if (!selectedClass) {
         showError('請選擇班級');
         return;
     }
     if (!selectedPhotoFile) {
-        showError('請先選擇照片檔案');
+        showError('沒有選擇照片，請重新選擇檔案');
         closeClassSelectModal();
         return;
     }
@@ -2592,7 +2605,6 @@ async function uploadPaymentPhoto(studentName, className, paymentDate) {
     document.getElementById('confirmBtn').onclick = currentConfirmCallback;
     document.getElementById('confirmModal').style.display = 'flex';
 }
-
 async function uploadPhoto(className) {
     if (!selectedPhotoFile) {
         showError('沒有選擇照片');
@@ -2637,7 +2649,6 @@ async function uploadPhoto(className) {
         document.getElementById('photoUploadInput').value = '';
     }
 }
-
         // 圖片壓縮函數
         function compressImage(file) {
             return new Promise((resolve, reject) => {
@@ -2719,6 +2730,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
