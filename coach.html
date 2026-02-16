@@ -1436,111 +1436,111 @@
     }
 
     // ---------- 渲染通知欄 ----------
-    function renderNotificationBody() {
-        const body = document.getElementById('notificationBody');
-        const countSpan = document.getElementById('notificationCount');
-        if (!body) return;
+function renderNotificationBody() {
+    const body = document.getElementById('notificationBody');
+    const countSpan = document.getElementById('notificationCount');
+    if (!body) return;
 
-        let total = 0;
-        let html = '';
+    let total = 0;
+    let html = '';
 
-        // 試堂提醒（所有人都可見）
-trialNotifications.forEach(t => {
-    total++;
-    html += `<div class="notification-item">
-        <span class="type-tag">試堂</span>
-        <div class="content">
-            ${t.name} - ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'}
-            ${t.note ? `<br><span style="font-size:0.8rem; color:#666;">📝 ${t.note}</span>` : ''}
-        </div>
-        <div class="actions">`;
+    // 試堂提醒（所有人都可見）
+    trialNotifications.forEach(t => {
+        total++;
+        html += `<div class="notification-item">
+            <span class="type-tag">試堂</span>
+            <div class="content">
+                <strong>${t.name}</strong> - ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'}
+                ${t.note ? `<br><span style="font-size:0.8rem; color:#666;">📝 ${t.note}</span>` : ''}
+            </div>
+            <div class="actions">`;
+        if (currentUser.role === 'admin') {
+            if (!t.paid) {
+                html += `<button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰標記已付</button>`;
+            }
+            html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>`;
+        }
+        html += `</div></div>`;
+    });
+
+    // 待續費提醒（管理員和教練可見）
+    if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+        paymentNotifications.forEach(p => {
+            total++;
+            html += `<div class="notification-item">
+                <span class="type-tag">待續費</span>
+                <div class="content">${p.studentName} 已上傳繳費憑證，請點擊續費</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費 (10堂)</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    // 新學生待繳費提醒（僅管理員）
     if (currentUser.role === 'admin') {
-        if (!t.paid) {
-            html += `<button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰標記已付</button>`;
-        }
-        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>`;
-    }
-    html += `</div></div>`;
-});
-
-        // 待續費提醒（管理員和教練可見）
-        if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-            paymentNotifications.forEach(p => {
-                total++;
-                html += `<div class="notification-item">
-                    <span class="type-tag">待續費</span>
-                    <div class="content">${p.studentName} 已上傳繳費憑證，請點擊續費</div>
-                    <div class="actions">
-                        <button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費 (10堂)</button>
-                    </div>
-                </div>`;
-            });
-        }
-
-        // 新學生待繳費提醒（僅管理員）
-        if (currentUser.role === 'admin') {
-            newStudentNotifications.forEach(n => {
-                total++;
-                html += `<div class="notification-item">
-                    <span class="type-tag">新學生</span>
-                    <div class="content">${n.name} 尚未上傳繳費憑證</div>
-                    <div class="actions">
+        newStudentNotifications.forEach(n => {
+            total++;
+            html += `<div class="notification-item">
+                <span class="type-tag">新學生</span>
+                <div class="content">${n.name} 尚未上傳繳費憑證</div>
+                <div class="actions">
                    <button class="btn-sm" onclick="uploadPaymentForNewStudent('${n.name}', '${n.className}')">💰上傳繳費</button>
-                    </div>
-                </div>`;
-            });
-        }
-
-        // 審批請求
-        if (currentUser.role === 'admin') {
-            pendingApprovals.forEach(req => {
-                total++;
-                let content = '';
-                if (req.type === 'addClasses') {
-                    content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
-                } else if (req.type === 'addStudent') {
-                    content = `${req.requester} 請求新增學生 ${req.data.name}`;
-                } else if (req.type === 'deleteStudent') {
-                    content = `${req.requester} 請求刪除學生 ${req.data.name}`;
-                }
-                html += `<div class="notification-item">
-                    <span class="type-tag">審批</span>
-                    <div class="content">${content}</div>
-                    <div class="actions">
-                        <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
-                        <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
-                    </div>
-                </div>`;
-            });
-        } else if (currentUser.role === 'coach') {
-            const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
-            myRequests.forEach(req => {
-                total++;
-                let content = '';
-                if (req.type === 'addClasses') {
-                    content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
-                } else if (req.type === 'addStudent') {
-                    content = `您請求新增學生 ${req.data.name} - 審批中`;
-                } else if (req.type === 'deleteStudent') {
-                    content = `您請求刪除學生 ${req.data.name} - 審批中`;
-                }
-                html += `<div class="notification-item">
-                    <span class="type-tag">審批中</span>
-                    <div class="content">${content}</div>
-                    <div class="actions">
-                        <span style="color:#718096;">等待管理員審批</span>
-                    </div>
-                </div>`;
-            });
-        }
-
-        if (total === 0) {
-            html = '<div class="notification-item">目前沒有待辦通知</div>';
-        }
-
-        body.innerHTML = html;
-        countSpan.textContent = total;
+                </div>
+            </div>`;
+        });
     }
+
+    // 審批請求
+    if (currentUser.role === 'admin') {
+        pendingApprovals.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
+            } else if (req.type === 'addStudent') {
+                content = `${req.requester} 請求新增學生 ${req.data.name}`;
+            } else if (req.type === 'deleteStudent') {
+                content = `${req.requester} 請求刪除學生 ${req.data.name}`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
+                    <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
+                </div>
+            </div>`;
+        });
+    } else if (currentUser.role === 'coach') {
+        const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
+        myRequests.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+            } else if (req.type === 'addStudent') {
+                content = `您請求新增學生 ${req.data.name} - 審批中`;
+            } else if (req.type === 'deleteStudent') {
+                content = `您請求刪除學生 ${req.data.name} - 審批中`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批中</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <span style="color:#718096;">等待管理員審批</span>
+                </div>
+            </div>`;
+        });
+    }
+
+    if (total === 0) {
+        html = '<div class="notification-item">目前沒有待辦通知</div>';
+    }
+
+    body.innerHTML = html;
+    countSpan.textContent = total;
+}
 
     // ---------- 快速續費 ----------
     async function quickRenew(name, className) {
@@ -2938,6 +2938,7 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
 </script>
 </body>
 </html>
+
 
 
 
