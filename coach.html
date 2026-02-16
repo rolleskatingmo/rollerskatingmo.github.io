@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.2.1</title>
+    <title>教練後台 · 課程系統v5.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -2415,18 +2415,18 @@ function applyRoleRestrictions() {
 
         // ---------- 繳費上傳 ----------
 document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
-    selectedPaymentFile = e.target.files[0];
-    if (!selectedPaymentFile) {
+    const file = e.target.files[0];
+    if (!file) {
         showError('請選擇圖片檔案');
         return;
     }
-    // 可選：檢查檔案類型
-    if (!selectedPaymentFile.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
         showError('請選擇圖片格式的檔案');
-        selectedPaymentFile = null;
         this.value = '';
         return;
     }
+    selectedPaymentFile = file;
+    console.log('✅ 已選擇繳費憑證：', file.name, '大小：', file.size, '類型：', file.type);
     openPaymentStudentModal();
 });
 
@@ -2440,7 +2440,7 @@ function openPaymentStudentModal(prefillName = '') {
 
 function closePaymentModal() {
     document.getElementById('paymentStudentModal').style.display = 'none';
-    // 不清空 selectedPaymentFile
+    // 重要：不要清空 selectedPaymentFile，否則檔案會遺失
 }
 
 function setupPaymentSearch() {
@@ -2476,6 +2476,9 @@ function confirmPaymentUpload() {
     const student = selectedPaymentStudent || document.getElementById('paymentStudentSearch').value.trim();
     const className = selectedPaymentClass || document.getElementById('paymentSelectedClass').value;
     const paymentDate = document.getElementById('paymentDate').value;
+    
+    console.log('📋 確認上傳，selectedPaymentFile =', selectedPaymentFile);
+
     if (!student || !className || !paymentDate) {
         showError('請填寫完整資料');
         return;
@@ -2483,6 +2486,8 @@ function confirmPaymentUpload() {
     if (!selectedPaymentFile) {
         showError('請先選擇繳費憑證圖片');
         closePaymentModal();
+        // 清空檔案輸入，讓用戶重新選擇
+        document.getElementById('paymentUploadInput').value = '';
         return;
     }
     closePaymentModal();
@@ -2730,6 +2735,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
