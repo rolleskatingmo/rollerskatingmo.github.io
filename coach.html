@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 輪滑課程系統v5.0</title>
+    <title>教練後台 · 課程系統v5.0</title>
+    <p>滾軸溜冰私教輪滑團隊</p>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -2148,4 +2149,455 @@
         async function submitChangePassword() {
             const oldPwd = document.getElementById('oldPassword').value.trim();
             const newPwd1 = document.getElementById('newPassword1').value.trim();
-            const newPwd
+            const newPwd2 = document.getElementById('newPassword2').value.trim();
+
+            if (!oldPwd || !newPwd1 || !newPwd2) {
+                showError('請填寫所有欄位');
+                return;
+            }
+            if (newPwd1 !== newPwd2) {
+                showError('兩次新密碼不一致');
+                return;
+            }
+
+            // 先驗證舊密碼
+            const verifyRes = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(currentUser.username)}&password=${encodeURIComponent(oldPwd)}`);
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+                showError('舊密碼錯誤');
+                return;
+            }
+
+            const updates = { password: newPwd1 };
+            const updateRes = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(currentUser.username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+            const updateData = await updateRes.json();
+            if (updateData.success) {
+                showSuccess('密碼修改成功');
+                closeChangePasswordModal();
+            } else {
+                showError(updateData.error || '修改失敗');
+            }
+        }
+
+        async function addUser() {
+            if (currentUser.role !== 'admin') return;
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value.trim();
+            const role = document.getElementById('newRole').value;
+            
+            const classesArray = Array.from(selectedClasses);
+            let authClasses = classesArray.join(',');
+            if (classesArray.length === allClasses.length) {
+                authClasses = '*';
+            }
+
+            if (!username || !password) { showError('請填寫用戶名與密碼'); return; }
+            
+            const addBtn = document.getElementById('addUserBtn');
+            const originalText = addBtn.textContent;
+            addBtn.disabled = true;
+            addBtn.textContent = '新增中...';
+
+            const data = {
+                username,
+                password,
+                role,
+                authorizedClasses: authClasses
+            };
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=addUser&data=${encodeURIComponent(JSON.stringify(data))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('用戶新增成功');
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '123456';
+                    selectedClasses.clear();
+                    renderClassSelection();
+                    loadUserList();
+                } else {
+                    showError(result.error || '新增失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = originalText;
+            }
+        }
+
+        function openEditUserModal(username, password, role, authClasses) {
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editRole').value = role;
+
+            selectedClasses.clear();
+            if (authClasses === '*') {
+                allClasses.forEach(c => selectedClasses.add(c));
+            } else {
+                authClasses.split(',').forEach(c => {
+                    if (c.trim()) selectedClasses.add(c.trim());
+                });
+            }
+            renderEditClassSelection();
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function renderEditClassSelection() {
+            const container = document.getElementById('editClassSelectionContainer');
+            if (!container) return;
+            let html = '';
+            allClasses.forEach(className => {
+                const isSelected = selectedClasses.has(className);
+                html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClassSelection('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+            });
+            container.innerHTML = html;
+            updateEditSelectedClassesDisplay();
+        }
+
+        function toggleEditClassSelection(className) {
+            if (selectedClasses.has(className)) {
+                selectedClasses.delete(className);
+            } else {
+                selectedClasses.add(className);
+            }
+            renderEditClassSelection();
+        }
+
+        function clearEditSelectedClasses() {
+            selectedClasses.clear();
+            renderEditClassSelection();
+        }
+
+        function updateEditSelectedClassesDisplay() {
+            const displaySpan = document.getElementById('editSelectedClassesDisplay');
+            const hiddenInput = document.getElementById('editAuthClasses');
+            if (!displaySpan || !hiddenInput) return;
+            const classesArray = Array.from(selectedClasses);
+            displaySpan.textContent = classesArray.length ? `已選：${classesArray.join(', ')}` : '尚未選取任何班級';
+            hiddenInput.value = classesArray.join(',');
+        }
+
+        async function saveUserEdit() {
+            const username = document.getElementById('editUsername').value;
+            const password = document.getElementById('editPassword').value.trim();
+            const role = document.getElementById('editRole').value;
+            
+            const classesArray = Array.from(selectedClasses);
+            let authClasses = classesArray.join(',');
+            if (classesArray.length === allClasses.length) {
+                authClasses = '*';
+            }
+
+            const updates = {};
+            if (password) updates.password = password;
+            updates.role = role;
+            updates.authorizedClasses = authClasses;
+
+            const saveBtn = document.querySelector('#editUserModal .confirm');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '儲存中...';
+
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('用戶資料已更新');
+                    closeEditUserModal();
+                    loadUserList();
+                } else {
+                    showError(result.error || '更新失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+            selectedClasses.clear();
+        }
+
+        function confirmDeleteUser(username) {
+            if (currentUser.role !== 'admin') return;
+            if (confirm(`確定要刪除用戶 ${username} 嗎？`)) {
+                deleteUser(username);
+            }
+        }
+
+        async function deleteUser(username) {
+            const res = await fetch(`${SCRIPT_URL}?action=deleteUser&username=${encodeURIComponent(username)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('用戶已刪除');
+                loadUserList();
+            } else {
+                showError(result.error || '刪除失敗');
+            }
+        }
+
+        // ---------- 繳費上傳 ----------
+        document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
+            selectedPaymentFile = e.target.files[0];
+            if (!selectedPaymentFile) return;
+            openPaymentStudentModal();
+        });
+
+        function openPaymentStudentModal() {
+            document.getElementById('paymentStudentSearch').value = '';
+            document.getElementById('paymentSelectedClass').value = '';
+            document.getElementById('paymentDate').value = getTodayUTC8();
+            document.getElementById('paymentStudentModal').style.display = 'flex';
+            setupPaymentSearch();
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentStudentModal').style.display = 'none';
+            selectedPaymentFile = null;
+        }
+
+        function setupPaymentSearch() {
+            const searchInput = document.getElementById('paymentStudentSearch');
+            const dropdown = document.getElementById('paymentStudentDropdown');
+            searchInput.addEventListener('input', function(e) {
+                const kw = e.target.value.trim().toLowerCase();
+                if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+                const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
+                if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+                let html = '';
+                filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectPaymentStudent('${s.name}', '${s.class}')">${s.name} (${s.class})</div>`);
+                dropdown.innerHTML = html;
+                dropdown.style.display = 'block';
+            });
+            document.addEventListener('click', e => {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+            });
+        }
+
+        window.selectPaymentStudent = function(name, className) {
+            document.getElementById('paymentStudentSearch').value = name;
+            document.getElementById('paymentSelectedClass').value = className;
+            selectedPaymentStudent = name;
+            selectedPaymentClass = className;
+            document.getElementById('paymentStudentDropdown').style.display = 'none';
+        };
+
+        function confirmPaymentUpload() {
+            const student = selectedPaymentStudent || document.getElementById('paymentStudentSearch').value.trim();
+            const className = selectedPaymentClass || document.getElementById('paymentSelectedClass').value;
+            const paymentDate = document.getElementById('paymentDate').value;
+            if (!student || !className || !paymentDate) {
+                showError('請填寫完整資料');
+                return;
+            }
+            closePaymentModal();
+
+            currentConfirmCallback = async () => {
+                closeConfirmModal();
+                await uploadPaymentPhoto(student, className, paymentDate);
+            };
+            document.getElementById('confirmTitle').textContent = '確認繳費';
+            document.getElementById('confirmMessage').textContent = `學生：${student}，班級：${className}，繳費日期：${paymentDate}\n確定上傳？`;
+            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        async function uploadPaymentPhoto(studentName, className, paymentDate) {
+            if (!selectedPaymentFile) return;
+
+            showLoadingSpinner('💰 繳費憑證上傳中，請勿關閉頁面...');
+
+            try {
+                const compressedBase64 = await compressImage(selectedPaymentFile);
+                const res = await fetch(`${SCRIPT_URL}?action=uploadPaymentPhoto`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        imageData: compressedBase64,
+                        fileName: selectedPaymentFile.name,
+                        uploader: currentUser.username,
+                        studentName: studentName,
+                        class: className,
+                        paymentDate: paymentDate
+                    })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('繳費憑證上傳成功！');
+                    // 新增繳費通知
+                    await loadPaymentNotifications();
+                    // 移除該學生的新學生通知（如果有的話）
+                    newStudentNotifications = newStudentNotifications.filter(n => n.name !== studentName);
+                    updateNotificationBadge();
+                    renderNotificationDropdown();
+                } else {
+                    showError(result.error || '上傳失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤：' + err.message);
+            } finally {
+                hideLoadingSpinner();
+                selectedPaymentFile = null;
+                document.getElementById('paymentUploadInput').value = '';
+            }
+        }
+
+        // ---------- 課堂相片上傳 ----------
+        document.getElementById('photoUploadInput').addEventListener('change', function(e) {
+            selectedPhotoFile = e.target.files[0];
+            if (!selectedPhotoFile) return;
+            openClassSelectModal();
+        });
+
+        function openClassSelectModal() {
+            const select = document.getElementById('photoClassSelect');
+            select.innerHTML = '<option value="">-- 請選擇班級 --</option>';
+            const allowedClasses = getAuthorizedClasses();
+            let classList = allowedClasses === '*' ? allClasses : allowedClasses;
+            classList.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                select.appendChild(option);
+            });
+            document.getElementById('classSelectModal').style.display = 'flex';
+        }
+
+        function closeClassSelectModal() {
+            document.getElementById('classSelectModal').style.display = 'none';
+            selectedPhotoFile = null;
+        }
+
+        function confirmClassSelection() {
+            const selectedClass = document.getElementById('photoClassSelect').value;
+            if (!selectedClass) {
+                showError('請選擇班級');
+                return;
+            }
+            closeClassSelectModal();
+            currentConfirmCallback = async () => {
+                closeConfirmModal();
+                await uploadPhoto(selectedClass);
+            };
+            document.getElementById('confirmTitle').textContent = '確認班級';
+            document.getElementById('confirmMessage').textContent = `您選擇的班級是「${selectedClass}」，確定要上傳這張照片嗎？`;
+            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        async function uploadPhoto(className) {
+            if (!selectedPhotoFile) return;
+
+            showLoadingSpinner('📸 相片上傳中，請勿關閉頁面...');
+
+            try {
+                const compressedBase64 = await compressImage(selectedPhotoFile);
+                const res = await fetch(`${SCRIPT_URL}?action=uploadPhoto`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        imageData: compressedBase64,
+                        fileName: selectedPhotoFile.name,
+                        uploader: currentUser.username,
+                        class: className
+                    })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showSuccess('相片上傳成功！');
+                } else {
+                    showError(result.error || '上傳失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤：' + err.message);
+            } finally {
+                hideLoadingSpinner();
+                selectedPhotoFile = null;
+                document.getElementById('photoUploadInput').value = '';
+            }
+        }
+
+        // 圖片壓縮函數
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (readerEvent) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxSize = 1600;
+                        if (width > height && width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        } else if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        resolve(compressedBase64);
+                    };
+                    img.onerror = reject;
+                    img.src = readerEvent.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ---------- 自訂對話框控制 ----------
+        function closeNoteModal() {
+            document.getElementById('noteModal').style.display = 'none';
+            currentNoteTarget = null;
+            const saveBtn = document.getElementById('saveNoteBtn');
+            const cancelBtn = document.querySelector('#noteModal .cancel');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '儲存';
+            }
+            if (cancelBtn) cancelBtn.disabled = false;
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            const confirmBtn = document.getElementById('confirmBtn');
+            const cancelBtn = document.querySelector('#confirmModal .cancel');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '確定';
+            cancelBtn.disabled = false;
+            currentConfirmCallback = null;
+        }
+
+        // ---------- 載入中控制 ----------
+        function showLoadingSpinner(message) {
+            const spinner = document.getElementById('loadingSpinner');
+            const p = spinner.querySelector('p');
+            if (p) p.textContent = message || '載入中，請稍後...';
+            spinner.style.display = 'flex';
+        }
+        function hideLoadingSpinner() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
+        // ---------- 訊息顯示 ----------
+        function showSuccess(msg) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<div class="success">✅ ${msg}</div>`;
+            setTimeout(() => msgDiv.innerHTML = '', 4000);
+        }
+        function showError(msg) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<div class="error">❌ ${msg}</div>`;
+            setTimeout(() => msgDiv.innerHTML = '', 4000);
+        }
+    </script>
+</body>
+</html>
