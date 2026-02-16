@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.3</title>
+    <title>教練後台 · 課程系統v5.4</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -860,7 +860,7 @@
 
     <script>
         // ========== 後端網址 ==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEcPdeQrSAdqyhOOHNknBRKXvxc1n9DGx455cD_KfFC3cJzA0RgdUyTpP_BTr6sFlRbA/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywlV-OSzevvqfQB28WkHweed64Nz0cqXcPPLylQQqFgrpsfL3OVtM_Dj0la8p-ESVmKw/exec';
 
         let allStudents = [];
         let currentUser = null; // { username, role, authorizedClasses }
@@ -1279,14 +1279,27 @@ function applyRoleRestrictions() {
         }
 
         // ---------- 繳費通知 ----------
-        async function loadPaymentNotifications() {
-            const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
-            const payments = await res.json();
-            // 繳費通知：已繳費但學生剩餘0堂
-            const zeroClassStudents = allStudents.filter(s => s.remainingClasses <= 0).map(s => s.name);
-            paymentNotifications = payments.filter(p => zeroClassStudents.includes(p.studentName));
-            renderNotificationBody();
-        }
+async function loadPaymentNotifications() {
+  const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
+  const payments = await res.json();
+  
+  // 待續費提醒：已繳費且未處理的記錄
+  paymentNotifications = payments.filter(p => !p.processed).map(p => ({
+    studentName: p.studentName,
+    className: p.className,
+    paymentDate: p.paymentDate,
+    time: p.time,
+    imageUrl: p.imageUrl
+  }));
+
+  // 無繳費記錄的學生提醒（新學生待繳費）
+  const paidStudentNames = new Set(payments.map(p => p.studentName));
+  newStudentNotifications = allStudents
+    .filter(s => !paidStudentNames.has(s.name))
+    .map(s => ({ name: s.name, className: s.class }));
+
+  renderNotificationBody();
+}
 
         // ---------- 待審批請求 ----------
         async function loadPendingApprovals() {
@@ -1318,7 +1331,55 @@ function applyRoleRestrictions() {
 
             let total = 0;
             let html = '';
+// 待續費提醒
+paymentNotifications.forEach(p => {
+  total++;
+  html += `<div class="notification-item">
+      <span class="type-tag">待續費</span>
+      <div class="content">${p.studentName} 已上傳繳費憑證，請點擊續費</div>
+      <div class="actions">`;
+  if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+    html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費 (10堂)</button>`;
+  }
+  html += `</div></div>`;
+});
 
+// 新學生待繳費提醒（僅管理員）
+if (currentUser.role === 'admin') {
+  newStudentNotifications.forEach(n => {
+    total++;
+    html += `<div class="notification-item">
+        <span class="type-tag">新學生</span>
+        <div class="content">${n.name} 尚未上傳繳費憑證</div>
+        <div class="actions">
+            <button class="btn-sm" onclick="uploadPaymentForNewStudent('${n.name}')">💰上傳繳費</button>
+        </div>
+    </div>`;
+  });
+}
+
+// 審批請求：管理員顯示全部，教練顯示自己提交的
+if (currentUser.role === 'admin') {
+  pendingApprovals.forEach(req => { /* 原有程式碼 */ });
+} else if (currentUser.role === 'coach') {
+  const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
+  myRequests.forEach(req => {
+    total++;
+    let content = '';
+    if (req.type === 'addClasses') {
+      content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+    } else if (req.type === 'addStudent') {
+      content = `您請求新增學生 ${req.data.name} - 審批中`;
+    }
+    html += `<div class="notification-item">
+        <span class="type-tag">審批中</span>
+        <div class="content">${content}</div>
+        <div class="actions">
+            <span style="color:#718096;">等待管理員審批</span>
+        </div>
+    </div>`;
+  });
+}
             // 試堂提醒
             trialNotifications.forEach(t => {
                 total++;
@@ -1398,11 +1459,14 @@ function applyRoleRestrictions() {
                 const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
                 const result = await res.json();
                 if (result.success) {
-                    showSuccess('續費成功');
-                    await fetchAllStudents();
-                    renderNoteListByClass();
-                    await loadPaymentNotifications();
-                } else {
+    // 續費成功後，將對應的繳費記錄標記為已處理
+    const pendingPayments = paymentNotifications.filter(p => p.studentName === name);
+    for (let p of pendingPayments) {
+      await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}`);
+    }
+    // 重新載入通知
+    await loadPaymentNotifications();
+  } else {
                     showError(result.message);
                 }
             } else if (currentUser.role === 'coach') {
@@ -1418,10 +1482,9 @@ function applyRoleRestrictions() {
         }
 
         // 為新學生上傳繳費憑證（管理員專用）
-        function uploadPaymentForNewStudent(name) {
-            // 預填學生姓名，觸發上傳流程
-            openPaymentStudentModal(name);
-        }
+function uploadPaymentForNewStudent(name) {
+  openPaymentStudentModal(name);
+}
 
         // ---------- 試堂管理 ----------
         async function loadTrialList() {
@@ -2735,6 +2798,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
