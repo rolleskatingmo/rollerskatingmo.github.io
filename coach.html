@@ -2414,11 +2414,21 @@ function applyRoleRestrictions() {
         }
 
         // ---------- 繳費上傳 ----------
-        document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
-            selectedPaymentFile = e.target.files[0];
-            if (!selectedPaymentFile) return;
-            openPaymentStudentModal();
-        });
+document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
+    selectedPaymentFile = e.target.files[0];
+    if (!selectedPaymentFile) {
+        showError('請選擇圖片檔案');
+        return;
+    }
+    // 可選：檢查檔案類型
+    if (!selectedPaymentFile.type.startsWith('image/')) {
+        showError('請選擇圖片格式的檔案');
+        selectedPaymentFile = null;
+        this.value = '';
+        return;
+    }
+    openPaymentStudentModal();
+});
 
         function openPaymentStudentModal(prefillName = '') {
             document.getElementById('paymentStudentSearch').value = prefillName;
@@ -2459,63 +2469,81 @@ function applyRoleRestrictions() {
             document.getElementById('paymentStudentDropdown').style.display = 'none';
         };
 
-        function confirmPaymentUpload() {
-            const student = selectedPaymentStudent || document.getElementById('paymentStudentSearch').value.trim();
-            const className = selectedPaymentClass || document.getElementById('paymentSelectedClass').value;
-            const paymentDate = document.getElementById('paymentDate').value;
-            if (!student || !className || !paymentDate) {
-                showError('請填寫完整資料');
-                return;
-            }
-            closePaymentModal();
+function confirmPaymentUpload() {
+    const student = selectedPaymentStudent || document.getElementById('paymentStudentSearch').value.trim();
+    const className = selectedPaymentClass || document.getElementById('paymentSelectedClass').value;
+    const paymentDate = document.getElementById('paymentDate').value;
+    if (!student || !className || !paymentDate) {
+        showError('請填寫完整資料');
+        return;
+    }
+    if (!selectedPaymentFile) {
+        showError('請先選擇繳費憑證圖片');
+        closePaymentModal();
+        return;
+    }
+    closePaymentModal();
 
-            currentConfirmCallback = async () => {
-                closeConfirmModal();
-                await uploadPaymentPhoto(student, className, paymentDate);
-            };
-            document.getElementById('confirmTitle').textContent = '確認繳費';
-            document.getElementById('confirmMessage').textContent = `學生：${student}，班級：${className}，繳費日期：${paymentDate}\n確定上傳？`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
+    currentConfirmCallback = async () => {
+        closeConfirmModal();
+        await uploadPaymentPhoto(student, className, paymentDate);
+    };
+    document.getElementById('confirmTitle').textContent = '確認繳費';
+    document.getElementById('confirmMessage').textContent = `學生：${student}\n班級：${className}\n繳費日期：${paymentDate}\n確定上傳？`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+async function uploadPaymentPhoto(studentName, className, paymentDate) {
+    if (!selectedPaymentFile) {
+        showError('沒有選擇繳費憑證');
+        return;
+    }
+
+    showLoadingSpinner('💰 繳費憑證上傳中，請勿關閉頁面...');
+
+    try {
+        console.log('開始壓縮繳費圖片');
+        const compressedBase64 = await compressImage(selectedPaymentFile);
+        console.log('壓縮完成，長度：', compressedBase64.length);
+
+        const params = new URLSearchParams({
+            imageData: compressedBase64,
+            fileName: selectedPaymentFile.name,
+            uploader: currentUser.username,
+            studentName: studentName,
+            class: className,
+            paymentDate: paymentDate
+        });
+
+        console.log('發送請求至後端');
+        const res = await fetch(`${SCRIPT_URL}?action=uploadPaymentPhoto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+
+        const result = await res.json();
+        console.log('後端回應：', result);
+
+        if (result.success) {
+            showSuccess('繳費憑證上傳成功！');
+            await loadPaymentNotifications();
+            // 移除該學生的新學生通知（如果有的話）
+            newStudentNotifications = newStudentNotifications.filter(n => n.name !== studentName);
+            renderNotificationBody();
+        } else {
+            showError(result.error || '上傳失敗');
         }
-
-        async function uploadPaymentPhoto(studentName, className, paymentDate) {
-            if (!selectedPaymentFile) return;
-
-            showLoadingSpinner('💰 繳費憑證上傳中，請勿關閉頁面...');
-
-            try {
-                const compressedBase64 = await compressImage(selectedPaymentFile);
-                const res = await fetch(`${SCRIPT_URL}?action=uploadPaymentPhoto`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        imageData: compressedBase64,
-                        fileName: selectedPaymentFile.name,
-                        uploader: currentUser.username,
-                        studentName: studentName,
-                        class: className,
-                        paymentDate: paymentDate
-                    })
-                });
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('繳費憑證上傳成功！');
-                    await loadPaymentNotifications();
-                    // 移除該學生的新學生通知（如果有的話）
-                    newStudentNotifications = newStudentNotifications.filter(n => n.name !== studentName);
-                    renderNotificationBody();
-                } else {
-                    showError(result.error || '上傳失敗');
-                }
-            } catch (err) {
-                showError('網路錯誤：' + err.message);
-            } finally {
-                hideLoadingSpinner();
-                selectedPaymentFile = null;
-                document.getElementById('paymentUploadInput').value = '';
-            }
-        }
+    } catch (err) {
+        console.error('上傳過程錯誤：', err);
+        showError('網路錯誤：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+        selectedPaymentFile = null;
+        document.getElementById('paymentUploadInput').value = '';
+    }
+}
 
         // ---------- 課堂相片上傳 ----------
         document.getElementById('photoUploadInput').addEventListener('change', function(e) {
@@ -2691,5 +2719,6 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
