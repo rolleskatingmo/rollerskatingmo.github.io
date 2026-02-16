@@ -981,8 +981,9 @@ function applyRoleRestrictions() {
     document.getElementById('btnAddClasses').style.display = (isAdmin || isCoach) ? 'block' : 'none';
     document.getElementById('btnAddStudent').style.display = (isAdmin || isCoach) ? 'block' : 'none';
     document.getElementById('btnCoachLeave').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // ⭐ 學生資訊：僅管理員與教練可見（助教隱藏）
+    document.getElementById('btnClear').style.display = (isAdmin || isCoach) ? 'block' : 'none';
     // 以下所有人可見
-    document.getElementById('btnClear').style.display = 'block';
     document.getElementById('btnAttendance').style.display = 'block';
     document.getElementById('btnRental').style.display = 'block';
     document.getElementById('btnPhoto').style.display = 'block';
@@ -992,35 +993,43 @@ function applyRoleRestrictions() {
 }
 
         // ---------- 區塊切換 ----------
-        function showSection(sectionId) {
-            if (!currentUser) return;
-            const role = currentUser.role;
-            const isAdmin = role === 'admin';
-            const isCoach = role === 'coach';
+       function showSection(sectionId) {
+    if (!currentUser) return;
+    const role = currentUser.role;
+    const isAdmin = role === 'admin';
+    const isCoach = role === 'coach';
+    const isAssistant = role === 'assistant';
 
-            // 權限檢查
-            if (!isAdmin) {
-                if (sectionId === 'userManage' || sectionId === 'classManage') {
-                    showError('您沒有權限使用此功能');
-                    return;
-                }
-            }
-
-            const sections = ['attendance','rental','trial','addClasses','addStudent','classManage','clear','coachLeave','userManage'];
-            sections.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = id === sectionId ? 'block' : 'none';
-            });
-            if (sectionId === 'clear') {
-                renderNoteListByClass();
-            }
-            if (sectionId === 'trial') loadTrialList();
-            if (sectionId === 'userManage' && isAdmin) {
-                selectedClasses.clear();
-                renderClassSelection();
-                loadUserList();
-            }
+    // ⭐ 助教不得查看學生資訊
+    if (!isAdmin && !isCoach) {
+        if (sectionId === 'clear') {
+            showError('您沒有權限查看學生資訊');
+            return;
         }
+    }
+    // 管理員專屬功能
+    if (!isAdmin) {
+        if (sectionId === 'userManage' || sectionId === 'classManage') {
+            showError('您沒有權限使用此功能');
+            return;
+        }
+    }
+
+    const sections = ['attendance','rental','trial','addClasses','addStudent','classManage','clear','coachLeave','userManage'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = id === sectionId ? 'block' : 'none';
+    });
+    if (sectionId === 'clear') {
+        renderNoteListByClass();
+    }
+    if (sectionId === 'trial') loadTrialList();
+    if (sectionId === 'userManage' && isAdmin) {
+        selectedClasses.clear();
+        renderClassSelection();
+        loadUserList();
+    }
+}
 
         // ---------- 取得所有學生 ----------
         async function fetchAllStudents() {
@@ -2535,53 +2544,71 @@ function applyRoleRestrictions() {
         }
 
         function confirmClassSelection() {
-            const selectedClass = document.getElementById('photoClassSelect').value;
-            if (!selectedClass) {
-                showError('請選擇班級');
-                return;
-            }
-            closeClassSelectModal();
-            currentConfirmCallback = async () => {
-                closeConfirmModal();
-                await uploadPhoto(selectedClass);
-            };
-            document.getElementById('confirmTitle').textContent = '確認班級';
-            document.getElementById('confirmMessage').textContent = `您選擇的班級是「${selectedClass}」，確定要上傳這張照片嗎？`;
-            document.getElementById('confirmBtn').onclick = currentConfirmCallback;
-            document.getElementById('confirmModal').style.display = 'flex';
+    const selectedClass = document.getElementById('photoClassSelect').value;
+    if (!selectedClass) {
+        showError('請選擇班級');
+        return;
+    }
+    if (!selectedPhotoFile) {
+        showError('請先選擇照片檔案');
+        closeClassSelectModal();
+        return;
+    }
+    closeClassSelectModal();
+    currentConfirmCallback = async () => {
+        closeConfirmModal();
+        await uploadPhoto(selectedClass);
+    };
+    document.getElementById('confirmTitle').textContent = '確認班級';
+    document.getElementById('confirmMessage').textContent = `您選擇的班級是「${selectedClass}」，確定要上傳這張照片嗎？`;
+    document.getElementById('confirmBtn').onclick = currentConfirmCallback;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+async function uploadPhoto(className) {
+    if (!selectedPhotoFile) {
+        showError('沒有選擇照片');
+        return;
+    }
+
+    showLoadingSpinner('📸 相片上傳中，請勿關閉頁面...');
+
+    try {
+        console.log('開始壓縮圖片');
+        const compressedBase64 = await compressImage(selectedPhotoFile);
+        console.log('壓縮完成，長度：', compressedBase64.length);
+
+        const params = new URLSearchParams({
+            imageData: compressedBase64,
+            fileName: selectedPhotoFile.name,
+            uploader: currentUser.username,
+            class: className
+        });
+
+        console.log('發送請求至後端');
+        const res = await fetch(`${SCRIPT_URL}?action=uploadPhoto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+
+        const result = await res.json();
+        console.log('後端回應：', result);
+
+        if (result.success) {
+            showSuccess('相片上傳成功！');
+        } else {
+            showError(result.error || '上傳失敗');
         }
-
-        async function uploadPhoto(className) {
-            if (!selectedPhotoFile) return;
-
-            showLoadingSpinner('📸 相片上傳中，請勿關閉頁面...');
-
-            try {
-                const compressedBase64 = await compressImage(selectedPhotoFile);
-                const res = await fetch(`${SCRIPT_URL}?action=uploadPhoto`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        imageData: compressedBase64,
-                        fileName: selectedPhotoFile.name,
-                        uploader: currentUser.username,
-                        class: className
-                    })
-                });
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('相片上傳成功！');
-                } else {
-                    showError(result.error || '上傳失敗');
-                }
-            } catch (err) {
-                showError('網路錯誤：' + err.message);
-            } finally {
-                hideLoadingSpinner();
-                selectedPhotoFile = null;
-                document.getElementById('photoUploadInput').value = '';
-            }
-        }
+    } catch (err) {
+        console.error('上傳過程錯誤：', err);
+        showError('網路錯誤：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+        selectedPhotoFile = null;
+        document.getElementById('photoUploadInput').value = '';
+    }
+}
 
         // 圖片壓縮函數
         function compressImage(file) {
@@ -2664,4 +2691,5 @@ function applyRoleRestrictions() {
     </script>
 </body>
 </html>
+
 
