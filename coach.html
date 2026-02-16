@@ -1455,22 +1455,83 @@ function renderNotificationBody() {
     });
 
     // 待續費提醒（管理員和教練可見）
-if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-    html += `<div class="actions">`;
+    if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+        paymentNotifications.forEach(p => {
+            total++;
+            html += `<div class="notification-item">
+                <span class="type-tag">待續費</span>
+                <div class="content">${p.studentName} 已上傳繳費憑證，請點擊續費</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費 (10堂)</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    // 新學生待繳費提醒（僅管理員）
     if (currentUser.role === 'admin') {
-        // 管理員完整功能
-        html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
-        html += `<button class="btn-sm" onclick="clearStudentLeave('${s.name}', event)">🧹清零請假</button>`;
-        html += `<button class="btn-sm" onclick="clearStudentRental('${s.name}', event)">🛞清零租借</button>`;
-        html += `<button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>`;
-        html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
+        newStudentNotifications.forEach(n => {
+            total++;
+            html += `<div class="notification-item">
+                <span class="type-tag">新學生</span>
+                <div class="content">${n.name} 尚未上傳繳費憑證</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="uploadPaymentForNewStudent('${n.name}')">💰上傳繳費</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    // 審批請求
+    if (currentUser.role === 'admin') {
+        pendingApprovals.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
+            } else if (req.type === 'addStudent') {
+                content = `${req.requester} 請求新增學生 ${req.data.name}`;
+            } else if (req.type === 'deleteStudent') {
+                content = `${req.requester} 請求刪除學生 ${req.data.name}`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
+                    <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
+                </div>
+            </div>`;
+        });
     } else if (currentUser.role === 'coach') {
-        // 教練僅保留刪除（需審批）
-        html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
+        const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
+        myRequests.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+            } else if (req.type === 'addStudent') {
+                content = `您請求新增學生 ${req.data.name} - 審批中`;
+            } else if (req.type === 'deleteStudent') {
+                content = `您請求刪除學生 ${req.data.name} - 審批中`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批中</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <span style="color:#718096;">等待管理員審批</span>
+                </div>
+            </div>`;
+        });
     }
-    html += `</div>`;
+
+    if (total === 0) {
+        html = '<div class="notification-item">目前沒有待辦通知</div>';
+    }
+
+    body.innerHTML = html;
+    countSpan.textContent = total;
 }
-    }
 
     // 新學生待繳費提醒（僅管理員）
     if (currentUser.role === 'admin') {
@@ -2925,6 +2986,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
