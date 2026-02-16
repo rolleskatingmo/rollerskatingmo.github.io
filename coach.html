@@ -2629,7 +2629,6 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
     document.getElementById('paymentStudentSearch').value = prefillName;
     document.getElementById('paymentSelectedClass').value = prefillClass;
     document.getElementById('paymentDate').value = getTodayUTC8();
-    // 若預填了班級，同時設定選中學生變數
     if (prefillName && prefillClass) {
         selectedPaymentStudent = prefillName;
         selectedPaymentClass = prefillClass;
@@ -2938,6 +2937,7 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
 </script>
 </body>
 </html>
+
 
 
 
