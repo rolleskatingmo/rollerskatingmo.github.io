@@ -918,7 +918,7 @@
     let currentNoteTarget = null;
     let currentConfirmCallback = null;
     let classCollapsed = {};
-
+    let pendingNewStudent = null; // 暫存新學生通知的 { name, className }
     // 班級選擇相關
     let allClasses = [];
     let selectedClasses = new Set(); // 用於新增用戶或編輯用戶時選中的班級
@@ -1482,7 +1482,7 @@
                     <span class="type-tag">新學生</span>
                     <div class="content">${n.name} 尚未上傳繳費憑證</div>
                     <div class="actions">
-                        <button class="btn-sm" onclick="uploadPaymentForNewStudent('${n.name}')">💰上傳繳費</button>
+                       html += `<button class="btn-sm" onclick="uploadPaymentForNewStudent('${n.name}', '${n.className}')">💰上傳繳費</button>`;
                     </div>
                 </div>`;
             });
@@ -1607,9 +1607,12 @@
     }
 
     // 為新學生上傳繳費憑證（管理員專用）
-    function uploadPaymentForNewStudent(name) {
-        openPaymentStudentModal(name);
-    }
+function uploadPaymentForNewStudent(name, className) {
+    // 儲存待處理的新學生資訊
+    pendingNewStudent = { name, className };
+    // 觸發檔案選擇
+    document.getElementById('paymentUploadInput').click();
+}
 
     // ---------- 試堂管理 ----------
     async function loadTrialList() {
@@ -2599,29 +2602,41 @@
     }
 
     // ---------- 繳費上傳 ----------
-    document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) {
-            showError('請選擇圖片檔案');
-            return;
-        }
-        if (!file.type.startsWith('image/')) {
-            showError('請選擇圖片格式的檔案');
-            this.value = '';
-            return;
-        }
-        selectedPaymentFile = file;
-        console.log('✅ 已選擇繳費憑證：', file.name, '大小：', file.size, '類型：', file.type);
-        openPaymentStudentModal();
-    });
-
-    function openPaymentStudentModal(prefillName = '') {
-        document.getElementById('paymentStudentSearch').value = prefillName;
-        document.getElementById('paymentSelectedClass').value = '';
-        document.getElementById('paymentDate').value = getTodayUTC8();
-        document.getElementById('paymentStudentModal').style.display = 'flex';
-        setupPaymentSearch();
+document.getElementById('paymentUploadInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) {
+        showError('請選擇圖片檔案');
+        return;
     }
+    if (!file.type.startsWith('image/')) {
+        showError('請選擇圖片格式的檔案');
+        this.value = '';
+        return;
+    }
+    selectedPaymentFile = file;
+    console.log('✅ 已選擇繳費憑證：', file.name, '大小：', file.size, '類型：', file.type);
+    
+    // 如果有待處理的新學生，直接開啟並預填
+    if (pendingNewStudent) {
+        openPaymentStudentModal(pendingNewStudent.name, pendingNewStudent.className);
+        pendingNewStudent = null; // 使用後清除
+    } else {
+        openPaymentStudentModal();
+    }
+});
+
+function openPaymentStudentModal(prefillName = '', prefillClass = '') {
+    document.getElementById('paymentStudentSearch').value = prefillName;
+    document.getElementById('paymentSelectedClass').value = prefillClass;
+    document.getElementById('paymentDate').value = getTodayUTC8();
+    // 若預填了班級，同時設定選中學生變數
+    if (prefillName && prefillClass) {
+        selectedPaymentStudent = prefillName;
+        selectedPaymentClass = prefillClass;
+    }
+    document.getElementById('paymentStudentModal').style.display = 'flex';
+    setupPaymentSearch();
+}
 
     function closePaymentModal() {
         document.getElementById('paymentStudentModal').style.display = 'none';
@@ -2923,6 +2938,7 @@
 </script>
 </body>
 </html>
+
 
 
 
