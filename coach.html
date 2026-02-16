@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.4</title>
+    <title>教練後台 · 課程系統v5.8</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -1123,7 +1123,11 @@ async function loadClassList() {
     
     return classes;
 }
-
+function getFilteredStudents() {
+    const allowedClasses = getAuthorizedClasses();
+    if (allowedClasses === '*') return allStudents;
+    return allStudents.filter(s => allowedClasses.includes(s.class));
+}
         function renderClassList(classes) {
             const container = document.getElementById('classListContainer');
             if (!container) return;
@@ -1165,39 +1169,37 @@ async function loadClassList() {
         }
 
         // ---------- 點名（根據權限過濾班級）----------
-        function updateAttendanceList() {
-            const container = document.getElementById('attendanceList');
-            if (!container) return;
-            const grouped = {};
-            allStudents.forEach(s => {
-                if (!grouped[s.class]) grouped[s.class] = [];
-                grouped[s.class].push(s);
-            });
+function updateAttendanceList() {
+    const container = document.getElementById('attendanceList');
+    if (!container) return;
 
-            let html = '';
-            const allowedClasses = getAuthorizedClasses();
-            for (let className in grouped) {
-                if (allowedClasses !== '*' && !allowedClasses.includes(className)) continue;
-                html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-                grouped[className].forEach(s => {
-                    const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-                    const disabled = isChecked ? 'disabled' : '';
-                    const checkedClass = isChecked ? 'checked' : '';
-                    let buttonText = s.name;
-                    // 教練/管理員可以看到剩餘堂數，助教看不到
-                    if (currentUser.role === 'coach' || currentUser.role === 'admin') {
-                        const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
-                        buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
-                        html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                    } else {
-                        // 助教只顯示名字
-                        html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                    }
-                });
-                html += '</div>';
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+    });
+
+    let html = '';
+    for (let className in grouped) {
+        html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+        grouped[className].forEach(s => {
+            const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+            const disabled = isChecked ? 'disabled' : '';
+            const checkedClass = isChecked ? 'checked' : '';
+            let buttonText = s.name;
+            if (currentUser.role === 'coach' || currentUser.role === 'admin') {
+                const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+                buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+                html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
+            } else {
+                html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
             }
-            container.innerHTML = html;
-        }
+        });
+        html += '</div>';
+    }
+    container.innerHTML = html;
+}
 
         async function markAttendance(name) {
             if (processing[`attendance_${name}`]) {
@@ -1254,27 +1256,27 @@ async function loadClassList() {
         }
 
         // ---------- 租借裝備（根據權限過濾班級）----------
-        function updateRentalList() {
-            const container = document.getElementById('rentalList');
-            if (!container) return;
-            const grouped = {};
-            allStudents.forEach(s => {
-                if (!grouped[s.class]) grouped[s.class] = [];
-                grouped[s.class].push(s);
-            });
+function updateRentalList() {
+    const container = document.getElementById('rentalList');
+    if (!container) return;
 
-            let html = '';
-            const allowedClasses = getAuthorizedClasses();
-            for (let className in grouped) {
-                if (allowedClasses !== '*' && !allowedClasses.includes(className)) continue;
-                html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-                grouped[className].forEach(s => {
-                    html += `<button class="rental-button" data-name="${s.name}" onclick="addRental('${s.name}')">${s.name} (${s.rentalCount}次)</button>`;
-                });
-                html += '</div>';
-            }
-            container.innerHTML = html;
-        }
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+    });
+
+    let html = '';
+    for (let className in grouped) {
+        html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+        grouped[className].forEach(s => {
+            html += `<button class="rental-button" data-name="${s.name}" onclick="addRental('${s.name}')">${s.name} (${s.rentalCount}次)</button>`;
+        });
+        html += '</div>';
+    }
+    container.innerHTML = html;
+}
 
         async function addRental(name) {
             if (processing[`rental_${name}`]) {
@@ -1898,69 +1900,69 @@ function uploadPaymentForNewStudent(name) {
         }
 
         // ---------- 學生資訊列表 ----------
-        function renderNoteListByClass() {
-            const container = document.getElementById('noteListByClass');
-            if (!container) return;
+function renderNoteListByClass() {
+    const container = document.getElementById('noteListByClass');
+    if (!container) return;
 
-            const grouped = {};
-            allStudents.forEach(s => {
-                if (!grouped[s.class]) grouped[s.class] = [];
-                grouped[s.class].push(s);
-            });
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+    });
 
-            let html = '';
-            const sortedClasses = sortClasses(Object.keys(grouped));
-            sortedClasses.forEach(className => {
-                const collapsed = classCollapsed[className] ? 'collapsed' : '';
-                const icon = classCollapsed[className] ? '▶' : '▼';
-                html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
-                    <span class="toggle-icon">${icon}</span>
-                    <h3>${className}班</h3>
+    let html = '';
+    const sortedClasses = sortClasses(Object.keys(grouped));
+    sortedClasses.forEach(className => {
+        const collapsed = classCollapsed[className] ? 'collapsed' : '';
+        const icon = classCollapsed[className] ? '▶' : '▼';
+        html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+            <span class="toggle-icon">${icon}</span>
+            <h3>${className}班</h3>
+        </div>`;
+        html += `<div class="class-students ${collapsed}" id="class-${className}">`;
+        grouped[className].forEach(s => {
+            const icons = [];
+            if (currentUser.role === 'admin') {
+                if (s.remainingClasses <= 0) icons.push('🔴');
+            }
+            if (s.leaveCount >= 2) icons.push('🟡');
+            const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
+
+            html += `<div class="student-row">
+                <div class="details">
+                    <div class="name-with-icons">
+                        ${iconsHtml}
+                        <strong>${s.name}</strong>
+                    </div>
+                    <div class="stats">`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
+            }
+            html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
+                        <span class="rental-badge">租借 ${s.rentalCount}</span>
+                    </div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
+            }
+            html += `</div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<div class="actions">`;
+                if (currentUser.role === 'admin') {
+                    html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
+                }
+                html += `<button class="btn-sm" onclick="clearStudentLeave('${s.name}', event)">🧹清零請假</button>
+                    <button class="btn-sm" onclick="clearStudentRental('${s.name}', event)">🛞清零租借</button>
+                    <button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>
+                    <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>
                 </div>`;
-                html += `<div class="class-students ${collapsed}" id="class-${className}">`;
-                grouped[className].forEach(s => {
-                    const icons = [];
-                    if (currentUser.role === 'admin') {
-                        if (s.remainingClasses <= 0) icons.push('🔴');
-                    }
-                    if (s.leaveCount >= 2) icons.push('🟡');
-                    const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
-
-                    html += `<div class="student-row">
-                        <div class="details">
-                            <div class="name-with-icons">
-                                ${iconsHtml}
-                                <strong>${s.name}</strong>
-                            </div>
-                            <div class="stats">`;
-                    if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                        html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
-                    }
-                    html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
-                                <span class="rental-badge">租借 ${s.rentalCount}</span>
-                            </div>`;
-                    // 備註只有管理員和教練可見（依需求調整）
-                    if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                        html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
-                    }
-                    html += `</div>`;
-                    if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                        html += `<div class="actions">`;
-                        if (currentUser.role === 'admin') {
-                            html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
-                        }
-                        html += `<button class="btn-sm" onclick="clearStudentLeave('${s.name}', event)">🧹清零請假</button>
-                            <button class="btn-sm" onclick="clearStudentRental('${s.name}', event)">🛞清零租借</button>
-                            <button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>
-                            <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>
-                        </div>`;
-                    }
-                    html += `</div>`;
-                });
-                html += `</div>`;
-            });
-            container.innerHTML = html || '無學生資料';
-        }
+            }
+            html += `</div>`;
+        });
+        html += `</div>`;
+    });
+    container.innerHTML = html || '無學生資料';
+}
 
         window.toggleClass = function(className) {
             classCollapsed[className] = !classCollapsed[className];
@@ -2883,6 +2885,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
