@@ -891,45 +891,47 @@
         let notificationCollapsed = false;
 
         // ---------- 登入 ----------
-        async function login() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            if (!username || !password) return showLoginError('請輸入用戶名與密碼');
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) return showLoginError('請輸入用戶名與密碼');
 
-            const loginBtn = document.querySelector('#loginForm .btn-primary');
-            const originalText = loginBtn.textContent;
-            loginBtn.disabled = true;
-            loginBtn.textContent = '登入中...';
+    const loginBtn = document.querySelector('#loginForm .btn-primary');
+    const originalText = loginBtn.textContent;
+    loginBtn.disabled = true;
+    loginBtn.textContent = '登入中...';
 
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
-                const data = await res.json();
-                if (data.success) {
-                    currentUser = {
-                        username: data.username,
-                        role: data.role,
-                        authorizedClasses: data.authorizedClasses
-                    };
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    // 修正角色顯示
-                    let roleName = '助教';
-                    if (data.role === 'admin') roleName = '管理員';
-                    else if (data.role === 'coach') roleName = '教練';
-                    document.getElementById('userInfoDisplay').textContent = `👤 ${data.username} (${roleName})`;
-                    document.getElementById('loadingSpinner').style.display = 'flex';
-                    document.getElementById('appContent').style.display = 'none';
-                    await loadAllData();
-                } else {
-                    showLoginError('用戶名或密碼錯誤');
-                }
-            } catch (e) {
-                showLoginError('連線失敗');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = originalText;
-            }
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+        const data = await res.json();
+        if (data.success) {
+            // 標準化角色值（轉小寫）
+            const role = (data.role || '').toLowerCase();
+            currentUser = {
+                username: data.username,
+                role: role,
+                authorizedClasses: data.authorizedClasses
+            };
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            // 設定顯示名稱
+            let roleName = '助教';
+            if (role === 'admin') roleName = '管理員';
+            else if (role === 'coach') roleName = '教練';
+            document.getElementById('userInfoDisplay').textContent = `👤 ${data.username} (${roleName})`;
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('appContent').style.display = 'none';
+            await loadAllData();
+        } else {
+            showLoginError('用戶名或密碼錯誤');
         }
+    } catch (e) {
+        showLoginError('連線失敗');
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = originalText;
+    }
+}
         function showLoginError(msg) {
             document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
         }
@@ -961,28 +963,33 @@
         }
 
         // ---------- 權限控制 ----------
-        function applyRoleRestrictions() {
-            const role = currentUser.role;
-            const isAdmin = role === 'admin';
-            const isCoach = role === 'coach';
-            const isAssistant = role === 'assistant';
+function applyRoleRestrictions() {
+    const role = currentUser.role; // 已是小寫
+    const isAdmin = role === 'admin';
+    const isCoach = role === 'coach';
+    const isAssistant = role === 'assistant';
 
-            // 管理員：所有功能
-            document.getElementById('btnPaymentUpload').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('btnUserManage').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('btnTrial').style.display = 'block'; // 所有人都可查看試堂列表，但操作按鈕會過濾
-            document.getElementById('btnAddClasses').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-            document.getElementById('btnAddStudent').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-            document.getElementById('btnCoachLeave').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-            document.getElementById('btnClear').style.display = 'block';
-            document.getElementById('btnAttendance').style.display = 'block';
-            document.getElementById('btnRental').style.display = 'block';
-            document.getElementById('btnPhoto').style.display = 'block';
+    // 繳費憑證上傳：僅管理員
+    document.getElementById('btnPaymentUpload').style.display = isAdmin ? 'block' : 'none';
+    // 班級管理：僅管理員
+    document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
+    // 用戶管理：僅管理員
+    document.getElementById('btnUserManage').style.display = isAdmin ? 'block' : 'none';
+    // 試堂管理：管理員與教練可見（助教不可見）
+    document.getElementById('btnTrial').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 新增/扣課、新增學生、代請假：管理員與教練可見
+    document.getElementById('btnAddClasses').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    document.getElementById('btnAddStudent').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    document.getElementById('btnCoachLeave').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 以下所有人可見
+    document.getElementById('btnClear').style.display = 'block';
+    document.getElementById('btnAttendance').style.display = 'block';
+    document.getElementById('btnRental').style.display = 'block';
+    document.getElementById('btnPhoto').style.display = 'block';
 
-            // 試堂新增表單僅管理員可見
-            document.getElementById('trialAddForm').style.display = isAdmin ? 'flex' : 'none';
-        }
+    // 試堂新增表單僅管理員可見
+    document.getElementById('trialAddForm').style.display = isAdmin ? 'flex' : 'none';
+}
 
         // ---------- 區塊切換 ----------
         function showSection(sectionId) {
@@ -2657,3 +2664,4 @@
     </script>
 </body>
 </html>
+
