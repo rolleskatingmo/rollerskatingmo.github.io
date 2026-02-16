@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.2</title>
+    <title>教練後台 · 課程系統v5.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -1328,10 +1328,11 @@ function applyRoleRestrictions() {
 
         // ---------- 繳費通知 ----------
 async function loadPaymentNotifications() {
+    console.log('loadPaymentNotifications 開始');
     const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
     const payments = await res.json();
-    console.log('續費後 paymentNotifications:', paymentNotifications);
-console.log('待續費提醒數:', paymentNotifications.length);
+    console.log('從後端獲取的繳費記錄：', payments);
+    
     // 待續費提醒：已繳費且未處理的記錄
     paymentNotifications = payments.filter(p => !p.processed).map(p => ({
         studentName: p.studentName,
@@ -1340,12 +1341,14 @@ console.log('待續費提醒數:', paymentNotifications.length);
         time: p.time,
         imageUrl: p.imageUrl
     }));
+    console.log('過濾後的 paymentNotifications：', paymentNotifications);
 
     // 新學生待繳費提醒：僅標記為 'new' 且尚未有繳費記錄的學生
     const paidStudentNames = new Set(payments.map(p => p.studentName));
     newStudentNotifications = allStudents
         .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name))
         .map(s => ({ name: s.name, className: s.class }));
+    console.log('newStudentNotifications：', newStudentNotifications);
 
     renderNotificationBody();
 }
@@ -2855,6 +2858,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
