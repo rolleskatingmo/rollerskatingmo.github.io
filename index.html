@@ -258,12 +258,12 @@
         <div id="message" class="message"></div>
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。租借裝備每次 $20。</p>
-            <p>系統版本 Version 3.5 By Thomas哥哥</p>
+            <p>系統版本 Version 5.0 By Thomas哥哥~冇錯已經係第5版先出街, 有咩意見同迪哥哥講我改下:)</p>
         </div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVogWqEvXJuXc1wXYQea1Q_tJS_m5G_cdrFaUrB9cSyakDdrJCPFb3gVEYlXH4fTWSMA/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-7WJ6M7VU3HkpwvSUHq0ODNbW49Ro2LbXh285V0MMN0M500rEzknLqfWxUKpJ0ZUV_A/exec';
 
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
@@ -295,6 +295,7 @@
             }
         }
 
+        // 只顯示姓名和班級，不顯示剩餘堂數
         function renderStudentList(students) {
             studentListDiv.innerHTML = '';
             if (students.length === 0) {
@@ -304,7 +305,7 @@
             students.forEach(s => {
                 const tag = document.createElement('span');
                 tag.className = 'student-tag';
-                tag.textContent = `${s.name} (${s.class}) 剩${s.remainingClasses}堂`;
+                tag.textContent = `${s.name} (${s.class})`; // 只顯示名字和班級
                 tag.addEventListener('click', () => loadStudentDetail(s.name));
                 studentListDiv.appendChild(tag);
             });
