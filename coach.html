@@ -1445,20 +1445,23 @@
         let html = '';
 
         // 試堂提醒（所有人都可見）
-        trialNotifications.forEach(t => {
-            total++;
-            html += `<div class="notification-item">
-                <span class="type-tag">試堂</span>
-                <div class="content">${t.name} - ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'}</div>
-                <div class="actions">`;
-            if (currentUser.role === 'admin') {
-                if (!t.paid) {
-                    html += `<button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰標記已付</button>`;
-                }
-                html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>`;
-            }
-            html += `</div></div>`;
-        });
+trialNotifications.forEach(t => {
+    total++;
+    html += `<div class="notification-item">
+        <span class="type-tag">試堂</span>
+        <div class="content">
+            ${t.name} - ${t.date} ${t.rentEquipment ? '🛞' : ''} ${t.paid ? '✅已付' : '❌未付'}
+            ${t.note ? `<br><span style="font-size:0.8rem; color:#666;">📝 ${t.note}</span>` : ''}
+        </div>
+        <div class="actions">`;
+    if (currentUser.role === 'admin') {
+        if (!t.paid) {
+            html += `<button class="btn-sm" onclick="markTrialPaid('${t.name}', '${t.date}')">💰標記已付</button>`;
+        }
+        html += `<button class="btn-sm" onclick="editTrialDate('${t.name}', '${t.date}')">📅改期</button>`;
+    }
+    html += `</div></div>`;
+});
 
         // 待續費提醒（管理員和教練可見）
         if (currentUser.role === 'admin' || currentUser.role === 'coach') {
@@ -2935,6 +2938,7 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
 </script>
 </body>
 </html>
+
 
 
 
