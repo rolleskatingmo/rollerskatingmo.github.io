@@ -1331,7 +1331,7 @@ async function loadPaymentNotifications() {
     console.log('loadPaymentNotifications 開始');
     const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
     const payments = await res.json();
-    console.log('從後端獲取的繳費記錄 (原始):', payments);
+    console.log('從後端獲取的繳費記錄 (原始):', JSON.stringify(payments, null, 2));
 
     // 待續費提醒：已繳費且未處理的記錄
     paymentNotifications = payments.filter(p => !p.processed).map(p => ({
@@ -1341,7 +1341,7 @@ async function loadPaymentNotifications() {
         time: p.time,
         imageUrl: p.imageUrl
     }));
-    console.log('過濾後的 paymentNotifications:', paymentNotifications);
+    console.log('過濾後的 paymentNotifications:', JSON.stringify(paymentNotifications, null, 2));
 
     // 新學生待繳費提醒：僅標記為 'new' 且尚未有繳費記錄的學生
     const paidStudentNames = new Set(payments.map(p => p.studentName));
@@ -1509,23 +1509,26 @@ async function quickRenew(name, className) {
         if (!result.success) throw new Error(result.error || '增加課堂失敗');
 
         // 4. 標記該學生所有待處理繳費記錄為已處理
+        console.log('當前 paymentNotifications:', paymentNotifications);
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
-        console.log('待標記的繳費記錄:', pendingForStudent);
+        console.log('待標記的繳費記錄 (pendingForStudent):', JSON.stringify(pendingForStudent, null, 2));
 
         for (let p of pendingForStudent) {
+            console.log('處理單筆記錄:', p);
             if (!p.time || !p.studentName) {
                 console.error('❌ 記錄缺少必要屬性', p);
                 showError('繳費記錄資料不完整，無法自動標記');
                 continue;
             }
-            console.log(`標記繳費記錄：time=${p.time}, studentName=${p.studentName}`);
+            console.log(`標記繳費記錄：time=${p.time}, studentName=${p.studentName}, 類型: ${typeof p.time}`);
             const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
             const markResult = await markRes.json();
+            console.log('標記結果:', markResult);
             if (!markResult.success) {
                 console.error('標記失敗：', markResult.error);
                 showError(`標記失敗：${markResult.error}`);
             } else {
-                console.log('標記成功');
+                console.log('✅ 標記成功');
             }
         }
 
@@ -2864,6 +2867,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
