@@ -2699,9 +2699,6 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
         document.getElementById('confirmModal').style.display = 'flex';
     }
 
-    function uploadPaymentForNewStudent(name) {
-        openPaymentStudentModal(name);
-    }
 
     async function uploadPaymentPhoto(studentName, className, paymentDate) {
         if (!selectedPaymentFile) {
@@ -2938,6 +2935,7 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
 </script>
 </body>
 </html>
+
 
 
 
