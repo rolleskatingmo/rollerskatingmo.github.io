@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.3</title>
+    <title>教練後台 · 課程系統v5.2</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -908,7 +908,7 @@
 
     <script>
         // ========== 後端網址 ==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCYex2Ruzm2Eu3EGE4g_KH0l3sU-EZW4sF-UqN8woTDpcxvSrNgQBPaKlilzQvrJck/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQlBqzPgZl63AHkJGyiyZlhj_VywM89P6drPMy-lFwCpJhcYvI0kYUqX_MfQoyI9Czsg/exec';
 
         let allStudents = [];
         let currentUser = null; // { username, role, authorizedClasses }
@@ -1330,7 +1330,8 @@ function applyRoleRestrictions() {
 async function loadPaymentNotifications() {
     const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
     const payments = await res.json();
-    
+    console.log('續費後 paymentNotifications:', paymentNotifications);
+console.log('待續費提醒數:', paymentNotifications.length);
     // 待續費提醒：已繳費且未處理的記錄
     paymentNotifications = payments.filter(p => !p.processed).map(p => ({
         studentName: p.studentName,
@@ -1511,8 +1512,9 @@ async function quickRenew(name, className) {
             const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
             const markResult = await markRes.json();
             if (!markResult.success) {
-                console.warn('標記失敗：', markResult.error);
-                // 可選：顯示警告但不中斷流程
+                console.error('標記失敗：', markResult.error);
+                showError(`標記失敗：${markResult.error}`); // 顯示錯誤提示
+                // 可選：中斷流程或繼續
             } else {
                 console.log('標記成功');
             }
@@ -2853,6 +2855,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
