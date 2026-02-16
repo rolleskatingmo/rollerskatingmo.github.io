@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>教練後台 · 課程系統v5.3</title>
+    <title>教練後台 · 課程系統v5.4</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -1331,8 +1331,8 @@ async function loadPaymentNotifications() {
     console.log('loadPaymentNotifications 開始');
     const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
     const payments = await res.json();
-    console.log('從後端獲取的繳費記錄：', payments);
-    
+    console.log('從後端獲取的繳費記錄 (原始):', payments);
+
     // 待續費提醒：已繳費且未處理的記錄
     paymentNotifications = payments.filter(p => !p.processed).map(p => ({
         studentName: p.studentName,
@@ -1341,14 +1341,14 @@ async function loadPaymentNotifications() {
         time: p.time,
         imageUrl: p.imageUrl
     }));
-    console.log('過濾後的 paymentNotifications：', paymentNotifications);
+    console.log('過濾後的 paymentNotifications:', paymentNotifications);
 
     // 新學生待繳費提醒：僅標記為 'new' 且尚未有繳費記錄的學生
     const paidStudentNames = new Set(payments.map(p => p.studentName));
     newStudentNotifications = allStudents
         .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name))
         .map(s => ({ name: s.name, className: s.class }));
-    console.log('newStudentNotifications：', newStudentNotifications);
+    console.log('newStudentNotifications:', newStudentNotifications);
 
     renderNotificationBody();
 }
@@ -1508,16 +1508,22 @@ async function quickRenew(name, className) {
         result = await res.json();
         if (!result.success) throw new Error(result.error || '增加課堂失敗');
 
-        // 4. 標記該學生所有待處理繳費記錄為已處理（傳遞時間和學生姓名）
+        // 4. 標記該學生所有待處理繳費記錄為已處理
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
+        console.log('待標記的繳費記錄:', pendingForStudent);
+
         for (let p of pendingForStudent) {
-            console.log('標記繳費記錄：', p.time, p.studentName);
+            if (!p.time || !p.studentName) {
+                console.error('❌ 記錄缺少必要屬性', p);
+                showError('繳費記錄資料不完整，無法自動標記');
+                continue;
+            }
+            console.log(`標記繳費記錄：time=${p.time}, studentName=${p.studentName}`);
             const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
             const markResult = await markRes.json();
             if (!markResult.success) {
                 console.error('標記失敗：', markResult.error);
-                showError(`標記失敗：${markResult.error}`); // 顯示錯誤提示
-                // 可選：中斷流程或繼續
+                showError(`標記失敗：${markResult.error}`);
             } else {
                 console.log('標記成功');
             }
@@ -2858,6 +2864,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
