@@ -950,10 +950,17 @@ async function login() {
     loginBtn.textContent = '登入中...';
 
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+        console.log('發送登入請求，用戶名:', username);
+        const url = `${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+        console.log('請求網址:', url);
+        const res = await fetch(url);
+        console.log('回應狀態碼:', res.status);
+        if (!res.ok) {
+            throw new Error(`HTTP 錯誤 ${res.status}`);
+        }
         const data = await res.json();
+        console.log('後端回應資料:', data);
         if (data.success) {
-            // 標準化角色值（轉小寫）
             const role = (data.role || '').toLowerCase();
             currentUser = {
                 username: data.username,
@@ -962,7 +969,6 @@ async function login() {
             };
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
-            // 設定顯示名稱
             let roleName = '助教';
             if (role === 'admin') roleName = '管理員';
             else if (role === 'coach') roleName = '教練';
@@ -971,18 +977,19 @@ async function login() {
             document.getElementById('appContent').style.display = 'none';
             await loadAllData();
         } else {
-            showLoginError('用戶名或密碼錯誤');
+            showLoginError(data.error || '用戶名或密碼錯誤');
         }
     } catch (e) {
-        showLoginError('連線失敗');
+        console.error('登入過程錯誤:', e);
+        showLoginError('連線失敗: ' + e.message);
     } finally {
         loginBtn.disabled = false;
         loginBtn.textContent = originalText;
     }
 }
-        function showLoginError(msg) {
-            document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
-        }
+function showLoginError(msg) {
+    document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
+}
 
         // ---------- 載入所有資料 ----------
 async function loadAllData() {
@@ -2918,6 +2925,7 @@ async function uploadPhoto(className) {
     </script>
 </body>
 </html>
+
 
 
 
