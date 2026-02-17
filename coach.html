@@ -1023,30 +1023,30 @@ function logout() {
     }
 
     // ---------- 載入所有資料 ----------
-    async function loadAllData() {
-        try {
-            await Promise.all([fetchAllStudents(), loadClassList()]);
-            await loadPendingApprovals();    // 先載入待審批
-            await loadPaymentNotifications(); // 依賴學生資料
-            await loadTrialNotifications();   // 獨立
+async function loadAllData() {
+    try {
+        // 載入全域必要資料：學生列表、班級列表、通知相關資料
+        await fetchAllStudents();
+        await loadClassList();
+        await loadPendingApprovals();    // 待審批請求（管理員需要）
+        await loadPaymentNotifications(); // 繳費通知（依賴學生資料）
+        await loadTrialNotifications();   // 試堂通知
 
-            updateAttendanceList();
-            updateRentalList();
-            renderNoteListByClass();
-            renderNotificationBody();
+        // 只更新通知欄，不渲染其他區塊
+        renderNotificationBody();
 
-            document.getElementById('loadingSpinner').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
 
-            applyRoleRestrictions();
-        } catch (error) {
-            console.error(error);
-            document.getElementById('loadingSpinner').innerHTML = `
-                <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
-                <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
-            `;
-        }
+        applyRoleRestrictions();
+    } catch (error) {
+        console.error(error);
+        document.getElementById('loadingSpinner').innerHTML = `
+            <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
+            <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
+        `;
     }
+}
 
     // ---------- 權限控制 ----------
 function applyRoleRestrictions() {
@@ -3033,4 +3033,5 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
