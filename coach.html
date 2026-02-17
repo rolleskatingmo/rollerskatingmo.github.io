@@ -628,6 +628,7 @@
             <div style="display: flex; gap: 10px; align-items: center;">
                 <div class="user-info" id="userInfoDisplay"></div>
                 <button class="btn-sm" id="changePasswordBtn" onclick="openChangePasswordModal()">🔑 修改密碼</button>
+                <button class="btn-sm" onclick="logout()">🚪 登出</button>
             </div>
         </div>
         <h1>⚙️ 教練後台 · 輪滑課程系統V5.8</h1>
@@ -960,15 +961,17 @@
             }
             const data = await res.json();
             console.log('後端回應資料:', data);
-            if (data.success) {
-                const role = (data.role || '').toLowerCase();
-                currentUser = {
-                    username: data.username,
-                    role: role,
-                    authorizedClasses: data.authorizedClasses
-                };
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
+if (data.success) {
+    const role = (data.role || '').toLowerCase();
+    currentUser = {
+        username: data.username,
+        role: role,
+        authorizedClasses: data.authorizedClasses
+    };
+    // ✅ 將使用者資訊存入 localStorage（保持登入狀態）
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
                 let roleName = '助教';
                 if (role === 'admin') roleName = '管理員';
                 else if (role === 'coach') roleName = '教練';
@@ -987,7 +990,34 @@
             loginBtn.textContent = originalText;
         }
     }
+    // ---------- 登出函數 ----------
+function logout() {
+    // 清除 localStorage 中的使用者資訊
+    localStorage.removeItem('currentUser');
+    currentUser = null;
+    allStudents = [];
 
+    // 隱藏主要內容，顯示登入表單
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('loginMessage').innerHTML = '';
+
+    // 清除點名狀態（按鈕樣式及 localStorage 標記）
+    document.querySelectorAll('.student-button.checked').forEach(b => {
+        b.classList.remove('checked');
+        b.disabled = false;
+    });
+    allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
+
+    // 重設班級折疊狀態
+    classCollapsed = {};
+
+    // 隱藏通知欄的內容（可選）
+    document.getElementById('notificationBody').innerHTML = '';
+    document.getElementById('notificationCount').textContent = '0';
+}
     function showLoginError(msg) {
         document.getElementById('loginMessage').innerHTML = `<span class="error">${msg}</span>`;
     }
@@ -2939,42 +2969,32 @@ function setupPaymentSearch() {
         msgDiv.innerHTML = `<div class="error">❌ ${msg}</div>`;
         setTimeout(() => msgDiv.innerHTML = '', 4000);
     }
+    // ---------- 頁面載入時自動登入 ----------
+window.addEventListener('DOMContentLoaded', async function() {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        try {
+            currentUser = JSON.parse(savedUser);
+            // 隱藏登入表單，顯示主要內容
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            // 更新使用者資訊顯示
+            let roleName = '助教';
+            if (currentUser.role === 'admin') roleName = '管理員';
+            else if (currentUser.role === 'coach') roleName = '教練';
+            document.getElementById('userInfoDisplay').textContent = `👤 ${currentUser.username} (${roleName})`;
+
+            // 顯示載入中，載入所有資料
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('appContent').style.display = 'none';
+            await loadAllData();
+        } catch (e) {
+            console.error('自動登入失敗', e);
+            localStorage.removeItem('currentUser'); // 清除錯誤的資料
+        }
+    }
+});
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
