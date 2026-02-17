@@ -5,613 +5,660 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>教練後台 · 課程系統v5.8</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
-            background: #edf2f7;
-            padding: 12px;
-            color: #1a202c;
-        }
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            padding: 20px 16px;
-        }
-        h1 {
-            font-size: 1.6rem;
-            color: #1a202c;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .nav-link a {
-            color: #4a5568;
-            text-decoration: none;
-            background: #f7fafc;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-        .user-info {
-            background: #ebf4ff;
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #2c5282;
-        }
-        .button-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .btn {
-            border: none;
-            padding: 12px 16px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-            background: #e2e8f0;
-            color: #2d3748;
-            flex: 1 0 calc(50% - 10px);
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-        }
-        .btn-primary { background: #4299e1; color: white; }
-        .btn-success { background: #48bb78; color: white; }
-        .btn-warning { background: #ed8936; color: white; }
-        .btn-danger { background: #f56565; color: white; }
-        .btn-purple { background: #9f7aea; color: white; }
-        .btn-indigo { background: #667eea; color: white; }
-        .btn-rental { background: #38b2ac; color: white; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f1f5f9;
+        padding: 12px;
+        color: #0f172a;
+        line-height: 1.5;
+    }
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 32px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        padding: 24px 20px;
+    }
+    h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        letter-spacing: -0.02em;
+    }
+    .nav-link a {
+        color: #334155;
+        text-decoration: none;
+        background: #f1f5f9;
+        padding: 8px 18px;
+        border-radius: 40px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: 0.2s;
+        display: inline-block;
+    }
+    .nav-link a:hover {
+        background: #e2e8f0;
+    }
+    .user-info {
+        background: #e6f0ff;
+        padding: 8px 20px;
+        border-radius: 40px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1e4a7a;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .button-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 24px 0;
+    }
+    .btn, .btn-sm, .student-button, .rental-button, .class-badge[onclick] {
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 40px;
+    }
+    .btn {
+        padding: 14px 20px;
+        font-size: 1rem;
+        flex: 1 0 calc(50% - 12px);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        background: #ffffff;
+        color: #1e293b;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-primary { background: #2563eb; color: white; border: none; }
+    .btn-success { background: #16a34a; color: white; border: none; }
+    .btn-warning { background: #ea580c; color: white; border: none; }
+    .btn-danger { background: #dc2626; color: white; border: none; }
+    .btn-purple { background: #9333ea; color: white; border: none; }
+    .btn-indigo { background: #4f46e5; color: white; border: none; }
+    .btn-rental { background: #0891b2; color: white; border: none; }
 
-        .trial-alert {
-            background: #fefcbf;
-            border: 1px solid #ecc94b;
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-        }
-        .trial-alert h3 {
-            color: #744210;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-        .trial-alert-item {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-            border-bottom: 1px dashed #ecc94b;
-        }
-        .trial-alert-item:last-child {
-            border-bottom: none;
-        }
-        .trial-alert-item span {
-            flex: 1;
-            font-size: 0.9rem;
-        }
-        .trial-alert-item .paid-tag {
-            background: #48bb78;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        .trial-alert-item button {
-            background: #48bb78;
-            color: white;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-        .trial-alert-item button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+    .btn:hover, .btn-sm:hover, .student-button:hover:not(:disabled), .rental-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .btn:active, .btn-sm:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn:disabled, .btn-sm:disabled, .student-button:disabled, .rental-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
 
-        .section {
-            background: #f7fafc;
-            border-radius: 20px;
-            padding: 20px 16px;
-            margin-bottom: 25px;
-            border: 1px solid #e2e8f0;
-        }
-        .section h2 { font-size: 1.3rem; margin-bottom: 16px; }
+    .trial-alert {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 20px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+    }
+    .trial-alert h3 {
+        color: #92400e;
+        margin-bottom: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    .trial-alert-item {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px dashed #fcd34d;
+    }
+    .trial-alert-item:last-child { border-bottom: none; }
+    .trial-alert-item span { flex: 1; font-size: 0.95rem; }
+    .trial-alert-item .paid-tag {
+        background: #16a34a;
+        color: white;
+        padding: 4px 14px;
+        border-radius: 40px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .trial-alert-item button {
+        background: #16a34a;
+        color: white;
+        border: none;
+        padding: 6px 16px;
+        border-radius: 40px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    .trial-alert-item button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 
-        .class-badge {
-            display: inline-block;
-            background: #4299e1;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 30px;
-            margin: 0 6px 6px 0;
-            font-size: 0.85rem;
-            max-width: 100%;
-            word-break: break-word;
-            transition: 0.2s;
-        }
+    .section {
+        background: #ffffff;
+        border-radius: 28px;
+        padding: 24px 20px;
+        margin-bottom: 30px;
+        border: 1px solid #e9eef2;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+    .section h2 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #0f172a;
+        letter-spacing: -0.01em;
+    }
+    .section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 16px 0 8px;
+        color: #334155;
+    }
 
-        .student-button, .rental-button {
-            background: #cbd5e0;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 30px;
-            margin: 5px;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .student-button .class-count {
-            background: rgba(0,0,0,0.1);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        .student-button.zero-class {
-            background: #fc8181 !important;
-            color: white !important;
-        }
-        .student-button.zero-class .class-count {
-            background: rgba(255,255,255,0.2);
-        }
-        .student-button.checked {
-            background: #48bb78 !important;
-            color: white !important;
-            opacity: 0.8;
-            cursor: not-allowed;
-        }
-        .student-button.checked .class-count {
-            background: rgba(255,255,255,0.2);
-        }
-        .student-button:disabled,
-        .rental-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .rental-button {
-            background: #38b2ac;
-            color: white;
-            min-width: 80px;
-        }
-        .rental-button:hover { background: #319795; }
+    .class-badge {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        padding: 8px 18px;
+        border-radius: 40px;
+        margin: 0 8px 8px 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        word-break: break-word;
+        transition: 0.2s;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+    .class-badge[onclick] {
+        cursor: pointer;
+    }
+    .class-badge[onclick]:hover {
+        filter: brightness(1.1);
+        transform: scale(1.02);
+    }
 
-        .form-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            margin-bottom: 15px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex: 1 1 100%;
-        }
-        label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #4a5568;
-        }
-        input, select, textarea {
-            padding: 12px 14px;
-            border: 1px solid #cbd5e0;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            width: 100%;
-            -webkit-appearance: none;
-            background: white;
-        }
-        .search-dropdown {
-            position: relative;
-            width: 100%;
-        }
-        .dropdown-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #cbd5e0;
-            border-radius: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: none;
-        }
-        .dropdown-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid #edf2f7;
-            font-size: 0.9rem;
-        }
-        .dropdown-item:hover { background: #f7fafc; }
-        .message {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: auto;
-            min-width: 200px;
-            max-width: 90%;
-            padding: 12px 20px;
-            border-radius: 30px;
-            font-size: 1rem;
-            font-weight: 500;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 30000;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        .success { background: #48bb78; color: white; }
-        .error { background: #f56565; color: white; }
+    .student-button, .rental-button {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 10px 20px;
+        border-radius: 40px;
+        margin: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        font-size: 0.95rem;
+        transition: 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .student-button .class-count {
+        background: #e2e8f0;
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .student-button.zero-class {
+        background: #fee2e2 !important;
+        border-color: #fecaca !important;
+        color: #991b1b !important;
+    }
+    .student-button.zero-class .class-count {
+        background: #fecaca;
+        color: #7f1d1d;
+    }
+    .student-button.checked {
+        background: #bbf7d0 !important;
+        border-color: #86efac !important;
+        color: #166534 !important;
+        opacity: 0.9;
+        cursor: not-allowed;
+    }
+    .student-button.checked .class-count {
+        background: #86efac;
+        color: #14532d;
+    }
+    .rental-button {
+        background: #0891b2;
+        color: white;
+        border: none;
+        min-width: 90px;
+    }
 
-        #loginForm {
-            max-width: 90%;
-            margin: 60px auto;
-            background: white;
-            padding: 30px 20px;
-            border-radius: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        .student-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            border: 1px solid #e2e8f0;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .student-row .details {
-            flex: 1;
-            min-width: 200px;
-        }
-        .student-row .details .name-with-icons {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-        .student-row .details .name-with-icons .icons {
-            display: flex;
-            gap: 4px;
-        }
-        .student-row .details .icons span {
-            font-size: 1rem;
-        }
-        .student-row .details .stats {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-            flex-wrap: wrap;
-        }
-        .student-row .details .note {
-            font-size: 0.8rem;
-            color: #718096;
-            margin-top: 4px;
-            word-break: break-word;
-        }
-        .student-row .actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .student-row .btn-sm {
-            padding: 4px 10px;
-            font-size: 0.8rem;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            background: #e2e8f0;
-            transition: 0.2s;
-            min-width: 70px;
-        }
-        .student-row .btn-sm:hover { background: #cbd5e0; }
-        .student-row .btn-sm:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .leave-badge, .rental-badge, .class-badge-stat {
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-        .leave-badge { background: #f56565; color: white; }
-        .rental-badge { background: #38b2ac; color: white; }
-        .class-badge-stat { background: #4299e1; color: white; }
-        .info-box {
-            background: #ebf8ff;
-            border-left: 4px solid #4299e1;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
+    .form-row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1 1 200px;
+    }
+    label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    input, select, textarea {
+        padding: 14px 16px;
+        border: 1px solid #d1d9e6;
+        border-radius: 20px;
+        font-size: 1rem;
+        width: 100%;
+        background: #ffffff;
+        transition: border 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    .search-dropdown {
+        position: relative;
+        width: 100%;
+    }
+    .dropdown-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #d1d9e6;
+        border-radius: 20px;
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        display: none;
+    }
+    .dropdown-item {
+        padding: 14px 18px;
+        cursor: pointer;
+        border-bottom: 1px solid #edf2f7;
+        font-size: 0.95rem;
+        transition: background 0.15s;
+    }
+    .dropdown-item:hover { background: #f1f5f9; }
+    .dropdown-item:last-child { border-bottom: none; }
 
-        /* 折疊樣式 */
-        .class-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px 0 10px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .class-header h3 {
-            margin: 0;
-        }
-        .class-header .toggle-icon {
-            font-size: 1.2rem;
-            transition: transform 0.2s;
-        }
-        .class-header.collapsed .toggle-icon {
-            transform: rotate(-90deg);
-        }
-        .class-students {
-            transition: max-height 0.3s ease;
-            overflow: hidden;
-        }
-        .class-students.collapsed {
-            max-height: 0;
-            opacity: 0;
-            margin: 0;
-        }
+    .message {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        min-width: 240px;
+        max-width: 90%;
+        padding: 14px 24px;
+        border-radius: 50px;
+        font-size: 1rem;
+        font-weight: 500;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        z-index: 30000;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+    }
+    .success { background: #22c55e; color: white; }
+    .error { background: #ef4444; color: white; }
 
-        /* 載入中動畫 - 全屏浮層 */
-        #loadingSpinner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 20000;
-            color: white;
-            text-align: center;
-            backdrop-filter: blur(3px);
-        }
-        #loadingSpinner .spinner {
-            border: 5px solid rgba(255,255,255,0.3);
-            border-top: 5px solid white;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        #loadingSpinner p {
-            font-size: 1.2rem;
-            font-weight: 500;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    #loginForm {
+        max-width: 400px;
+        margin: 80px auto;
+        background: white;
+        padding: 40px 30px;
+        border-radius: 40px;
+        box-shadow: 0 20px 35px -8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    #loginForm h2 {
+        font-size: 2rem;
+        margin-bottom: 20px;
+        color: #0f172a;
+    }
+    #loginForm input {
+        margin: 12px 0;
+        padding: 16px;
+    }
 
-        /* 自訂模態對話框 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            padding: 24px;
-            max-width: 90%;
-            width: 500px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-            animation: modalFadeIn 0.3s ease;
-        }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .modal-content h3 {
-            margin-bottom: 16px;
-            color: #2d3748;
-        }
-        .modal-content input,
-        .modal-content select,
-        .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #cbd5e0;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 1rem;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-        .modal-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .modal-buttons .confirm {
-            background: #48bb78;
-            color: white;
-        }
-        .modal-buttons .cancel {
-            background: #e2e8f0;
-            color: #2d3748;
-        }
+    .student-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-radius: 24px;
+        margin-bottom: 12px;
+        border: 1px solid #e9eef2;
+        flex-wrap: wrap;
+        gap: 12px;
+        transition: 0.2s;
+    }
+    .student-row:hover {
+        background: #f1f5f9;
+    }
+    .student-row .details {
+        flex: 1;
+        min-width: 200px;
+    }
+    .student-row .details .name-with-icons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+    }
+    .student-row .details .icons span { font-size: 1.1rem; }
+    .student-row .details .stats {
+        display: flex;
+        gap: 10px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+    }
+    .student-row .details .note {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 6px;
+        word-break: break-word;
+        background: #ffffff;
+        padding: 6px 12px;
+        border-radius: 30px;
+        display: inline-block;
+    }
+    .student-row .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .btn-sm {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        border-radius: 40px;
+        border: none;
+        cursor: pointer;
+        background: #ffffff;
+        border: 1px solid #d1d9e6;
+        transition: 0.2s;
+        min-width: 70px;
+        font-weight: 500;
+        color: #1e293b;
+    }
+    .btn-sm:hover {
+        background: #f1f5f9;
+        border-color: #a0b3c9;
+    }
+    .btn-sm:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 
-        /* 通知欄樣式 - 預設展開 */
-        .notification-section {
-            background: #f7fafc;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            border: 1px solid #cbd5e0;
-            overflow: hidden;
-        }
-        .notification-header {
-            background: #4299e1;
-            color: white;
-            padding: 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .notification-header .toggle-icon {
-            font-size: 1.2rem;
-            transition: transform 0.2s;
-        }
-        .notification-header.collapsed .toggle-icon {
-            transform: rotate(-90deg);
-        }
-        .notification-body {
-            transition: max-height 0.3s ease;
-            overflow: hidden;
-        }
-        .notification-body.collapsed {
-            max-height: 0;
-            opacity: 0;
-            padding: 0 16px;
-        }
-        .notification-item {
-            padding: 16px;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 16px;
-        }
-        .notification-item:last-child {
-            border-bottom: none;
-        }
-        .notification-item .type-tag {
-            background: #3182ce;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            min-width: 60px;
-            text-align: center;
-        }
-        .notification-item .content {
-            flex: 1;
-            min-width: 200px;
-        }
-        .notification-item .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+    .leave-badge, .rental-badge, .class-badge-stat {
+        padding: 5px 14px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .leave-badge { background: #ef4444; color: white; }
+    .rental-badge { background: #0891b2; color: white; }
+    .class-badge-stat { background: #2563eb; color: white; }
 
-        @media screen and (max-width: 480px) {
-            body { padding: 8px; }
-            .container { padding: 16px 12px; }
-            h1 { font-size: 1.4rem; flex-direction: column; align-items: flex-start; }
-            .nav-link { align-self: flex-end; margin-top: -38px; }
-            .btn { flex: 1 0 calc(50% - 8px); font-size: 0.85rem; padding: 10px 8px; }
-            .section h2 { font-size: 1.2rem; }
-            .form-group { flex: 1 1 100%; }
-            .student-button, .rental-button { font-size: 0.85rem; padding: 6px 12px; }
-            .student-button .class-count { font-size: 0.7rem; padding: 2px 6px; }
-            .trial-alert-item { flex-direction: column; align-items: flex-start; }
-            .trial-alert-item button { align-self: flex-end; }
-            .student-row .actions { justify-content: flex-end; width: 100%; }
-            .class-header { margin: 15px 0 5px; }
-        }
-        /* 通用按鈕樣式優化 */
-.btn, .btn-sm, .student-button, .rental-button, .class-badge[onclick] {
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-}
+    .info-box {
+        background: #e6f0ff;
+        border-left: 4px solid #2563eb;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        border-radius: 20px;
+        font-size: 0.95rem;
+        color: #1e3a8a;
+    }
 
-.btn:hover, .btn-sm:hover, .student-button:hover:not(:disabled), .rental-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
+    /* 折疊樣式 */
+    .class-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0 12px;
+        cursor: pointer;
+        user-select: none;
+        padding: 6px 12px;
+        background: #f1f5f9;
+        border-radius: 40px;
+    }
+    .class-header h3 { margin: 0; font-size: 1.2rem; }
+    .class-header .toggle-icon {
+        font-size: 1.2rem;
+        transition: transform 0.2s;
+        color: #475569;
+    }
+    .class-header.collapsed .toggle-icon { transform: rotate(-90deg); }
+    .class-students {
+        transition: max-height 0.3s ease;
+        overflow: hidden;
+    }
+    .class-students.collapsed {
+        max-height: 0;
+        opacity: 0;
+        margin: 0;
+    }
 
-.btn:active, .btn-sm:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
+    /* 載入中動畫 */
+    #loadingSpinner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.7);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 20000;
+        color: white;
+        text-align: center;
+        backdrop-filter: blur(5px);
+    }
+    #loadingSpinner .spinner {
+        border: 5px solid rgba(255,255,255,0.2);
+        border-top: 5px solid white;
+        border-radius: 50%;
+        width: 70px;
+        height: 70px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 25px;
+    }
+    #loadingSpinner p {
+        font-size: 1.2rem;
+        font-weight: 500;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.btn:disabled, .btn-sm:disabled, .student-button:disabled, .rental-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
+    /* 自訂模態對話框 */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        backdrop-filter: blur(4px);
+    }
+    .modal-content {
+        background: white;
+        border-radius: 36px;
+        padding: 30px;
+        max-width: 90%;
+        width: 500px;
+        box-shadow: 0 30px 40px -15px rgba(0,0,0,0.2);
+        animation: modalFadeIn 0.3s ease;
+    }
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .modal-content h3 {
+        margin-bottom: 20px;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 1.4rem;
+    }
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #d1d9e6;
+        border-radius: 24px;
+        margin-bottom: 20px;
+        font-size: 1rem;
+    }
+    .modal-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: flex-end;
+    }
+    .modal-buttons button {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 40px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.95rem;
+    }
+    .modal-buttons .confirm {
+        background: #2563eb;
+        color: white;
+        border: none;
+    }
+    .modal-buttons .confirm:hover { background: #1d4ed8; }
+    .modal-buttons .cancel {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+    }
+    .modal-buttons .cancel:hover { background: #e2e8f0; }
 
-/* 主要按鈕顏色強化 */
-.btn-primary { background: #4299e1; color: white; }
-.btn-success { background: #48bb78; color: white; }
-.btn-warning { background: #ed8936; color: white; }
-.btn-danger { background: #f56565; color: white; }
-.btn-purple { background: #9f7aea; color: white; }
-.btn-indigo { background: #667eea; color: white; }
-.btn-rental { background: #38b2ac; color: white; }
+    /* 通知欄 */
+    .notification-section {
+        background: #ffffff;
+        border-radius: 24px;
+        margin-bottom: 24px;
+        border: 1px solid #e9eef2;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    .notification-header {
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 18px 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 1.1rem;
+    }
+    .notification-header .toggle-icon {
+        font-size: 1.2rem;
+        transition: transform 0.2s;
+    }
+    .notification-header.collapsed .toggle-icon { transform: rotate(-90deg); }
+    .notification-body {
+        transition: max-height 0.3s ease;
+        overflow: hidden;
+    }
+    .notification-body.collapsed {
+        max-height: 0;
+        opacity: 0;
+        padding: 0 16px;
+    }
+    .notification-item {
+        padding: 18px 20px;
+        border-bottom: 1px solid #edf2f7;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+    }
+    .notification-item:last-child { border-bottom: none; }
+    .notification-item .type-tag {
+        background: #2563eb;
+        color: white;
+        padding: 5px 14px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        min-width: 70px;
+        text-align: center;
+    }
+    .notification-item .content { flex: 1; min-width: 200px; }
+    .notification-item .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* 通知欄中的小按鈕 */
-.notification-item .btn-sm {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-    border-radius: 20px;
-    background: #e2e8f0;
-    color: #2d3748;
-    min-width: 60px;
-}
+    /* 手機專屬調整 */
+    @media screen and (max-width: 600px) {
+        body { padding: 8px; }
+        .container { padding: 20px 16px; border-radius: 24px; }
+        h1 { font-size: 1.6rem; }
+        .button-grid { gap: 8px; }
+        .btn { flex: 1 0 calc(50% - 8px); padding: 12px 12px; font-size: 0.9rem; }
+        .section { padding: 20px 16px; border-radius: 24px; }
+        .section h2 { font-size: 1.3rem; }
+        .form-group { flex: 1 1 100%; }
+        .student-button, .rental-button { font-size: 0.85rem; padding: 8px 16px; }
+        .student-row { padding: 14px 16px; }
+        .student-row .actions { width: 100%; justify-content: flex-start; }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+        .modal-content { padding: 25px 20px; border-radius: 30px; }
+        .modal-content h3 { font-size: 1.3rem; }
+        .modal-buttons button { padding: 10px 20px; }
+        .class-header { margin: 16px 0 8px; padding: 8px 16px; }
+        .class-header h3 { font-size: 1.1rem; }
+        .notification-item { padding: 14px 16px; }
+        .notification-item .type-tag { min-width: 60px; font-size: 0.75rem; }
+    }
 
-.notification-item .btn-sm:hover {
-    background: #cbd5e0;
-}
-    </style>
+    /* 更小螢幕 */
+    @media screen and (max-width: 380px) {
+        .btn { flex: 1 0 100%; }
+        .student-button, .rental-button { width: 100%; margin: 4px 0; }
+        .student-row .details .stats { flex-direction: column; align-items: flex-start; }
+    }
+</style>
 </head>
 <body>
     <div id="loginForm">
@@ -3059,6 +3106,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
