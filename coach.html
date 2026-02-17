@@ -630,7 +630,7 @@
                 <button class="btn-sm" id="changePasswordBtn" onclick="openChangePasswordModal()">🔑 修改密碼</button>
             </div>
         </div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V5.2</h1>
+        <h1>⚙️ 教練後台 · 輪滑課程系統V5.8</h1>
         <p>滾軸溜冰私教輪滑團隊</p>
 
         <!-- 通知欄位（預設展開） -->
@@ -1019,34 +1019,34 @@
     }
 
     // ---------- 權限控制 ----------
-    function applyRoleRestrictions() {
-        const role = currentUser.role; // 已是小寫
-        const isAdmin = role === 'admin';
-        const isCoach = role === 'coach';
-        const isAssistant = role === 'assistant';
+function applyRoleRestrictions() {
+    const role = currentUser.role;
+    const isAdmin = role === 'admin';
+    const isCoach = role === 'coach';
+    const isAssistant = role === 'assistant';
 
-        // 繳費憑證上傳：僅管理員
-        document.getElementById('btnPaymentUpload').style.display = isAdmin ? 'block' : 'none';
-        // 班級管理：僅管理員
-        document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
-        // 用戶管理：僅管理員
-        document.getElementById('btnUserManage').style.display = isAdmin ? 'block' : 'none';
-        // 試堂管理：管理員與教練可見（助教不可見）
-        document.getElementById('btnTrial').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-        // 新增/扣課、新增學生、代請假：管理員與教練可見
-        document.getElementById('btnAddClasses').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-        document.getElementById('btnAddStudent').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-        document.getElementById('btnCoachLeave').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-        // 學生資訊：僅管理員與教練可見（助教隱藏）
-        document.getElementById('btnClear').style.display = (isAdmin || isCoach) ? 'block' : 'none';
-        // 以下所有人可見
-        document.getElementById('btnAttendance').style.display = 'block';
-        document.getElementById('btnRental').style.display = 'block';
-        document.getElementById('btnPhoto').style.display = 'block';
+    // 繳費憑證上傳：管理員與教練
+    document.getElementById('btnPaymentUpload').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 班級管理：僅管理員
+    document.getElementById('btnClassManage').style.display = isAdmin ? 'block' : 'none';
+    // 用戶管理：僅管理員
+    document.getElementById('btnUserManage').style.display = isAdmin ? 'block' : 'none';
+    // 試堂管理：管理員與教練可見
+    document.getElementById('btnTrial').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 新增/扣課、新增學生、代請假：管理員與教練可見
+    document.getElementById('btnAddClasses').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    document.getElementById('btnAddStudent').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    document.getElementById('btnCoachLeave').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 學生資訊：管理員與教練可見
+    document.getElementById('btnClear').style.display = (isAdmin || isCoach) ? 'block' : 'none';
+    // 以下所有人可見
+    document.getElementById('btnAttendance').style.display = 'block';
+    document.getElementById('btnRental').style.display = 'block';
+    document.getElementById('btnPhoto').style.display = 'block';
 
-        // 試堂新增表單僅管理員可見
-        document.getElementById('trialAddForm').style.display = isAdmin ? 'flex' : 'none';
-    }
+    // 試堂新增表單僅管理員可見
+    document.getElementById('trialAddForm').style.display = isAdmin ? 'flex' : 'none';
+}
 
     // ---------- 區塊切換 ----------
     function showSection(sectionId) {
@@ -1132,11 +1132,11 @@
         return classes;
     }
 
-    function getFilteredStudents() {
-        const allowedClasses = getAuthorizedClasses();
-        if (allowedClasses === '*') return allStudents;
-        return allStudents.filter(s => allowedClasses.includes(s.class));
-    }
+function getFilteredStudents() {
+    const allowedClasses = getAuthorizedClasses();
+    if (allowedClasses === '*') return allStudents;
+    return allStudents.filter(s => allowedClasses.includes(s.class));
+}
 
     function renderClassList(classes) {
         const container = document.getElementById('classListContainer');
@@ -1465,16 +1465,20 @@ function renderNotificationBody() {
 
     // 待續費提醒（管理員和教練可見）
     if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-        paymentNotifications.forEach(p => {
-            total++;
-            html += `<div class="notification-item">
-                <span class="type-tag">待續費</span>
-                <div class="content">${p.studentName} 已上傳繳費憑證，請點擊續費</div>
-                <div class="actions">
-                    <button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費 (10堂)</button>
-                </div>
-            </div>`;
-        });
+// 待續費提醒（管理員可見按鈕，教練僅見文字）
+paymentNotifications.forEach(p => {
+    total++;
+    html += `<div class="notification-item">
+        <span class="type-tag">待續費</span>
+        <div class="content">${p.studentName} 已上傳繳費憑證，請管理員點擊續費</div>
+        <div class="actions">`;
+    if (currentUser.role === 'admin') {
+        html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費按此</button>`;
+    } else {
+        html += `<span style="color:#718096;">等待管理員處理</span>`;
+    }
+    html += `</div></div>`;
+});
     }
 
     // 新學生待繳費提醒（僅管理員）
@@ -1543,12 +1547,12 @@ function renderNotificationBody() {
 }
 
     // ---------- 快速續費 ----------
-    async function quickRenew(name, className) {
-        if (currentUser.role !== 'admin' && currentUser.role !== 'coach') {
-            showError('無權限');
-            return;
-        }
-
+async function quickRenew(name, className) {
+    // 僅允許管理員執行續費
+    if (currentUser.role !== 'admin') {
+        showError('只有管理員可以執行續費操作');
+        return;
+    }
         const lockKey = `renew_${name}`;
         if (processing[lockKey]) {
             showError('正在處理中，請稍後...');
@@ -1793,16 +1797,16 @@ function uploadPaymentForNewStudent(name, className) {
     const searchInput = document.getElementById('searchStudentInput');
     const dropdown = document.getElementById('studentDropdown');
     if (searchInput) {
-        searchInput.addEventListener('input', function(e) {
-            const kw = e.target.value.trim().toLowerCase();
-            if (kw.length < 1) { dropdown.style.display = 'none'; return; }
-            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
-            if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
-            let html = '';
-            filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 剩${s.remainingClasses}堂</div>`);
-            dropdown.innerHTML = html;
-            dropdown.style.display = 'block';
-        });
+searchInput.addEventListener('input', function(e) {
+    const kw = e.target.value.trim().toLowerCase();
+    if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+    const filtered = getFilteredStudents().filter(s => s.name.toLowerCase().includes(kw));  
+    if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+    let html = '';
+    filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectStudent('${s.name}', '${s.class}')">${s.name} (${s.class}) 剩${s.remainingClasses}堂</div>`);
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
+});
         document.addEventListener('click', e => {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
         });
@@ -2244,16 +2248,16 @@ function uploadPaymentForNewStudent(name, className) {
     const coachSearch = document.getElementById('coachLeaveSearchInput');
     const coachDropdown = document.getElementById('coachLeaveDropdown');
     if (coachSearch) {
-        coachSearch.addEventListener('input', function(e) {
-            const kw = e.target.value.trim().toLowerCase();
-            if (kw.length < 1) { coachDropdown.style.display = 'none'; return; }
-            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
-            if (filtered.length === 0) { coachDropdown.style.display = 'none'; return; }
-            let html = '';
-            filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectCoachLeave('${s.name}', '${s.class}')">${s.name} (${s.class}) 請假${s.leaveCount}次</div>`);
-            coachDropdown.innerHTML = html;
-            coachDropdown.style.display = 'block';
-        });
+coachSearch.addEventListener('input', function(e) {
+    const kw = e.target.value.trim().toLowerCase();
+    if (kw.length < 1) { coachDropdown.style.display = 'none'; return; }
+    const filtered = getFilteredStudents().filter(s => s.name.toLowerCase().includes(kw));  // ← 修改處
+    if (filtered.length === 0) { coachDropdown.style.display = 'none'; return; }
+    let html = '';
+    filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectCoachLeave('${s.name}', '${s.class}')">${s.name} (${s.class}) 請假${s.leaveCount}次</div>`);
+    coachDropdown.innerHTML = html;
+    coachDropdown.style.display = 'block';
+});
         document.addEventListener('click', e => {
             if (!coachSearch.contains(e.target) && !coachDropdown.contains(e.target)) coachDropdown.style.display = 'none';
         });
@@ -2645,25 +2649,25 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
         document.getElementById('paymentStudentModal').style.display = 'none';
     }
 
-    function setupPaymentSearch() {
-        const searchInput = document.getElementById('paymentStudentSearch');
-        const dropdown = document.getElementById('paymentStudentDropdown');
-        const newInput = searchInput.cloneNode(true);
-        searchInput.parentNode.replaceChild(newInput, searchInput);
-        newInput.addEventListener('input', function(e) {
-            const kw = e.target.value.trim().toLowerCase();
-            if (kw.length < 1) { dropdown.style.display = 'none'; return; }
-            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(kw));
-            if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
-            let html = '';
-            filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectPaymentStudent('${s.name}', '${s.class}')">${s.name} (${s.class})</div>`);
-            dropdown.innerHTML = html;
-            dropdown.style.display = 'block';
-        });
-        document.addEventListener('click', function(e) {
-            if (!newInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
-        });
-    }
+function setupPaymentSearch() {
+    const searchInput = document.getElementById('paymentStudentSearch');
+    const dropdown = document.getElementById('paymentStudentDropdown');
+    const newInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newInput, searchInput);
+    newInput.addEventListener('input', function(e) {
+        const kw = e.target.value.trim().toLowerCase();
+        if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+        const filtered = getFilteredStudents().filter(s => s.name.toLowerCase().includes(kw));  // ← 修改處
+        if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+        let html = '';
+        filtered.forEach(s => html += `<div class="dropdown-item" onclick="selectPaymentStudent('${s.name}', '${s.class}')">${s.name} (${s.class})</div>`);
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+    });
+    document.addEventListener('click', function(e) {
+        if (!newInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+    });
+}
 
     window.selectPaymentStudent = function(name, className) {
         document.getElementById('paymentStudentSearch').value = name;
@@ -2938,6 +2942,7 @@ function openPaymentStudentModal(prefillName = '', prefillClass = '') {
 </script>
 </body>
 </html>
+
 
 
 
