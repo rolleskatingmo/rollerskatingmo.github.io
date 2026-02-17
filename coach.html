@@ -4,83 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>教練後台 · 課程系統v6.0</title>
-    <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+  <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* 基礎設定：1rem = 16px，但會根據螢幕寬度微調 */
+    html {
+        font-size: 16px;
+    }
+
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        background: #f1f5f9;
-        padding: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f8fafc;
         color: #0f172a;
         line-height: 1.5;
+        padding: 0.5rem;
+        min-height: 100vh;
     }
+
+    /* 主容器 */
     .container {
         max-width: 100%;
         margin: 0 auto;
         background: #ffffff;
-        border-radius: 32px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        padding: 24px 20px;
+        border-radius: 2rem 2rem 1.5rem 1.5rem;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.05);
+        padding: 1.25rem 1rem;
     }
+
+    /* 標題區 */
     h1 {
         font-size: 1.8rem;
         font-weight: 700;
         color: #0f172a;
-        margin-bottom: 16px;
+        margin-bottom: 1rem;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
         flex-wrap: wrap;
-        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
         letter-spacing: -0.02em;
     }
-    .nav-link a {
-        color: #334155;
-        text-decoration: none;
-        background: #f1f5f9;
-        padding: 8px 18px;
-        border-radius: 40px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: 0.2s;
-        display: inline-block;
-    }
-    .nav-link a:hover {
-        background: #e2e8f0;
-    }
+
     .user-info {
-        background: #e6f0ff;
-        padding: 8px 20px;
-        border-radius: 40px;
-        font-size: 0.95rem;
+        background: #e0f2fe;
+        padding: 0.5rem 1.2rem;
+        border-radius: 2rem;
+        font-size: 0.9rem;
         font-weight: 600;
-        color: #1e4a7a;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        color: #0369a1;
+        white-space: nowrap;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
+
+    /* 按鈕網格 */
     .button-grid {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
-        margin: 24px 0;
+        gap: 0.6rem;
+        margin: 1.2rem 0;
     }
+
+    /* 通用按鈕樣式 */
     .btn, .btn-sm, .student-button, .rental-button, .class-badge[onclick] {
         transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         border: none;
         font-weight: 500;
         cursor: pointer;
-        border-radius: 40px;
+        border-radius: 2.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        touch-action: manipulation;
     }
+
     .btn {
-        padding: 14px 20px;
+        padding: 0.9rem 0.8rem;
         font-size: 1rem;
-        flex: 1 0 calc(50% - 12px);
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
+        flex: 1 0 calc(50% - 0.3rem);
         background: #ffffff;
         color: #1e293b;
         border: 1px solid #e2e8f0;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
+
+    /* 彩色按鈕 */
     .btn-primary { background: #2563eb; color: white; border: none; }
     .btn-success { background: #16a34a; color: white; border: none; }
     .btn-warning { background: #ea580c; color: white; border: none; }
@@ -90,128 +103,124 @@
     .btn-rental { background: #0891b2; color: white; border: none; }
 
     .btn:hover, .btn-sm:hover, .student-button:hover:not(:disabled), .rental-button:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
     }
+
     .btn:active, .btn-sm:active {
         transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+
     .btn:disabled, .btn-sm:disabled, .student-button:disabled, .rental-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
         transform: none;
-        box-shadow: none;
     }
 
+    /* 試堂警示 */
     .trial-alert {
         background: #fffbeb;
         border: 1px solid #fcd34d;
-        border-radius: 20px;
-        padding: 16px 20px;
-        margin-bottom: 24px;
+        border-radius: 1.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
     }
     .trial-alert h3 {
         color: #92400e;
-        margin-bottom: 12px;
         font-size: 1.1rem;
         font-weight: 600;
+        margin-bottom: 0.8rem;
     }
     .trial-alert-item {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 12px;
-        padding: 10px 0;
+        gap: 0.6rem;
+        padding: 0.8rem 0;
         border-bottom: 1px dashed #fcd34d;
     }
     .trial-alert-item:last-child { border-bottom: none; }
-    .trial-alert-item span { flex: 1; font-size: 0.95rem; }
+    .trial-alert-item span { flex: 1; font-size: 0.95rem; word-break: break-word; }
     .trial-alert-item .paid-tag {
         background: #16a34a;
         color: white;
-        padding: 4px 14px;
-        border-radius: 40px;
-        font-size: 0.85rem;
+        padding: 0.3rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.8rem;
         font-weight: 500;
     }
     .trial-alert-item button {
         background: #16a34a;
         color: white;
         border: none;
-        padding: 6px 16px;
-        border-radius: 40px;
-        cursor: pointer;
+        padding: 0.4rem 1.2rem;
+        border-radius: 2rem;
         font-weight: 500;
-    }
-    .trial-alert-item button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+        font-size: 0.85rem;
     }
 
+    /* 各功能區塊 */
     .section {
         background: #ffffff;
-        border-radius: 28px;
-        padding: 24px 20px;
-        margin-bottom: 30px;
-        border: 1px solid #e9eef2;
+        border-radius: 2rem;
+        padding: 1.5rem 1.2rem;
+        margin-bottom: 2rem;
+        border: 1px solid #eef2f6;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
     }
     .section h2 {
         font-size: 1.4rem;
         font-weight: 600;
-        margin-bottom: 20px;
+        margin-bottom: 1.2rem;
         color: #0f172a;
         letter-spacing: -0.01em;
+        padding-left: 0.2rem;
     }
     .section h3 {
         font-size: 1.1rem;
         font-weight: 600;
-        margin: 16px 0 8px;
+        margin: 1rem 0 0.5rem;
         color: #334155;
     }
 
+    /* 班級標籤 */
     .class-badge {
         display: inline-block;
         background: #2563eb;
         color: white;
-        padding: 8px 18px;
-        border-radius: 40px;
-        margin: 0 8px 8px 0;
+        padding: 0.5rem 1.2rem;
+        border-radius: 2rem;
+        margin: 0 0.5rem 0.5rem 0;
         font-size: 0.9rem;
         font-weight: 500;
         word-break: break-word;
-        transition: 0.2s;
-        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
     }
     .class-badge[onclick] {
         cursor: pointer;
     }
     .class-badge[onclick]:hover {
         filter: brightness(1.1);
-        transform: scale(1.02);
     }
 
+    /* 點名/租借按鈕 */
     .student-button, .rental-button {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        padding: 10px 20px;
-        border-radius: 40px;
-        margin: 6px;
+        padding: 0.6rem 1.2rem;
+        border-radius: 2.5rem;
+        margin: 0.3rem;
         font-weight: 500;
-        cursor: pointer;
-        font-size: 0.95rem;
-        transition: 0.2s;
+        font-size: 0.9rem;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        gap: 0.4rem;
     }
     .student-button .class-count {
         background: #e2e8f0;
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 0.8rem;
+        padding: 0.2rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: #1e293b;
     }
@@ -239,44 +248,49 @@
         background: #0891b2;
         color: white;
         border: none;
-        min-width: 90px;
+        min-width: 5rem;
+        justify-content: center;
     }
 
+    /* 表單 */
     .form-row {
         display: flex;
-        gap: 16px;
+        gap: 1rem;
         flex-wrap: wrap;
-        align-items: flex-end;
-        margin-bottom: 20px;
+        margin-bottom: 1.2rem;
     }
     .form-group {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        flex: 1 1 200px;
+        gap: 0.4rem;
+        flex: 1 1 100%;
     }
     label {
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #475569;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
+        margin-left: 0.3rem;
     }
     input, select, textarea {
-        padding: 14px 16px;
+        padding: 1rem;
         border: 1px solid #d1d9e6;
-        border-radius: 20px;
+        border-radius: 2rem;
         font-size: 1rem;
         width: 100%;
         background: #ffffff;
-        transition: border 0.2s, box-shadow 0.2s;
+        transition: 0.2s;
         font-family: inherit;
+        -webkit-appearance: none;
     }
     input:focus, select:focus, textarea:focus {
         outline: none;
         border-color: #2563eb;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
+
+    /* 搜尋下拉 */
     .search-dropdown {
         position: relative;
         width: 100%;
@@ -288,171 +302,169 @@
         right: 0;
         background: white;
         border: 1px solid #d1d9e6;
-        border-radius: 20px;
-        max-height: 250px;
+        border-radius: 1.5rem;
+        max-height: 15rem;
         overflow-y: auto;
         z-index: 1000;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         display: none;
     }
     .dropdown-item {
-        padding: 14px 18px;
+        padding: 1rem;
         cursor: pointer;
         border-bottom: 1px solid #edf2f7;
         font-size: 0.95rem;
         transition: background 0.15s;
+        word-break: break-word;
     }
     .dropdown-item:hover { background: #f1f5f9; }
     .dropdown-item:last-child { border-bottom: none; }
 
+    /* 訊息提示 */
     .message {
         position: fixed;
-        bottom: 20px;
+        bottom: 1.5rem;
         left: 50%;
         transform: translateX(-50%);
         width: auto;
-        min-width: 240px;
+        min-width: 14rem;
         max-width: 90%;
-        padding: 14px 24px;
-        border-radius: 50px;
+        padding: 1rem 1.5rem;
+        border-radius: 3rem;
         font-size: 1rem;
         font-weight: 500;
         text-align: center;
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         z-index: 30000;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s;
         pointer-events: none;
         backdrop-filter: blur(8px);
     }
     .success { background: #22c55e; color: white; }
     .error { background: #ef4444; color: white; }
 
+    /* 登入表單 */
     #loginForm {
-        max-width: 400px;
-        margin: 80px auto;
+        max-width: 22rem;
+        margin: 4rem auto;
         background: white;
-        padding: 40px 30px;
-        border-radius: 40px;
-        box-shadow: 0 20px 35px -8px rgba(0,0,0,0.1);
+        padding: 2rem 1.5rem;
+        border-radius: 3rem;
+        box-shadow: 0 20px 30px -10px rgba(0,0,0,0.1);
         text-align: center;
     }
     #loginForm h2 {
         font-size: 2rem;
-        margin-bottom: 20px;
+        margin-bottom: 1.5rem;
         color: #0f172a;
     }
     #loginForm input {
-        margin: 12px 0;
-        padding: 16px;
+        margin: 0.8rem 0;
+        padding: 1rem;
     }
 
+    /* 學生資訊列 */
     .student-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         background: #f8fafc;
-        padding: 16px 20px;
-        border-radius: 24px;
-        margin-bottom: 12px;
-        border: 1px solid #e9eef2;
+        padding: 1rem 1.2rem;
+        border-radius: 2rem;
+        margin-bottom: 0.8rem;
+        border: 1px solid #eef2f6;
         flex-wrap: wrap;
-        gap: 12px;
-        transition: 0.2s;
-    }
-    .student-row:hover {
-        background: #f1f5f9;
+        gap: 0.8rem;
     }
     .student-row .details {
         flex: 1;
-        min-width: 200px;
+        min-width: 12rem;
     }
     .student-row .details .name-with-icons {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 0.4rem;
         flex-wrap: wrap;
-        margin-bottom: 4px;
+        margin-bottom: 0.2rem;
     }
     .student-row .details .icons span { font-size: 1.1rem; }
     .student-row .details .stats {
         display: flex;
-        gap: 10px;
-        margin-top: 6px;
+        gap: 0.5rem;
+        margin-top: 0.4rem;
         flex-wrap: wrap;
     }
     .student-row .details .note {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #64748b;
-        margin-top: 6px;
+        margin-top: 0.5rem;
         word-break: break-word;
         background: #ffffff;
-        padding: 6px 12px;
-        border-radius: 30px;
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
         display: inline-block;
+        max-width: 100%;
     }
     .student-row .actions {
         display: flex;
-        gap: 8px;
+        gap: 0.5rem;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: flex-start;
     }
+
     .btn-sm {
-        padding: 8px 16px;
-        font-size: 0.85rem;
-        border-radius: 40px;
-        border: none;
-        cursor: pointer;
-        background: #ffffff;
+        padding: 0.5rem 1.2rem;
+        font-size: 0.8rem;
+        border-radius: 2rem;
         border: 1px solid #d1d9e6;
-        transition: 0.2s;
-        min-width: 70px;
+        background: white;
         font-weight: 500;
         color: #1e293b;
+        min-width: 4rem;
+        text-align: center;
     }
     .btn-sm:hover {
         background: #f1f5f9;
         border-color: #a0b3c9;
     }
-    .btn-sm:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
 
+    /* 徽章 */
     .leave-badge, .rental-badge, .class-badge-stat {
-        padding: 5px 14px;
-        border-radius: 40px;
-        font-size: 0.8rem;
+        padding: 0.3rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
         font-weight: 600;
         display: inline-block;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        white-space: nowrap;
     }
     .leave-badge { background: #ef4444; color: white; }
     .rental-badge { background: #0891b2; color: white; }
     .class-badge-stat { background: #2563eb; color: white; }
 
+    /* 提示框 */
     .info-box {
-        background: #e6f0ff;
+        background: #e0f2fe;
         border-left: 4px solid #2563eb;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        border-radius: 20px;
-        font-size: 0.95rem;
-        color: #1e3a8a;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 1.5rem;
+        font-size: 0.9rem;
+        color: #0369a1;
     }
 
-    /* 折疊樣式 */
+    /* 折疊標題 */
     .class-header {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 20px 0 12px;
+        gap: 0.8rem;
+        margin: 1.2rem 0 0.5rem;
         cursor: pointer;
         user-select: none;
-        padding: 6px 12px;
+        padding: 0.5rem 1rem;
         background: #f1f5f9;
-        border-radius: 40px;
+        border-radius: 2rem;
     }
-    .class-header h3 { margin: 0; font-size: 1.2rem; }
+    .class-header h3 { margin: 0; font-size: 1.1rem; }
     .class-header .toggle-icon {
         font-size: 1.2rem;
         transition: transform 0.2s;
@@ -469,7 +481,7 @@
         margin: 0;
     }
 
-    /* 載入中動畫 */
+    /* 載入中 */
     #loadingSpinner {
         position: fixed;
         top: 0;
@@ -490,10 +502,10 @@
         border: 5px solid rgba(255,255,255,0.2);
         border-top: 5px solid white;
         border-radius: 50%;
-        width: 70px;
-        height: 70px;
+        width: 4rem;
+        height: 4rem;
         animation: spin 1s linear infinite;
-        margin-bottom: 25px;
+        margin-bottom: 1.5rem;
     }
     #loadingSpinner p {
         font-size: 1.2rem;
@@ -502,7 +514,7 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* 自訂模態對話框 */
+    /* 模態框 */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -515,13 +527,14 @@
         align-items: center;
         z-index: 10000;
         backdrop-filter: blur(4px);
+        padding: 1rem;
     }
     .modal-content {
         background: white;
-        border-radius: 36px;
-        padding: 30px;
-        max-width: 90%;
-        width: 500px;
+        border-radius: 2.5rem;
+        padding: 2rem 1.5rem;
+        max-width: 95%;
+        width: 24rem;
         box-shadow: 0 30px 40px -15px rgba(0,0,0,0.2);
         animation: modalFadeIn 0.3s ease;
     }
@@ -530,30 +543,31 @@
         to { opacity: 1; transform: scale(1); }
     }
     .modal-content h3 {
-        margin-bottom: 20px;
+        margin-bottom: 1.2rem;
         color: #0f172a;
         font-weight: 600;
-        font-size: 1.4rem;
+        font-size: 1.3rem;
     }
     .modal-content input,
     .modal-content select,
     .modal-content textarea {
         width: 100%;
-        padding: 14px;
+        padding: 1rem;
         border: 1px solid #d1d9e6;
-        border-radius: 24px;
-        margin-bottom: 20px;
+        border-radius: 2rem;
+        margin-bottom: 1.2rem;
         font-size: 1rem;
     }
     .modal-buttons {
         display: flex;
-        gap: 16px;
+        gap: 1rem;
         justify-content: flex-end;
+        flex-wrap: wrap;
     }
     .modal-buttons button {
-        padding: 12px 24px;
+        padding: 0.8rem 1.8rem;
         border: none;
-        border-radius: 40px;
+        border-radius: 2rem;
         font-weight: 600;
         cursor: pointer;
         transition: 0.2s;
@@ -562,7 +576,6 @@
     .modal-buttons .confirm {
         background: #2563eb;
         color: white;
-        border: none;
     }
     .modal-buttons .confirm:hover { background: #1d4ed8; }
     .modal-buttons .cancel {
@@ -575,23 +588,22 @@
     /* 通知欄 */
     .notification-section {
         background: #ffffff;
-        border-radius: 24px;
-        margin-bottom: 24px;
-        border: 1px solid #e9eef2;
+        border-radius: 2rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #eef2f6;
         overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
     }
     .notification-header {
         background: #f1f5f9;
         color: #0f172a;
-        padding: 18px 20px;
+        padding: 1.2rem 1.2rem;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 0.8rem;
         cursor: pointer;
         user-select: none;
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     .notification-header .toggle-icon {
         font-size: 1.2rem;
@@ -605,58 +617,65 @@
     .notification-body.collapsed {
         max-height: 0;
         opacity: 0;
-        padding: 0 16px;
+        padding: 0 1rem;
     }
     .notification-item {
-        padding: 18px 20px;
+        padding: 1.2rem 1rem;
         border-bottom: 1px solid #edf2f7;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 16px;
+        gap: 1rem;
     }
     .notification-item:last-child { border-bottom: none; }
     .notification-item .type-tag {
         background: #2563eb;
         color: white;
-        padding: 5px 14px;
-        border-radius: 40px;
-        font-size: 0.8rem;
+        padding: 0.3rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        min-width: 70px;
+        min-width: 4rem;
         text-align: center;
     }
-    .notification-item .content { flex: 1; min-width: 200px; }
-    .notification-item .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .notification-item .content { flex: 1; min-width: 12rem; word-break: break-word; }
+    .notification-item .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-    /* 手機專屬調整 */
-    @media screen and (max-width: 600px) {
-        body { padding: 8px; }
-        .container { padding: 20px 16px; border-radius: 24px; }
-        h1 { font-size: 1.6rem; }
-        .button-grid { gap: 8px; }
-        .btn { flex: 1 0 calc(50% - 8px); padding: 12px 12px; font-size: 0.9rem; }
-        .section { padding: 20px 16px; border-radius: 24px; }
-        .section h2 { font-size: 1.3rem; }
-        .form-group { flex: 1 1 100%; }
-        .student-button, .rental-button { font-size: 0.85rem; padding: 8px 16px; }
-        .student-row { padding: 14px 16px; }
+    /* 手機尺寸細調 */
+    @media (max-width: 400px) {
+        html { font-size: 15px; } /* 更小的螢幕縮小基礎字體 */
+        .btn { flex: 1 0 100%; }
+        .student-button, .rental-button { width: 100%; margin: 0.2rem 0; }
+        .student-row .details .stats { flex-direction: column; align-items: flex-start; }
         .student-row .actions { width: 100%; justify-content: flex-start; }
-        .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
-        .modal-content { padding: 25px 20px; border-radius: 30px; }
-        .modal-content h3 { font-size: 1.3rem; }
-        .modal-buttons button { padding: 10px 20px; }
-        .class-header { margin: 16px 0 8px; padding: 8px 16px; }
-        .class-header h3 { font-size: 1.1rem; }
-        .notification-item { padding: 14px 16px; }
-        .notification-item .type-tag { min-width: 60px; font-size: 0.75rem; }
+        .btn-sm { padding: 0.5rem 1rem; min-width: 3.5rem; }
     }
 
-    /* 更小螢幕 */
-    @media screen and (max-width: 380px) {
-        .btn { flex: 1 0 100%; }
-        .student-button, .rental-button { width: 100%; margin: 4px 0; }
-        .student-row .details .stats { flex-direction: column; align-items: flex-start; }
+    @media (max-width: 340px) {
+        html { font-size: 14px; }
+        .class-badge { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    }
+
+    /* 確保所有文字都不會溢出 */
+    h1, h2, h3, p, span, div {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* 增加可點擊區域 */
+    button, .class-badge, .dropdown-item {
+        min-height: 2.8rem;  /* 確保觸摸高度足夠 */
+    }
+
+    /* 隱藏日期輸入的修復（保留原有功能） */
+    #hiddenDatePicker {
+        position: fixed;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        pointer-events: none;
+        width: 1px;
+        height: 1px;
     }
 </style>
 </head>
@@ -677,8 +696,8 @@
                 <button class="btn-sm" onclick="logout()">🚪 登出</button>
             </div>
         </div>
-        <h1>⚙️ 教練後台 · 輪滑課程系統V6.0</h1>
-        <p>滾軸溜冰私教輪滑團隊</p>
+        <h1>⚙️ 教練後台 · 輪滑課程系統</h1>
+        <p>⛸️滾軸溜冰私教輪滑團隊 系統V6.0</p>
 
         <!-- 通知欄位（預設展開） -->
         <div id="notificationSection" class="notification-section">
@@ -3115,6 +3134,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
