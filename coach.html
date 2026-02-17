@@ -909,7 +909,7 @@
 
    <script>
     // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8YfE206VajkuPfMCE2I6Y_ldkBehs8YawRCYol6F4eEwYGuy_rHua3QqruGZIITcaCA/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwvOwLgC_UtdtIgBJVHobFiUP3srLeOYTyeF4WRDa6rd24iKjvWfhpc6LhfFp-Bqck3wA/exec';
 
     let allStudents = [];
     let currentUser = null; // { username, role, authorizedClasses }
@@ -1026,30 +1026,44 @@ function logout() {
 // ---------- 載入所有資料（並行優化）----------
 async function loadAllData() {
     try {
-        // 顯示載入中畫面
         document.getElementById('loadingSpinner').style.display = 'flex';
 
-        // 第一步：載入學生與班級（兩者無依賴，可並行）
-        await Promise.all([
-            fetchAllStudents(),   // 取得 allStudents
-            loadClassList()       // 取得 allClasses
-        ]);
+        // 單一請求獲取所有初始化資料
+        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
+        const data = await res.json();
 
-        // 第二步：載入需要學生資料的通知及其他獨立通知（全部並行）
-        await Promise.all([
-            loadPaymentNotifications(), // 依賴 allStudents（已在上一步完成）
-            loadTrialNotifications(),   // 獨立
-            loadPendingApprovals()      // 獨立
-        ]);
+        // 賦值給全域變數
+        allStudents = data.students || [];
+        allClasses = data.classes || [];
+        pendingApprovals = data.pendingApprovals || [];
 
-        // 只更新通知欄，其他區塊留到點擊時才渲染
+        // 處理繳費通知（過濾出未處理的記錄）
+        paymentNotifications = (data.paymentRecords || [])
+            .filter(p => !p.processed)
+            .map(p => ({
+                studentName: p.studentName,
+                className: p.className,
+                paymentDate: p.paymentDate,
+                time: p.time,
+                imageUrl: p.imageUrl
+            }));
+
+        // 處理試堂通知（未付費或未來試堂）
+        trialNotifications = (data.trialStudents || [])
+            .filter(t => !t.paid || t.date >= getTodayUTC8());
+
+        // 計算新學生待繳費提醒
+        const paidStudentNames = new Set((data.paymentRecords || []).map(p => p.studentName));
+        newStudentNotifications = allStudents
+            .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name))
+            .map(s => ({ name: s.name, className: s.class }));
+
+        // 只更新通知欄
         renderNotificationBody();
 
-        // 隱藏載入中，顯示主內容
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
 
-        // 套用角色權限
         applyRoleRestrictions();
     } catch (error) {
         console.error(error);
@@ -3045,6 +3059,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
