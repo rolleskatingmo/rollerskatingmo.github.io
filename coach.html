@@ -1079,44 +1079,79 @@ function applyRoleRestrictions() {
 }
 
     // ---------- 區塊切換 ----------
-    function showSection(sectionId) {
-        if (!currentUser) return;
-        const role = currentUser.role;
-        const isAdmin = role === 'admin';
-        const isCoach = role === 'coach';
-        const isAssistant = role === 'assistant';
+// ---------- 區塊切換（顯示載入中） ----------
+async function showSection(sectionId) {
+    if (!currentUser) return;
 
-        // 助教不得查看學生資訊
-        if (!isAdmin && !isCoach) {
-            if (sectionId === 'clear') {
-                showError('您沒有權限查看學生資訊');
-                return;
-            }
-        }
-        // 管理員專屬功能
-        if (!isAdmin) {
-            if (sectionId === 'userManage' || sectionId === 'classManage') {
-                showError('您沒有權限使用此功能');
-                return;
-            }
-        }
+    const role = currentUser.role;
+    const isAdmin = role === 'admin';
+    const isCoach = role === 'coach';
+    const isAssistant = role === 'assistant';
 
+    // 權限檢查（與原有邏輯一致）
+    if (!isAdmin && !isCoach) {
+        if (sectionId === 'clear') {
+            showError('您沒有權限查看學生資訊');
+            return;
+        }
+    }
+    if (!isAdmin) {
+        if (sectionId === 'userManage' || sectionId === 'classManage') {
+            showError('您沒有權限使用此功能');
+            return;
+        }
+    }
+
+    // 顯示載入中 spinner
+    showLoadingSpinner('載入中，請稍後...');
+
+    try {
+        // 隱藏所有區塊，顯示目標區塊
         const sections = ['attendance','rental','trial','addClasses','addStudent','classManage','clear','coachLeave','userManage'];
         sections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = id === sectionId ? 'block' : 'none';
         });
-        if (sectionId === 'clear') {
-            renderNoteListByClass();
-        }
-        if (sectionId === 'trial') loadTrialList();
-        if (sectionId === 'userManage' && isAdmin) {
-            selectedClasses.clear();
-            renderClassSelection();
-            loadUserList();
-        }
-    }
 
+        // 根據區塊執行非同步初始化
+        if (sectionId === 'trial') {
+            await loadTrialList();               // 非同步載入試堂列表
+        } else if (sectionId === 'userManage' && isAdmin) {
+            selectedClasses.clear();
+            renderClassSelection();               // 同步渲染班級選擇按鈕
+            await loadUserList();                  // 非同步載入用戶列表
+        } else if (sectionId === 'classManage' && isAdmin) {
+            await loadClassList();                  // 非同步重新載入班級列表（確保最新）
+        } else if (sectionId === 'clear') {
+            renderNoteListByClass();                // 同步渲染學生資訊
+        } else if (sectionId === 'addClasses') {
+            // 不需要特別初始化，但可確保班級下拉已更新（如果需要）
+        } else if (sectionId === 'addStudent') {
+            // 更新新增學生的班級下拉選單（避免班級列表已變更）
+            const newStudentSelect = document.getElementById('newStudentClass');
+            if (newStudentSelect) {
+                newStudentSelect.innerHTML = '<option value="">選擇班級</option>' + 
+                    allClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+        }
+
+        // 同步更新點名與租借列表（無論是否切換到該區塊，確保資料最新）
+        if (sectionId === 'attendance') {
+            updateAttendanceList();
+        }
+        if (sectionId === 'rental') {
+            updateRentalList();
+        }
+        // 其他同步函數可在此添加
+
+    } catch (error) {
+        console.error('載入區塊失敗', error);
+        showError('載入失敗，請稍後再試');
+    } finally {
+        // 隱藏載入中 spinner
+        hideLoadingSpinner();
+    }
+}
     // ---------- 取得所有學生 ----------
     async function fetchAllStudents() {
         const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
@@ -2998,3 +3033,4 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
