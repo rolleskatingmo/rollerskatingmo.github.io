@@ -1023,21 +1023,33 @@ function logout() {
     }
 
     // ---------- 載入所有資料 ----------
+// ---------- 載入所有資料（並行優化）----------
 async function loadAllData() {
     try {
-        // 載入全域必要資料：學生列表、班級列表、通知相關資料
-        await fetchAllStudents();
-        await loadClassList();
-        await loadPendingApprovals();    // 待審批請求（管理員需要）
-        await loadPaymentNotifications(); // 繳費通知（依賴學生資料）
-        await loadTrialNotifications();   // 試堂通知
+        // 顯示載入中畫面
+        document.getElementById('loadingSpinner').style.display = 'flex';
 
-        // 只更新通知欄，不渲染其他區塊
+        // 第一步：載入學生與班級（兩者無依賴，可並行）
+        await Promise.all([
+            fetchAllStudents(),   // 取得 allStudents
+            loadClassList()       // 取得 allClasses
+        ]);
+
+        // 第二步：載入需要學生資料的通知及其他獨立通知（全部並行）
+        await Promise.all([
+            loadPaymentNotifications(), // 依賴 allStudents（已在上一步完成）
+            loadTrialNotifications(),   // 獨立
+            loadPendingApprovals()      // 獨立
+        ]);
+
+        // 只更新通知欄，其他區塊留到點擊時才渲染
         renderNotificationBody();
 
+        // 隱藏載入中，顯示主內容
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
 
+        // 套用角色權限
         applyRoleRestrictions();
     } catch (error) {
         console.error(error);
@@ -3033,5 +3045,6 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
