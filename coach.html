@@ -1553,14 +1553,11 @@ function updateAttendanceList() {
             let onClick = '';
 
             if (isMakeupMode) {
-                // 補點名模式
-                if (isCheckedNormal) {
-                    buttonClass += ' checked';
-                    disabled = true;
-                } else {
-                    buttonClass += isSelectedMakeup ? ' selected' : '';
-                    onClick = `toggleMakeupStudent('${s.name}')`;
-                }
+                // 補點名模式：不參考 localStorage，所有學生都可選
+                buttonClass += isSelectedMakeup ? ' selected' : '';
+                // 不加入 checked 類，也不根據 localStorage 禁用
+                disabled = false;
+                onClick = `toggleMakeupStudent('${s.name}')`;
             } else {
                 // 一般點名模式
                 if (isCheckedNormal) {
@@ -1583,7 +1580,6 @@ function updateAttendanceList() {
     }
     container.innerHTML = html;
 }
-
     async function coachRequestDeleteStudent(name) {
         if (currentUser.role !== 'coach') {
             showError('無權限');
@@ -3462,6 +3458,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
