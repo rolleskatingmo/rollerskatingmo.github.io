@@ -35,6 +35,12 @@
             margin-bottom: 16px;
             letter-spacing: -0.02em;
         }
+        .makeup-row {
+    background-color: #fce4e4 !important;
+}
+.makeup-row td {
+    background-color: #fce4e4;
+}
         /* 教練入口按鈕（固定在右下角） */
         .coach-fab {
             position: fixed;
@@ -503,13 +509,15 @@
                     <table class="record-table">
                         <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                         <tbody>`;
-                allRecords.slice(0, 30).forEach(rec => {
-                    if (rec.type === '上課') {
-                        recordsHtml += `<tr><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
-                    } else {
-                        recordsHtml += `<tr><td>${rec.date}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
-                    }
-                });
+allRecords.slice(0, 30).forEach(rec => {
+    if (rec.type === '上課') {
+        const isMakeup = rec.reason === '補點名';
+        const rowClass = isMakeup ? 'makeup-row' : '';
+        recordsHtml += `<tr class="${rowClass}"><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
+    } else {
+        recordsHtml += `<tr><td>${rec.date}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
+    }
+});
                 recordsHtml += `</tbody></table></div>`;
             }
 
