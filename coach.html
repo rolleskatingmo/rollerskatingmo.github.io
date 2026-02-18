@@ -1312,36 +1312,34 @@ async function showSection(sectionId) {
                     allClasses.map(c => `<option value="${c}">${c}</option>`).join('');
             }
             scrollToSection('addStudent');
-} else if (sectionId === 'attendance') {
-    updateAttendanceList();
-    scrollToSection('attendance');
-    // 補點名提示
-    const attendanceDiv = document.getElementById('attendance');
-    let hint = document.getElementById('makeupHint');
-    if (!hint) {
-        hint = document.createElement('div');
-        hint.id = 'makeupHint';
-        hint.className = 'info-box';
-        hint.style.marginBottom = '15px';
-        attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
-    }
-    if (isMakeupMode) {
-        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-            <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
-            <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
-            <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
-        hint.style.display = 'block';
-    } else {
-        hint.style.display = 'none';
-    }
-}
-} else if (sectionId === 'rental') {
+        } else if (sectionId === 'attendance') {
+            updateAttendanceList();
+            scrollToSection('attendance');
+            // 補點名提示
+            const attendanceDiv = document.getElementById('attendance');
+            let hint = document.getElementById('makeupHint');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.id = 'makeupHint';
+                hint.className = 'info-box';
+                hint.style.marginBottom = '15px';
+                attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
+            }
+            if (isMakeupMode) {
+                hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+                    <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
+                    <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
+                    <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+                hint.style.display = 'block';
+            } else {
+                hint.style.display = 'none';
+            }
+        } else if (sectionId === 'rental') {
             updateRentalList();
             scrollToSection('rental');
         } else if (sectionId === 'coachLeave') {
             scrollToSection('coachLeave');
         }
-
     } catch (error) {
         console.error('載入區塊失敗', error);
         showError('載入失敗，請稍後再試');
@@ -3460,6 +3458,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
