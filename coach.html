@@ -782,7 +782,8 @@
                 <button id="btnAddStudent" class="btn btn-indigo" onclick="showSection('addStudent')">👤 新增學生</button>
                 <button id="btnClassManage" class="btn btn-warning" onclick="showSection('classManage')" style="display:none;">🏫 班級管理</button>
                 <button id="btnClear" class="btn btn-danger" onclick="showSection('clear')">📋 學生資訊</button>
-                <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 代請假</button>
+                <button id="btnCoachLeave" class="btn btn-purple" onclick="showSection('coachLeave')">📝 請假</button>
+                <button id="btnMakeupAttendance" class="btn btn-warning" onclick="openMakeupDateModal()">📅 補點名</button>
                 <button id="btnUserManage" class="btn btn-primary" onclick="showSection('userManage')" style="background:#6b46c1; display:none;">👥 用戶管理</button>
             </div>
 
@@ -1013,7 +1014,17 @@
             </div>
         </div>
     </div>
-
+<!-- 補點名日期選擇模態框 -->
+<div id="makeupDateModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>📅 選擇補點名日期</h3>
+        <input type="date" id="makeupDateInput" style="width:100%; margin-bottom:20px;">
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeMakeupDateModal()">取消</button>
+            <button class="confirm" onclick="confirmMakeupDate()">下一步</button>
+        </div>
+    </div>
+</div>
     <!-- 課堂相片-選擇班級模態框 -->
     <div id="classSelectModal" class="modal-overlay">
         <div class="modal-content">
@@ -1034,6 +1045,8 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwvOwLgC_UtdtIgBJVHobFiUP3srLeOYTyeF4WRDa6rd24iKjvWfhpc6LhfFp-Bqck3wA/exec';
 
     let allStudents = [];
+    let isMakeupMode = false;      // 是否處於補點名模式
+    let makeupDate = '';           // 當前選擇的補點名日期 (YYYY-MM-DD)
     let currentUser = null; // { username, role, authorizedClasses }
     const processing = {};
 
@@ -1244,7 +1257,6 @@ async function showSection(sectionId) {
     const isCoach = role === 'coach';
     const isAssistant = role === 'assistant';
 
-    // 權限檢查
     if (!isAdmin && !isCoach) {
         if (sectionId === 'clear') {
             showError('您沒有權限查看學生資訊');
@@ -1261,14 +1273,12 @@ async function showSection(sectionId) {
     showLoadingSpinner('載入中，請稍後...');
 
     try {
-        // 隱藏所有區塊，顯示目標區塊
         const sections = ['attendance','rental','trial','addClasses','addStudent','classManage','clear','coachLeave','userManage'];
         sections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = id === sectionId ? 'block' : 'none';
         });
 
-        // 根據區塊執行非同步初始化
         if (sectionId === 'trial') {
             await loadTrialList();
             scrollToSection('trial');
@@ -1284,7 +1294,6 @@ async function showSection(sectionId) {
             renderNoteListByClass();
             scrollToSection('clear');
         } else if (sectionId === 'addClasses') {
-            // 無需特別初始化，直接滾動
             scrollToSection('addClasses');
         } else if (sectionId === 'addStudent') {
             const newStudentSelect = document.getElementById('newStudentClass');
@@ -1296,6 +1305,22 @@ async function showSection(sectionId) {
         } else if (sectionId === 'attendance') {
             updateAttendanceList();
             scrollToSection('attendance');
+            // 補點名提示
+            const attendanceDiv = document.getElementById('attendance');
+            let hint = document.getElementById('makeupHint');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.id = 'makeupHint';
+                hint.className = 'info-box';
+                hint.style.marginBottom = '15px';
+                attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
+            }
+            if (isMakeupMode) {
+                hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出補點名</button>`;
+                hint.style.display = 'block';
+            } else {
+                hint.style.display = 'none';
+            }
         } else if (sectionId === 'rental') {
             updateRentalList();
             scrollToSection('rental');
@@ -1400,39 +1425,83 @@ function getFilteredStudents() {
             showError(result.message);
         }
     }
+async function markMakeupAttendance(name) {
+    if (!makeupDate) {
+        showError('請先選擇補點名日期');
+        return;
+    }
+    const btn = document.querySelector(`.student-button[data-name="${name}"]`);
+    if (btn && (btn.disabled || btn.classList.contains('checked'))) {
+        showError('此學生已完成點名');
+        return;
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('checked');
+    }
 
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=markAttendanceMakeup&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}&date=${encodeURIComponent(makeupDate)}`);
+        const data = await res.json();
+        if (data.success) {
+            showSuccess(`${name} 補點名成功！`);
+            await fetchAllStudents();
+            updateAttendanceList();
+        } else {
+            showError(data.message || '補點名失敗');
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('checked');
+            }
+        }
+    } catch (err) {
+        showError('網路錯誤');
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('checked');
+        }
+    }
+}
     // ---------- 點名（根據權限過濾班級）----------
-    function updateAttendanceList() {
-        const container = document.getElementById('attendanceList');
-        if (!container) return;
+function updateAttendanceList() {
+    const container = document.getElementById('attendanceList');
+    if (!container) return;
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            if (!grouped[s.class]) grouped[s.class] = [];
-            grouped[s.class].push(s);
-        });
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+    });
 
-        let html = '';
-        for (let className in grouped) {
-            html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-            grouped[className].forEach(s => {
-                const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-                const disabled = isChecked ? 'disabled' : '';
-                const checkedClass = isChecked ? 'checked' : '';
-                let buttonText = s.name;
-                if (currentUser.role === 'coach' || currentUser.role === 'admin') {
-                    const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
-                    buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+    let html = '';
+    for (let className in grouped) {
+        html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+        grouped[className].forEach(s => {
+            const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+            const disabled = isChecked ? 'disabled' : '';
+            const checkedClass = isChecked ? 'checked' : '';
+            let buttonText = s.name;
+            if (currentUser.role === 'coach' || currentUser.role === 'admin') {
+                const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+                buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+                if (isMakeupMode) {
+                    html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markMakeupAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
+                } else {
                     html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
+                }
+            } else {
+                if (isMakeupMode) {
+                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markMakeupAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
                 } else {
                     html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
                 }
-            });
-            html += '</div>';
-        }
-        container.innerHTML = html;
+            }
+        });
+        html += '</div>';
     }
+    container.innerHTML = html;
+}
 
     async function coachRequestDeleteStudent(name) {
         if (currentUser.role !== 'coach') {
@@ -1510,15 +1579,55 @@ function getFilteredStudents() {
         }
     }
 
-    function resetAttendance() {
-        document.querySelectorAll('.student-button.checked').forEach(b => {
-            b.classList.remove('checked');
-            b.disabled = false;
-        });
+function resetAttendance() {
+    document.querySelectorAll('.student-button.checked').forEach(b => {
+        b.classList.remove('checked');
+        b.disabled = false;
+    });
+    if (!isMakeupMode) {
         allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
-        showSuccess('點名狀態已重置');
     }
+    showSuccess('點名狀態已重置');
+}
 
+function exitMakeupMode() {
+    isMakeupMode = false;
+    makeupDate = '';
+    showSection('attendance');
+}
+
+function openMakeupDateModal() {
+    // 預設為今天
+    const today = getTodayUTC8();
+    document.getElementById('makeupDateInput').value = today;
+    document.getElementById('makeupDateModal').style.display = 'flex';
+}
+
+function closeMakeupDateModal() {
+    document.getElementById('makeupDateModal').style.display = 'none';
+}
+
+function confirmMakeupDate() {
+    const date = document.getElementById('makeupDateInput').value;
+    if (!date) {
+        showError('請選擇日期');
+        return;
+    }
+    closeMakeupDateModal();
+
+    // 顯示星期幾
+    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const d = new Date(date + 'T00:00:00');
+    const weekday = weekdays[d.getDay()];
+    const confirmMsg = `你確定要補點名日期 ${date} (${weekday}) 的點名嗎？`;
+
+    if (!confirm(confirmMsg)) return;
+
+    // 進入補點名模式
+    isMakeupMode = true;
+    makeupDate = date;
+    showSection('attendance');
+}
     // ---------- 租借裝備（根據權限過濾班級）----------
     function updateRentalList() {
         const container = document.getElementById('rentalList');
@@ -3191,4 +3300,5 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
