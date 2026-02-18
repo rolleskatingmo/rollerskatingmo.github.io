@@ -1523,7 +1523,12 @@ function toggleMakeupStudent(name) {
     } else {
         makeupSelectedStudents.add(name);
     }
-    updateAttendanceList(); // 重新渲染按鈕樣式
+    updateAttendanceList();
+    // 更新提示條中的計數
+    const selectedCountSpan = document.getElementById('selectedCount');
+    if (selectedCountSpan) {
+        selectedCountSpan.textContent = makeupSelectedStudents.size;
+    }
 }
 function updateAttendanceList() {
     const container = document.getElementById('attendanceList');
@@ -1822,13 +1827,12 @@ function confirmMakeupDate() {
     }
 
     // ---------- 待審批請求 ----------
-    async function loadPendingApprovals() {
-        if (currentUser.role !== 'admin') return;
-        const res = await fetch(`${SCRIPT_URL}?action=getPendingApprovals`);
-        const data = await res.json();
-        pendingApprovals = data;
-        renderNotificationBody();
-    }
+async function loadPendingApprovals() {
+    const res = await fetch(`${SCRIPT_URL}?action=getPendingApprovals`);
+    const data = await res.json();
+    pendingApprovals = data;
+    renderNotificationBody();
+}
 
     // ---------- 通知欄控制 ----------
     function toggleNotificationBody() {
@@ -3073,20 +3077,20 @@ coachSearch.addEventListener('input', function(e) {
     }
 
     // ---------- 審批請求處理 ----------
-    async function approveRequest(id) {
-        const res = await fetch(`${SCRIPT_URL}?action=approveRequest&id=${id}&approver=${encodeURIComponent(currentUser.username)}`);
-        const result = await res.json();
-        if (result.success) {
-            showSuccess('請求已批准');
-            await loadPendingApprovals();
-            await fetchAllStudents();
-            renderNoteListByClass();
-            updateAttendanceList();
-            updateRentalList();
-        } else {
-            showError(result.error || '批准失敗');
-        }
+async function approveRequest(id) {
+    const res = await fetch(`${SCRIPT_URL}?action=approveRequest&id=${id}&approver=${encodeURIComponent(currentUser.username)}`);
+    const result = await res.json();
+    if (result.success) {
+        showSuccess('請求已批准');
+        await loadPendingApprovals();      // 重新載入待審批列表
+        await fetchAllStudents();          // 更新學生資料
+        renderNoteListByClass();
+        updateAttendanceList();
+        updateRentalList();
+    } else {
+        showError(result.error || '批准失敗');
     }
+}
 
     async function rejectRequest(id) {
         const res = await fetch(`${SCRIPT_URL}?action=rejectRequest&id=${id}&approver=${encodeURIComponent(currentUser.username)}`);
@@ -3458,6 +3462,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
