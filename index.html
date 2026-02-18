@@ -140,40 +140,7 @@
             margin-bottom: 5px;
         }
 
-        /* 載入中浮層（全螢幕，與教練後台一致） */
-        #loadingSpinner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.7);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 30000;
-            color: white;
-            text-align: center;
-            backdrop-filter: blur(5px);
-        }
-        #loadingSpinner .spinner {
-            border: 5px solid rgba(255,255,255,0.2);
-            border-top: 5px solid white;
-            border-radius: 50%;
-            width: 70px;
-            height: 70px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 25px;
-        }
-        #loadingSpinner p {
-            font-size: 1.2rem;
-            font-weight: 500;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 訊息條（改為頂部，避免被鍵盤遮擋） */
+        /* 頂部訊息條（支援 spinner） */
         .message {
             position: fixed;
             top: 20px;
@@ -182,7 +149,7 @@
             width: auto;
             min-width: 240px;
             max-width: 90%;
-            padding: 14px 24px;
+            padding: 12px 24px;
             border-radius: 50px;
             font-size: 1rem;
             font-weight: 500;
@@ -190,15 +157,30 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             z-index: 31000;
             transition: opacity 0.3s ease;
-            pointer-events: none;
             backdrop-filter: blur(8px);
             color: white;
             display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         .message.info { background: #2563eb; }
         .message.success { background: #16a34a; }
         .message.error { background: #dc2626; }
         .message.warning { background: #ea580c; }
+        .message.loading { background: #2563eb; }
+
+        /* 內聯 spinner 樣式 */
+        .spinner-small {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* 模態框樣式（與教練後台一致） */
         .modal-overlay {
@@ -382,12 +364,6 @@
         </div>
     </div>
 
-    <!-- 載入中全螢幕浮層 -->
-    <div id="loadingSpinner">
-        <div class="spinner"></div>
-        <p>載入中，請稍後...</p>
-    </div>
-
     <!-- 學生詳細資訊模態框 -->
     <div id="studentModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
@@ -401,31 +377,40 @@
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
         const messageDiv = document.getElementById('message');
-        const loadingSpinner = document.getElementById('loadingSpinner');
         const modalOverlay = document.getElementById('studentModal');
         const modalContent = document.getElementById('modalContent');
         let searchTimer;
+        let loadingTimeout = null; // 用於自動隱藏（以防萬一）
 
-        // 顯示載入中浮層
-        function showLoading(message = '載入中，請稍後...') {
-            loadingSpinner.style.display = 'flex';
-            loadingSpinner.querySelector('p').textContent = message;
+        // 顯示載入中（頂部訊息條 + spinner）
+        function showLoading(message = '載入中...') {
+            // 清除之前的定時器
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            // 設定內容：文字 + spinner
+            messageDiv.innerHTML = `
+                <span>${message}</span>
+                <span class="spinner-small"></span>
+            `;
+            messageDiv.className = 'message loading';
+            messageDiv.style.display = 'flex';
         }
+
+        // 隱藏載入中
         function hideLoading() {
-            loadingSpinner.style.display = 'none';
+            messageDiv.style.display = 'none';
+            if (loadingTimeout) clearTimeout(loadingTimeout);
         }
 
-        // 顯示訊息條（僅用於非載入狀態的提示）
+        // 顯示普通訊息（非載入狀態）
         function showMessage(msg, type = 'info') {
-            messageDiv.textContent = msg;
+            hideLoading(); // 先隱藏 loading
+            messageDiv.innerHTML = msg; // 純文字
             messageDiv.className = `message ${type}`;
             messageDiv.style.display = 'block';
+            // 3秒後自動隱藏
             setTimeout(() => {
                 messageDiv.style.display = 'none';
             }, 3000);
-        }
-        function hideMessage() {
-            messageDiv.style.display = 'none';
         }
 
         searchInput.addEventListener('input', function(e) {
