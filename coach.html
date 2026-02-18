@@ -1334,6 +1334,7 @@ async function showSection(sectionId) {
     } else {
         hint.style.display = 'none';
     }
+}
 } else if (sectionId === 'rental') {
             updateRentalList();
             scrollToSection('rental');
@@ -1875,20 +1876,19 @@ function renderNotificationBody() {
 
     // 待續費提醒（管理員和教練可見）
     if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-// 待續費提醒（管理員可見按鈕，教練僅見文字）
-paymentNotifications.forEach(p => {
-    total++;
-    html += `<div class="notification-item">
-        <span class="type-tag">待續費</span>
-        <div class="content">${p.studentName} 已上傳繳費憑證，請管理員點擊續費</div>
-        <div class="actions">`;
-    if (currentUser.role === 'admin') {
-        html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費按此</button>`;
-    } else {
-        html += `<span style="color:#718096;">等待管理員處理</span>`;
-    }
-    html += `</div></div>`;
-});
+        paymentNotifications.forEach(p => {
+            total++;
+            html += `<div class="notification-item">
+                <span class="type-tag">待續費</span>
+                <div class="content">${p.studentName} 已上傳繳費憑證，請管理員點擊續費</div>
+                <div class="actions">`;
+            if (currentUser.role === 'admin') {
+                html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費按此</button>`;
+            } else {
+                html += `<span style="color:#718096;">等待管理員處理</span>`;
+            }
+            html += `</div></div>`;
+        });
     }
 
     // 新學生待繳費提醒（僅管理員）
@@ -1905,55 +1905,130 @@ paymentNotifications.forEach(p => {
         });
     }
 
-    // 審批請求
-if (currentUser.role === 'admin') {
-    pendingApprovals.forEach(req => {
-        total++;
-        let content = '';
-        if (req.type === 'addClasses') {
-            content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
-        } else if (req.type === 'addStudent') {
-            content = `${req.requester} 請求新增學生 ${req.data.name}`;
-        } else if (req.type === 'deleteStudent') {
-            content = `${req.requester} 請求刪除學生 ${req.data.name}`;
-        } else if (req.type === 'makeupAttendance') {
-            const studentList = req.data.students.join('、');
-            content = `${req.requester} 請求為 ${studentList} 補點名 (日期：${req.data.date})`;
-        }
-        html += `<div class="notification-item">
-            <span class="type-tag">審批</span>
-            <div class="content">${content}</div>
-            <div class="actions">
-                <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
-                <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
-            </div>
-        </div>`;
-    });
-}
-    } else if (currentUser.role === 'coach' || currentUser.role === 'assistant') {
-    const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
-    myRequests.forEach(req => {
-        total++;
-        let content = '';
-        if (req.type === 'addClasses') {
-            content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
-        } else if (req.type === 'addStudent') {
-            content = `您請求新增學生 ${req.data.name} - 審批中`;
-        } else if (req.type === 'deleteStudent') {
-            content = `您請求刪除學生 ${req.data.name} - 審批中`;
-        } else if (req.type === 'makeupAttendance') {
-            const studentList = req.data.students.join('、');
-            content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
-        }
-        html += `<div class="notification-item">
-            <span class="type-tag">審批中</span>
-            <div class="content">${content}</div>
-            <div class="actions">
-                <span style="color:#718096;">等待管理員審批</span>
-            </div>
-        </div>`;
-    });
-}
+    // ----- 審批請求區塊 -----
+    if (currentUser.role === 'admin') {
+        // 管理員：看到所有待審批請求，並可批准/拒絕
+        pendingApprovals.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
+            } else if (req.type === 'addStudent') {
+                content = `${req.requester} 請求新增學生 ${req.data.name}`;
+            } else if (req.type === 'deleteStudent') {
+                content = `${req.requester} 請求刪除學生 ${req.data.name}`;
+            } else if (req.type === 'makeupAttendance') {
+                const studentList = req.data.students.join('、');
+                content = `${req.requester} 請求為 ${studentList} 補點名 (日期：${req.data.date})`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
+                    <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
+                </div>
+            </div>`;
+        });
+    } else if (currentUser.role === 'coach') {
+        // 教練：看到所有補點名請求（需檢查授權班級）以及自己提交的其他請求（只顯示狀態）
+        const coachRequests = pendingApprovals.filter(req => {
+            return req.type === 'makeupAttendance' || req.requester === currentUser.username;
+        });
+        coachRequests.forEach(req => {
+            total++;
+            let content = '';
+            let actions = '';
+            if (req.type === 'makeupAttendance') {
+                const studentList = req.data.students.join('、');
+                if (req.requester === currentUser.username) {
+                    // 自己提交的補點名
+                    content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
+                    actions = `<span style="color:#718096;">等待管理員審批</span>`;
+                } else {
+                    // 他人的補點名（需要教練批准），但需要檢查授權班級
+                    const authClasses = currentUser.authorizedClasses;
+                    // 過濾出請求中哪些學生屬於教練授權班級
+                    const authorizedStudents = [];
+                    const unauthorizedStudents = [];
+                    req.data.students.forEach(sName => {
+                        const student = allStudents.find(s => s.name === sName);
+                        if (!student) {
+                            unauthorizedStudents.push(sName);
+                        } else {
+                            if (authClasses === '*' || authClasses.includes(student.class)) {
+                                authorizedStudents.push(sName);
+                            } else {
+                                unauthorizedStudents.push(sName);
+                            }
+                        }
+                    });
+
+                    if (authorizedStudents.length === 0) {
+                        // 沒有一個學生是授權班級的，不顯示此請求
+                        return; // 跳過此請求
+                    }
+
+                    // 構建內容，顯示授權學生和未授權學生
+                    content = `${req.requester} 請求為 `;
+                    if (authorizedStudents.length > 0) {
+                        content += `${authorizedStudents.join('、')}`;
+                        if (unauthorizedStudents.length > 0) {
+                            content += ` 及其他學生（不在您授權範圍）`;
+                        }
+                    }
+                    content += ` 補點名 (日期：${req.data.date})`;
+
+                    if (unauthorizedStudents.length > 0) {
+                        actions = `<span style="color:#b91c1c;">部分學生不在授權範圍，無法批准</span>`;
+                    } else {
+                        actions = `
+                            <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
+                            <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
+                        `;
+                    }
+                }
+            } else if (req.type === 'addClasses') {
+                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+                actions = `<span style="color:#718096;">等待管理員審批</span>`;
+            } else if (req.type === 'addStudent') {
+                content = `您請求新增學生 ${req.data.name} - 審批中`;
+                actions = `<span style="color:#718096;">等待管理員審批</span>`;
+            } else if (req.type === 'deleteStudent') {
+                content = `您請求刪除學生 ${req.data.name} - 審批中`;
+                actions = `<span style="color:#718096;">等待管理員審批</span>`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批</span>
+                <div class="content">${content}</div>
+                <div class="actions">${actions}</div>
+            </div>`;
+        });
+    } else if (currentUser.role === 'assistant') {
+        // 助教：只看到自己提交的請求，無批准按鈕
+        const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
+        myRequests.forEach(req => {
+            total++;
+            let content = '';
+            if (req.type === 'addClasses') {
+                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+            } else if (req.type === 'addStudent') {
+                content = `您請求新增學生 ${req.data.name} - 審批中`;
+            } else if (req.type === 'deleteStudent') {
+                content = `您請求刪除學生 ${req.data.name} - 審批中`;
+            } else if (req.type === 'makeupAttendance') {
+                const studentList = req.data.students.join('、');
+                content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
+            }
+            html += `<div class="notification-item">
+                <span class="type-tag">審批中</span>
+                <div class="content">${content}</div>
+                <div class="actions">
+                    <span style="color:#718096;">等待審批</span>
+                </div>
+            </div>`;
+        });
+    }
 
     if (total === 0) {
         html = '<div class="notification-item">目前沒有待辦通知</div>';
@@ -3385,6 +3460,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
