@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>教練後台 · 輪滑課程管理系統</title>
 <style>
+    .student-button.selected {
+    background: #fbbf24 !important;  /* 黃色表示待提交 */
+    border-color: #f59e0b !important;
+    color: #78350f !important;
+}
+.student-button.selected .class-count {
+    background: #f59e0b;
+    color: white;
+}
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -1042,10 +1051,11 @@
 
    <script>
     // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz3UbuYFs6TYWyQBsdZ-cQDzpZs7ZItQ9UMv0OBQFDGvED8trPl9p2ABKoXbquLLkGcWQ/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypa4Pgo1fNS0y-X1eqQzmzZcAvvVqMoxwdhm2UV-_Q1VZcb_L1f2EvMsw3Pe8HOyje4A/exec';
 
     let allStudents = [];
     let isMakeupMode = false;      // 是否處於補點名模式
+    let makeupSelectedStudents = new Set(); // 存放選中的學生姓名（用於補點名審批）
     let makeupDate = '';           // 當前選擇的補點名日期 (YYYY-MM-DD)
     let currentUser = null; // { username, role, authorizedClasses }
     const processing = {};
@@ -1302,26 +1312,29 @@ async function showSection(sectionId) {
                     allClasses.map(c => `<option value="${c}">${c}</option>`).join('');
             }
             scrollToSection('addStudent');
-        } else if (sectionId === 'attendance') {
-            updateAttendanceList();
-            scrollToSection('attendance');
-            // 補點名提示
-            const attendanceDiv = document.getElementById('attendance');
-            let hint = document.getElementById('makeupHint');
-            if (!hint) {
-                hint = document.createElement('div');
-                hint.id = 'makeupHint';
-                hint.className = 'info-box';
-                hint.style.marginBottom = '15px';
-                attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
-            }
-            if (isMakeupMode) {
-                hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出補點名</button>`;
-                hint.style.display = 'block';
-            } else {
-                hint.style.display = 'none';
-            }
-        } else if (sectionId === 'rental') {
+} else if (sectionId === 'attendance') {
+    updateAttendanceList();
+    scrollToSection('attendance');
+    // 補點名提示
+    const attendanceDiv = document.getElementById('attendance');
+    let hint = document.getElementById('makeupHint');
+    if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'makeupHint';
+        hint.className = 'info-box';
+        hint.style.marginBottom = '15px';
+        attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
+    }
+    if (isMakeupMode) {
+        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+            <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
+            <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
+            <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+        hint.style.display = 'block';
+    } else {
+        hint.style.display = 'none';
+    }
+} else if (sectionId === 'rental') {
             updateRentalList();
             scrollToSection('rental');
         } else if (sectionId === 'coachLeave') {
@@ -1462,7 +1475,57 @@ async function markMakeupAttendance(name) {
         }
     }
 }
+       async function submitMakeupApproval() {
+    if (makeupSelectedStudents.size === 0) {
+        showError('請至少選擇一位學生');
+        return;
+    }
+    if (!makeupDate) {
+        showError('日期不存在，請重新進入補點名模式');
+        return;
+    }
+
+    const lockKey = 'submitMakeupApproval';
+    if (processing[lockKey]) {
+        showError('正在提交中，請稍後...');
+        return;
+    }
+    processing[lockKey] = true;
+
+    const students = Array.from(makeupSelectedStudents);
+    const payload = {
+        type: 'makeupAttendance',
+        payload: {
+            students: students,
+            date: makeupDate
+        }
+    };
+
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify(payload))}&requester=${encodeURIComponent(currentUser.username)}`);
+        const result = await res.json();
+        if (result.success) {
+            showSuccess('補點名審批請求已提交，等待管理員批准');
+            makeupSelectedStudents.clear();
+            exitMakeupMode();
+        } else {
+            showError(result.error || '提交失敗');
+        }
+    } catch (err) {
+        showError('網路錯誤');
+    } finally {
+        delete processing[lockKey];
+    }
+}
     // ---------- 點名（根據權限過濾班級）----------
+function toggleMakeupStudent(name) {
+    if (makeupSelectedStudents.has(name)) {
+        makeupSelectedStudents.delete(name);
+    } else {
+        makeupSelectedStudents.add(name);
+    }
+    updateAttendanceList(); // 重新渲染按鈕樣式
+}
 function updateAttendanceList() {
     const container = document.getElementById('attendanceList');
     if (!container) return;
@@ -1478,25 +1541,39 @@ function updateAttendanceList() {
     for (let className in grouped) {
         html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
         grouped[className].forEach(s => {
-            const isChecked = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-            const disabled = isChecked ? 'disabled' : '';
-            const checkedClass = isChecked ? 'checked' : '';
+            const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+            const isSelectedMakeup = makeupSelectedStudents.has(s.name);
+            
+            let buttonClass = 'student-button';
+            let disabled = false;
+            let onClick = '';
+
+            if (isMakeupMode) {
+                // 補點名模式
+                if (isCheckedNormal) {
+                    buttonClass += ' checked';
+                    disabled = true;
+                } else {
+                    buttonClass += isSelectedMakeup ? ' selected' : '';
+                    onClick = `toggleMakeupStudent('${s.name}')`;
+                }
+            } else {
+                // 一般點名模式
+                if (isCheckedNormal) {
+                    buttonClass += ' checked';
+                    disabled = true;
+                }
+                onClick = `markAttendance('${s.name}')`;
+            }
+
             let buttonText = s.name;
             if (currentUser.role === 'coach' || currentUser.role === 'admin') {
                 const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+                if (zeroClass) buttonClass += ' zero-class';
                 buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
-                if (isMakeupMode) {
-                    html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markMakeupAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                } else {
-                    html += `<button class="student-button ${checkedClass} ${zeroClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                }
-            } else {
-                if (isMakeupMode) {
-                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markMakeupAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                } else {
-                    html += `<button class="student-button ${checkedClass}" data-name="${s.name}" onclick="markAttendance('${s.name}')" ${disabled}>${buttonText}</button>`;
-                }
             }
+
+            html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
         });
         html += '</div>';
     }
@@ -1593,6 +1670,7 @@ function resetAttendance() {
 function exitMakeupMode() {
     isMakeupMode = false;
     makeupDate = '';
+    makeupSelectedStudents.clear();
     showSection('attendance');
 }
 
@@ -1828,47 +1906,54 @@ paymentNotifications.forEach(p => {
     }
 
     // 審批請求
-    if (currentUser.role === 'admin') {
-        pendingApprovals.forEach(req => {
-            total++;
-            let content = '';
-            if (req.type === 'addClasses') {
-                content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
-            } else if (req.type === 'addStudent') {
-                content = `${req.requester} 請求新增學生 ${req.data.name}`;
-            } else if (req.type === 'deleteStudent') {
-                content = `${req.requester} 請求刪除學生 ${req.data.name}`;
-            }
-            html += `<div class="notification-item">
-                <span class="type-tag">審批</span>
-                <div class="content">${content}</div>
-                <div class="actions">
-                    <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
-                    <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
-                </div>
-            </div>`;
-        });
-    } else if (currentUser.role === 'coach') {
-        const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
-        myRequests.forEach(req => {
-            total++;
-            let content = '';
-            if (req.type === 'addClasses') {
-                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
-            } else if (req.type === 'addStudent') {
-                content = `您請求新增學生 ${req.data.name} - 審批中`;
-            } else if (req.type === 'deleteStudent') {
-                content = `您請求刪除學生 ${req.data.name} - 審批中`;
-            }
-            html += `<div class="notification-item">
-                <span class="type-tag">審批中</span>
-                <div class="content">${content}</div>
-                <div class="actions">
-                    <span style="color:#718096;">等待管理員審批</span>
-                </div>
-            </div>`;
-        });
-    }
+if (currentUser.role === 'admin') {
+    pendingApprovals.forEach(req => {
+        total++;
+        let content = '';
+        if (req.type === 'addClasses') {
+            content = `${req.requester} 請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂)`;
+        } else if (req.type === 'addStudent') {
+            content = `${req.requester} 請求新增學生 ${req.data.name}`;
+        } else if (req.type === 'deleteStudent') {
+            content = `${req.requester} 請求刪除學生 ${req.data.name}`;
+        } else if (req.type === 'makeupAttendance') {
+            const studentList = req.data.students.join('、');
+            content = `${req.requester} 請求為 ${studentList} 補點名 (日期：${req.data.date})`;
+        }
+        html += `<div class="notification-item">
+            <span class="type-tag">審批</span>
+            <div class="content">${content}</div>
+            <div class="actions">
+                <button class="btn-sm" onclick="approveRequest('${req.id}')">✅批准</button>
+                <button class="btn-sm" onclick="rejectRequest('${req.id}')">❌拒絕</button>
+            </div>
+        </div>`;
+    });
+}
+    } else if (currentUser.role === 'coach' || currentUser.role === 'assistant') {
+    const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
+    myRequests.forEach(req => {
+        total++;
+        let content = '';
+        if (req.type === 'addClasses') {
+            content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+        } else if (req.type === 'addStudent') {
+            content = `您請求新增學生 ${req.data.name} - 審批中`;
+        } else if (req.type === 'deleteStudent') {
+            content = `您請求刪除學生 ${req.data.name} - 審批中`;
+        } else if (req.type === 'makeupAttendance') {
+            const studentList = req.data.students.join('、');
+            content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
+        }
+        html += `<div class="notification-item">
+            <span class="type-tag">審批中</span>
+            <div class="content">${content}</div>
+            <div class="actions">
+                <span style="color:#718096;">等待管理員審批</span>
+            </div>
+        </div>`;
+    });
+}
 
     if (total === 0) {
         html = '<div class="notification-item">目前沒有待辦通知</div>';
@@ -3300,6 +3385,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
