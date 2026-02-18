@@ -1325,26 +1325,24 @@ async function showSection(sectionId) {
                 hint.style.marginBottom = '15px';
                 attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
             }
-if (isMakeupMode) {
-    let actionButtons = '';
-    if (currentUser.role === 'admin' || currentUser.role === 'assistant') {
-        actionButtons = `
-            <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
-            <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>
-        `;
-        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-            <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
-            ${actionButtons}`;
-    } else if (currentUser.role === 'coach') {
-        actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
-        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-            <span style="margin-left:10px;">點擊學生直接補點名</span>
-            ${actionButtons}`;
-    }
-    hint.style.display = 'block';
-} else {
-    hint.style.display = 'none';
-} else {
+            if (isMakeupMode) {
+                let actionButtons = '';
+                if (isAdmin || isAssistant) {
+                    actionButtons = `
+                        <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
+                        <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>
+                    `;
+                    hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+                        <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
+                        ${actionButtons}`;
+                } else if (isCoach) {
+                    actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+                    hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+                        <span style="margin-left:10px;">點擊學生直接補點名</span>
+                        ${actionButtons}`;
+                }
+                hint.style.display = 'block';
+            } else {
                 hint.style.display = 'none';
             }
         } else if (sectionId === 'rental') {
@@ -3484,6 +3482,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
