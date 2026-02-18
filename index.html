@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>家長查詢 · 輪滑課程系統</title>
+    <title>輪滑課程管理系統</title>
     <style>
         * {
             box-sizing: border-box;
@@ -139,9 +139,44 @@
         .footer p {
             margin-bottom: 5px;
         }
+
+        /* 載入中浮層（全螢幕，與教練後台一致） */
+        #loadingSpinner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30000;
+            color: white;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        #loadingSpinner .spinner {
+            border: 5px solid rgba(255,255,255,0.2);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+        #loadingSpinner p {
+            font-size: 1.2rem;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 訊息條（改為頂部，避免被鍵盤遮擋） */
         .message {
             position: fixed;
-            bottom: 80px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: auto;
@@ -153,11 +188,12 @@
             font-weight: 500;
             text-align: center;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            z-index: 3000;
+            z-index: 31000;
             transition: opacity 0.3s ease;
             pointer-events: none;
             backdrop-filter: blur(8px);
             color: white;
+            display: none;
         }
         .message.info { background: #2563eb; }
         .message.success { background: #16a34a; }
@@ -318,6 +354,7 @@
             .modal-info-label { width: 90px; font-size: 0.9rem; }
             .modal-info-value { font-size: 0.9rem; }
             .modal-buttons button { padding: 10px 22px; }
+            .message { top: 10px; } /* 手機上頂部間距縮小 */
         }
         @media screen and (max-width: 380px) {
             .modal-info-label { width: 80px; }
@@ -330,19 +367,25 @@
 <body>
     <a href="coach.html" class="coach-fab">⚙️ 教練入口 →</a>
     <div class="container">
-        <h1>⚡ 輪滑課程管理系統 · 家長查詢</h1>
-        <p>🛼滾軸溜冰私教輪滑團隊</p>
+        <h1>🛼 輪滑課程管理系統 · 家長查詢</h1>
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
-            <input type="text" id="searchInput" placeholder="例如：王小明" autocomplete="off">
+            <input type="text" id="searchInput" placeholder="例如：王小明可輸入'王','小','小明'或'明'即可搜尋" autocomplete="off">
             <div class="search-hint">💡 點擊學生姓名可查看完整記錄（請假、租借、上課記錄）</div>
             <div id="studentList" class="student-list"></div>
         </div>
-        <div id="message" class="message" style="display: none;"></div>
+        <div id="message" class="message"></div>
         <div class="footer">
             <p>⚠️ 請假超過2次將自動扣減1堂課。租借裝備每次 $20。</p>
-            <p>系統版本 Version 5.0 By Thomas哥哥~ 有咩意見同迪哥哥講 :)</p>
+            <p>🛼滾軸溜冰私教輪滑團隊🛼</p>
+            <p>系統版本 Version 6.0 By Thomas哥哥~有咩意見同迪哥哥講我改進下</p>
         </div>
+    </div>
+
+    <!-- 載入中全螢幕浮層 -->
+    <div id="loadingSpinner">
+        <div class="spinner"></div>
+        <p>載入中，請稍後...</p>
     </div>
 
     <!-- 學生詳細資訊模態框 -->
@@ -358,9 +401,32 @@
         const searchInput = document.getElementById('searchInput');
         const studentListDiv = document.getElementById('studentList');
         const messageDiv = document.getElementById('message');
+        const loadingSpinner = document.getElementById('loadingSpinner');
         const modalOverlay = document.getElementById('studentModal');
         const modalContent = document.getElementById('modalContent');
         let searchTimer;
+
+        // 顯示載入中浮層
+        function showLoading(message = '載入中，請稍後...') {
+            loadingSpinner.style.display = 'flex';
+            loadingSpinner.querySelector('p').textContent = message;
+        }
+        function hideLoading() {
+            loadingSpinner.style.display = 'none';
+        }
+
+        // 顯示訊息條（僅用於非載入狀態的提示）
+        function showMessage(msg, type = 'info') {
+            messageDiv.textContent = msg;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+        function hideMessage() {
+            messageDiv.style.display = 'none';
+        }
 
         searchInput.addEventListener('input', function(e) {
             clearTimeout(searchTimer);
@@ -373,14 +439,15 @@
         });
 
         async function performSearch(keyword) {
-            showMessage('搜尋中...', 'info');
+            showLoading('搜尋中...');
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=searchStudent&keyword=${encodeURIComponent(keyword)}`);
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || '搜尋失敗');
                 renderStudentList(data.students || []);
-                hideMessage();
+                hideLoading();
             } catch (err) {
+                hideLoading();
                 showMessage('❌ ' + err.message, 'error');
             }
         }
@@ -402,15 +469,16 @@
         }
 
         async function loadStudentDetail(name) {
-            showMessage('載入詳細記錄...', 'info');
+            showLoading('載入詳細記錄...');
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 renderModal(data);
                 modalOverlay.style.display = 'flex';
-                hideMessage();
+                hideLoading();
             } catch (err) {
+                hideLoading();
                 showMessage('❌ 無法載入記錄：' + err.message, 'error');
             }
         }
@@ -494,18 +562,6 @@
                 closeModal();
             }
         });
-
-        function showMessage(msg, type = 'info') {
-            messageDiv.textContent = msg;
-            messageDiv.className = `message ${type}`;
-            messageDiv.style.display = 'block';
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 3000);
-        }
-        function hideMessage() {
-            messageDiv.style.display = 'none';
-        }
     </script>
 </body>
 </html>
