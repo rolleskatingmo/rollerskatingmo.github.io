@@ -1325,13 +1325,26 @@ async function showSection(sectionId) {
                 hint.style.marginBottom = '15px';
                 attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
             }
-            if (isMakeupMode) {
-                hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-                    <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
-                    <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
-                    <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
-                hint.style.display = 'block';
-            } else {
+if (isMakeupMode) {
+    let actionButtons = '';
+    if (currentUser.role === 'admin' || currentUser.role === 'assistant') {
+        actionButtons = `
+            <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
+            <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>
+        `;
+        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+            <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
+            ${actionButtons}`;
+    } else if (currentUser.role === 'coach') {
+        actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
+            <span style="margin-left:10px;">點擊學生直接補點名</span>
+            ${actionButtons}`;
+    }
+    hint.style.display = 'block';
+} else {
+    hint.style.display = 'none';
+} else {
                 hint.style.display = 'none';
             }
         } else if (sectionId === 'rental') {
@@ -1544,38 +1557,52 @@ function updateAttendanceList() {
     let html = '';
     for (let className in grouped) {
         html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-        grouped[className].forEach(s => {
-            const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-            const isSelectedMakeup = makeupSelectedStudents.has(s.name);
-            
-            let buttonClass = 'student-button';
-            let disabled = false;
-            let onClick = '';
+ grouped[className].forEach(s => {
+    const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+    const isSelectedMakeup = makeupSelectedStudents.has(s.name);
+    
+    let buttonClass = 'student-button';
+    let disabled = false;
+    let onClick = '';
 
-            if (isMakeupMode) {
-                // 補點名模式：不參考 localStorage，所有學生都可選
-                buttonClass += isSelectedMakeup ? ' selected' : '';
-                // 不加入 checked 類，也不根據 localStorage 禁用
-                disabled = false;
-                onClick = `toggleMakeupStudent('${s.name}')`;
+    if (isMakeupMode) {
+        // 補點名模式
+        if (currentUser.role === 'coach') {
+            // 教練直接補點名，不可選中多個
+            if (isCheckedNormal) {
+                buttonClass += ' checked';
+                disabled = true;
             } else {
-                // 一般點名模式
-                if (isCheckedNormal) {
-                    buttonClass += ' checked';
-                    disabled = true;
-                }
-                onClick = `markAttendance('${s.name}')`;
+                onClick = `markMakeupAttendance('${s.name}')`;
             }
-
-            let buttonText = s.name;
-            if (currentUser.role === 'coach' || currentUser.role === 'admin') {
-                const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
-                if (zeroClass) buttonClass += ' zero-class';
-                buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+        } else {
+            // 管理員或助教：可選中多個後提交審批
+            if (isCheckedNormal) {
+                buttonClass += ' checked';
+                disabled = true;
+            } else {
+                buttonClass += isSelectedMakeup ? ' selected' : '';
+                onClick = `toggleMakeupStudent('${s.name}')`;
             }
+        }
+    } else {
+        // 一般點名模式
+        if (isCheckedNormal) {
+            buttonClass += ' checked';
+            disabled = true;
+        }
+        onClick = `markAttendance('${s.name}')`;
+    }
 
-            html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
-        });
+    let buttonText = s.name;
+    if (currentUser.role === 'coach' || currentUser.role === 'admin') {
+        const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+        if (zeroClass) buttonClass += ' zero-class';
+        buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+    }
+
+    html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+});
         html += '</div>';
     }
     container.innerHTML = html;
@@ -1928,46 +1955,40 @@ function renderNotificationBody() {
                 </div>
             </div>`;
         });
-    } else if (currentUser.role === 'coach') {
-        // 教練：看到所有補點名請求（需檢查授權班級）以及自己提交的其他請求（只顯示狀態）
-        const coachRequests = pendingApprovals.filter(req => {
-            return req.type === 'makeupAttendance' || req.requester === currentUser.username;
-        });
-        coachRequests.forEach(req => {
-            total++;
-            let content = '';
-            let actions = '';
-            if (req.type === 'makeupAttendance') {
-                const studentList = req.data.students.join('、');
-                if (req.requester === currentUser.username) {
-                    // 自己提交的補點名
-                    content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
-                    actions = `<span style="color:#718096;">等待管理員審批</span>`;
-                } else {
-                    // 他人的補點名（需要教練批准），但需要檢查授權班級
-                    const authClasses = currentUser.authorizedClasses;
-                    // 過濾出請求中哪些學生屬於教練授權班級
-                    const authorizedStudents = [];
-                    const unauthorizedStudents = [];
-                    req.data.students.forEach(sName => {
-                        const student = allStudents.find(s => s.name === sName);
-                        if (!student) {
-                            unauthorizedStudents.push(sName);
+} else if (currentUser.role === 'coach') {
+    const coachRequests = pendingApprovals.filter(req => {
+        return req.type === 'makeupAttendance' || req.requester === currentUser.username;
+    });
+    coachRequests.forEach(req => {
+        let content = '';
+        let actions = '';
+        let shouldDisplay = true;
+        if (req.type === 'makeupAttendance') {
+            const studentList = req.data.students.join('、');
+            if (req.requester === currentUser.username) {
+                content = `您請求為 ${studentList} 補點名 (日期：${req.data.date}) - 審批中`;
+                actions = `<span style="color:#718096;">等待管理員審批</span>`;
+            } else {
+                // 他人的補點名，檢查授權班級
+                const authClasses = currentUser.authorizedClasses;
+                const authorizedStudents = [];
+                const unauthorizedStudents = [];
+                req.data.students.forEach(sName => {
+                    const student = allStudents.find(s => s.name === sName);
+                    if (!student) {
+                        unauthorizedStudents.push(sName);
+                    } else {
+                        if (authClasses === '*' || authClasses.includes(student.class)) {
+                            authorizedStudents.push(sName);
                         } else {
-                            if (authClasses === '*' || authClasses.includes(student.class)) {
-                                authorizedStudents.push(sName);
-                            } else {
-                                unauthorizedStudents.push(sName);
-                            }
+                            unauthorizedStudents.push(sName);
                         }
-                    });
-
-                    if (authorizedStudents.length === 0) {
-                        // 沒有一個學生是授權班級的，不顯示此請求
-                        return; // 跳過此請求
                     }
+                });
 
-                    // 構建內容，顯示授權學生和未授權學生
+                if (authorizedStudents.length === 0) {
+                    shouldDisplay = false;
+                } else {
                     content = `${req.requester} 請求為 `;
                     if (authorizedStudents.length > 0) {
                         content += `${authorizedStudents.join('、')}`;
@@ -1986,23 +2007,28 @@ function renderNotificationBody() {
                         `;
                     }
                 }
-            } else if (req.type === 'addClasses') {
-                content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
-                actions = `<span style="color:#718096;">等待管理員審批</span>`;
-            } else if (req.type === 'addStudent') {
-                content = `您請求新增學生 ${req.data.name} - 審批中`;
-                actions = `<span style="color:#718096;">等待管理員審批</span>`;
-            } else if (req.type === 'deleteStudent') {
-                content = `您請求刪除學生 ${req.data.name} - 審批中`;
-                actions = `<span style="color:#718096;">等待管理員審批</span>`;
             }
+        } else if (req.type === 'addClasses') {
+            content = `您請求為 ${req.data.name} 增減課堂 (${req.data.classesChange}堂) - 審批中`;
+            actions = `<span style="color:#718096;">等待管理員審批</span>`;
+        } else if (req.type === 'addStudent') {
+            content = `您請求新增學生 ${req.data.name} - 審批中`;
+            actions = `<span style="color:#718096;">等待管理員審批</span>`;
+        } else if (req.type === 'deleteStudent') {
+            content = `您請求刪除學生 ${req.data.name} - 審批中`;
+            actions = `<span style="color:#718096;">等待管理員審批</span>`;
+        }
+
+        if (shouldDisplay) {
+            total++;
             html += `<div class="notification-item">
                 <span class="type-tag">審批</span>
                 <div class="content">${content}</div>
                 <div class="actions">${actions}</div>
             </div>`;
-        });
-    } else if (currentUser.role === 'assistant') {
+        }
+    });
+} else if (currentUser.role === 'assistant') {
         // 助教：只看到自己提交的請求，無批准按鈕
         const myRequests = pendingApprovals.filter(req => req.requester === currentUser.username);
         myRequests.forEach(req => {
@@ -3458,6 +3484,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
 
 
 
