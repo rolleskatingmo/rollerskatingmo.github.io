@@ -573,20 +573,24 @@
     .class-header.collapsed .toggle-icon {
         transform: rotate(-90deg);
     }
+/* 班級學生列表容器 */
+.class-students {
+    transition: max-height 0.3s ease;
+    max-height: 2000px;          /* 一個足夠大的值，確保能容納所有學生 */
+    overflow-y: auto;             /* 內容過高時顯示滾動條 */
+}
 
+.class-students.collapsed {
+    max-height: 0;
+    overflow: hidden;             /* 折疊時隱藏滾動條 */
+}
+
+/* 可選：限制最大高度為視窗高度的 70%，避免列表過長時佔滿整個螢幕 */
+@media screen and (min-height: 600px) {
     .class-students {
-        transition: max-height 0.3s ease, opacity 0.3s;
-        max-height: 1000px;
-        opacity: 1;
-        overflow: hidden;
+        max-height: 70vh;
     }
-
-    .class-students.collapsed {
-        max-height: 0;
-        opacity: 0;
-        margin: 0;
-    }
-
+}
     /* ===== 訊息提示 ===== */
     .message {
         position: fixed;
