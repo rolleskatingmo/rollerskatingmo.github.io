@@ -437,19 +437,113 @@
     }
 
     /* ===== 學生資訊列表 ===== */
-    .student-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #f8fafc;
-        padding: 18px 20px;
-        border-radius: 28px;
-        margin-bottom: 12px;
-        border: 1px solid #e9eef2;
-        flex-wrap: wrap;
-        gap: 12px;
-        transition: 0.2s;
+    /* 學生卡片新樣式（取代原有的 .student-row） */
+.student-card {
+    background: #f8fafc;
+    border-radius: 24px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #e9eef2;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.student-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.student-name-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.student-icons {
+    font-size: 1rem;
+}
+
+.student-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.remaining-class {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #e0f2fe;
+    padding: 4px 12px;
+    border-radius: 40px;
+}
+
+.remaining-class.remaining-zero {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.student-stats {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.student-stats .leave-badge,
+.student-stats .rental-badge {
+    padding: 6px 16px;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.student-note {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    color: #475569;
+    margin-bottom: 12px;
+    word-break: break-word;
+}
+
+.student-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.student-actions .btn-sm {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+}
+
+/* 手機適配微調 */
+@media screen and (max-width: 600px) {
+    .student-card {
+        padding: 14px;
     }
+    .student-name {
+        font-size: 1.1rem;
+    }
+    .remaining-class {
+        font-size: 1rem;
+        padding: 3px 10px;
+    }
+    .student-stats .leave-badge,
+    .student-stats .rental-badge {
+        padding: 4px 12px;
+        font-size: 0.75rem;
+    }
+    .student-actions .btn-sm {
+        padding: 5px 12px;
+        font-size: 0.75rem;
+    }
+}
 
     .student-row:hover {
         background: #f1f5f9;
@@ -2814,7 +2908,7 @@ function renderNoteListByClass() {
         if (!grouped[s.class]) grouped[s.class] = [];
         grouped[s.class].push(s);
         if (classCollapsed[s.class] === undefined) {
-            classCollapsed[s.class] = true;
+            classCollapsed[s.class] = true; // 預設折疊
         }
     });
 
@@ -2828,47 +2922,59 @@ function renderNoteListByClass() {
             <h3>${className}班</h3>
         </div>`;
         html += `<div class="class-students ${collapsed}" id="class-${className}">`;
-        grouped[className].forEach(s => {
-            const icons = [];
-            if (currentUser.role === 'admin') {
-                if (s.remainingClasses <= 0) icons.push('🔴');
-            }
-            if (s.leaveCount >= 2) icons.push('🟡');
-            const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
 
-            html += `<div class="student-row">
-                <div class="details">
-                    <div class="name-with-icons">
-                        ${iconsHtml}
-                        <strong>${s.name}</strong>
+        grouped[className].forEach(s => {
+            // 狀態圖示
+            const icons = [];
+            if (currentUser.role === 'admin' && s.remainingClasses <= 0) icons.push('🔴');
+            if (s.leaveCount >= 2) icons.push('🟡');
+            const iconsHtml = icons.length ? `<span class="student-icons">${icons.join(' ')}</span>` : '';
+
+            // 剩餘堂數顯示（若0堂則紅字）
+            const remainingClass = s.remainingClasses <= 0 ? 'remaining-zero' : '';
+            const remainingDisplay = `<span class="remaining-class ${remainingClass}">${s.remainingClasses} 堂</span>`;
+
+            // 操作按鈕（根據權限）
+            let actionsHtml = '';
+            if (currentUser.role === 'admin') {
+                actionsHtml = `
+                    <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
+                    <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
+                    <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
+                `;
+            } else if (currentUser.role === 'coach') {
+                actionsHtml = `
+                    <button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除</button>
+                    <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
+                `;
+            }
+
+            // 備註（若存在）
+            const noteHtml = s.note ? `<div class="student-note">📝 ${s.note}</div>` : '';
+
+            // 學生卡片 HTML（垂直佈局）
+            html += `
+                <div class="student-card">
+                    <div class="student-card-header">
+                        <div class="student-name-icons">
+                            ${iconsHtml}
+                            <span class="student-name"><strong>${s.name}</strong></span>
+                        </div>
+                        ${remainingDisplay}
                     </div>
-                    <div class="stats">`;
-            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
-            }
-            html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
+                    <div class="student-stats">
+                        <span class="leave-badge">請假 ${s.leaveCount}</span>
                         <span class="rental-badge">租借 ${s.rentalCount}</span>
-                    </div>`;
-            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
-            }
-            html += `</div>`;
-            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                html += `<div class="actions">`;
-                if (currentUser.role === 'admin') {
-                    html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
-                    // 續費按鈕已移除，必須透過通知欄續費
-                    html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
-                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
-                } else if (currentUser.role === 'coach') {
-                    html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
-                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
-                }
-                html += `</div>`;
-            }
-            html += `</div>`;
+                    </div>
+                    ${noteHtml}
+                    <div class="student-actions">
+                        ${actionsHtml}
+                    </div>
+                </div>
+            `;
         });
-        html += `</div>`;
+
+        html += `</div>`; // 關閉 class-students
     });
     container.innerHTML = html || '無學生資料';
 }
