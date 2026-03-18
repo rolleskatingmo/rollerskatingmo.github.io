@@ -304,11 +304,17 @@
     .record-table td {
         padding: 12px 8px;
         border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;        /* 防止數字換行 */
     }
 
     /* 日期欄位強制不換行，以便顯示星期 */
     .record-table td:first-child {
         white-space: nowrap;
+    }
+
+    /* 剩餘堂數靠右對齊 */
+    .record-table td:last-child {
+        text-align: right;
     }
 
     .record-table tr:last-child td {
@@ -490,10 +496,14 @@
         let searchTimer;
         let loadingTimeout = null;
 
-        // 新增：取得星期幾
+        // 改進的 getWeekday：支援 yyyy/MM/dd 和 yyyy-MM-dd
         function getWeekday(dateStr) {
+            if (!dateStr) return '';
             const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            const d = new Date(dateStr + 'T00:00:00');
+            // 將 'yyyy/MM/dd' 轉為 'yyyy-MM-dd'
+            const normalized = dateStr.replace(/\//g, '-');
+            const d = new Date(normalized + 'T00:00:00');
+            if (isNaN(d.getTime())) return '';
             return weekdays[d.getDay()];
         }
 
@@ -571,6 +581,8 @@
                 if (data.error) throw new Error(data.error);
                 renderModal(data);
                 modalOverlay.style.display = 'flex';
+                // 強制滾動到頂部
+                modalContent.scrollTop = 0;
                 hideLoading();
             } catch (err) {
                 hideLoading();
@@ -614,7 +626,8 @@
                         <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                         <tbody>`;
                 allRecords.slice(0, 30).forEach(rec => {
-                    const dateWithWeekday = `${rec.date} ${getWeekday(rec.date)}`;
+                    const weekday = getWeekday(rec.date);
+                    const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
                     if (rec.type === '上課') {
                         const isMakeup = rec.reason === '補點名';
                         const rowClass = isMakeup ? 'makeup-row' : '';
