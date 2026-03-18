@@ -623,7 +623,7 @@
             } else {
                 recordsHtml = `<div style="overflow-x: auto;">
                     <table class="record-table">
-                        <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
+                        <thead><tr><th>日期</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                         <tbody>`;
                 allRecords.slice(0, 30).forEach(rec => {
                     const weekday = getWeekday(rec.date);
@@ -632,9 +632,9 @@
                         const isMakeup = rec.reason === '補點名';
                         const rowClass = isMakeup ? 'makeup-row' : '';
                         const typeLabel = isMakeup ? '補點名' : '上課';
-                        recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td>${rec.time || ''}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
+                        recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
                     } else {
-                        recordsHtml += `<tr><td>${dateWithWeekday}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
+                        recordsHtml += `<tr><td>${dateWithWeekday}</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
                     }
                 });
                 recordsHtml += `</tbody></table></div>`;
