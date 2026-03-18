@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>輪滑課程管理系統</title>
+    <title>輪滑課程管理系統 · 家長查詢</title>
 <style>
     /* ===== 全局重置與變數 ===== */
     * {
@@ -23,61 +23,10 @@
     }
 
     .container {
-        max-width: 600px;  /* 手機舒適寬度 */
+        max-width: 600px;
         margin: 0 auto;
-        background: transparent;  /* 背景由內部卡片提供 */
+        background: transparent;
         padding: 0;
-    }
-
-    /* ===== 頂部用戶欄 ===== */
-    .user-bar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 16px;
-        background: white;
-        padding: 12px 16px;
-        border-radius: 40px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
-    }
-
-    .user-info {
-        background: #eef2ff;
-        padding: 8px 20px;
-        border-radius: 40px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #1e4a7a;
-        flex: 1 1 auto;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .btn-sm {
-        padding: 8px 16px;
-        font-size: 0.85rem;
-        border-radius: 40px;
-        border: none;
-        font-weight: 500;
-        background: white;
-        border: 1px solid #e2e8f0;
-        color: #334155;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-
-    .btn-sm:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    }
-
-    .btn-sm:active {
-        transform: translateY(0);
     }
 
     /* ===== 主要標題 ===== */
@@ -90,101 +39,8 @@
         padding: 0 4px;
     }
 
-    /* ===== 功能按鈕網格 ===== */
-    .button-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-        margin: 20px 0;
-    }
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 14px 12px;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 40px;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
-        background: white;
-        color: #1e293b;
-        border: 1px solid #e2e8f0;
-        line-height: 1.2;
-        text-align: center;
-        gap: 6px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(145deg, #2563eb, #1d4ed8);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #2563eb80;
-    }
-
-    .btn-success {
-        background: linear-gradient(145deg, #16a34a, #15803d);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #16a34a80;
-    }
-
-    .btn-warning {
-        background: linear-gradient(145deg, #ea580c, #c2410c);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #ea580c80;
-    }
-
-    .btn-danger {
-        background: linear-gradient(145deg, #dc2626, #b91c1c);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #dc262680;
-    }
-
-    .btn-purple {
-        background: linear-gradient(145deg, #9333ea, #7e22ce);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #9333ea80;
-    }
-
-    .btn-indigo {
-        background: linear-gradient(145deg, #4f46e5, #4338ca);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #4f46e580;
-    }
-
-    .btn-rental {
-        background: linear-gradient(145deg, #0891b2, #0e7490);
-        color: white;
-        border: none;
-        box-shadow: 0 8px 16px -6px #0891b280;
-    }
-
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn:active {
-        transform: translateY(0);
-        box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn:disabled {
-        opacity: 0.5;
-        pointer-events: none;
-        transform: none;
-    }
-
     /* ===== 卡片區塊 ===== */
-    .section {
+    .section, .search-area {
         background: white;
         border-radius: 32px;
         padding: 24px 20px;
@@ -193,194 +49,24 @@
         border: 1px solid rgba(226, 232, 240, 0.6);
     }
 
-    .section h2 {
-        font-size: 1.4rem;
+    .search-label {
+        display: block;
         font-weight: 600;
-        margin-bottom: 20px;
-        color: #0f172a;
-        letter-spacing: -0.01em;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 8px;
     }
 
-    .section h3 {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin: 20px 0 12px;
-        color: #334155;
-    }
-
-    /* ===== 通知欄 ===== */
-    .notification-section {
-        background: white;
-        border-radius: 32px;
-        margin-bottom: 24px;
-        border: 1px solid #e9eef2;
-        overflow: hidden;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.02);
-    }
-
-    .notification-header {
-        background: #f8fafc;
-        padding: 18px 20px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        user-select: none;
-        font-size: 1.1rem;
-        border-bottom: 1px solid #e9eef2;
-    }
-
-    .notification-header .toggle-icon {
-        font-size: 1rem;
-        transition: transform 0.2s;
+    .search-hint {
+        font-size: 0.85rem;
         color: #64748b;
-    }
-
-    .notification-header.collapsed .toggle-icon {
-        transform: rotate(-90deg);
-    }
-
-    .notification-body {
-        transition: max-height 0.3s ease, padding 0.3s;
-        max-height: 1000px;
-        overflow: hidden;
-    }
-
-    .notification-body.collapsed {
-        max-height: 0;
-        padding: 0 20px;
-    }
-
-    .notification-item {
-        padding: 18px 20px;
-        border-bottom: 1px solid #edf2f7;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 16px;
-        background: white;
-    }
-
-    .notification-item:last-child {
-        border-bottom: none;
-    }
-
-    .notification-item .type-tag {
-        background: #2563eb;
-        color: white;
-        padding: 6px 16px;
+        margin: 12px 0 8px;
+        background: #f1f5f9;
+        padding: 10px 14px;
         border-radius: 40px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        min-width: 70px;
-        text-align: center;
-    }
-
-    .notification-item .content {
-        flex: 1;
-        min-width: 200px;
-        font-size: 0.95rem;
-    }
-
-    .notification-item .actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    /* ===== 點名/租借按鈕 ===== */
-    .student-button, .rental-button {
-        background: white;
-        border: 1px solid #e2e8f0;
-        padding: 12px 20px;
-        border-radius: 40px;
-        margin: 6px;
-        font-weight: 500;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-        line-height: 1.2;
-    }
-
-    .student-button .class-count {
-        background: #e2e8f0;
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    .student-button.zero-class {
-        background: #fee2e2 !important;
-        border-color: #fecaca !important;
-        color: #991b1b !important;
-    }
-
-    .student-button.zero-class .class-count {
-        background: #fecaca;
-        color: #7f1d1d;
-    }
-
-    .student-button.checked {
-        background: #bbf7d0 !important;
-        border-color: #86efac !important;
-        color: #166534 !important;
-        opacity: 0.9;
-        cursor: default;
-    }
-
-    .student-button.checked .class-count {
-        background: #86efac;
-        color: #14532d;
-    }
-
-    .student-button.selected {
-        background: #fef3c7 !important;
-        border-color: #fbbf24 !important;
-        color: #92400e !important;
-    }
-
-    .rental-button {
-        background: #0891b2;
-        color: white;
-        border: none;
-        min-width: 100px;
-        justify-content: center;
     }
 
     /* ===== 表單元素 ===== */
-    .form-row {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        margin-bottom: 20px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        flex: 1 1 200px;
-    }
-
-    label {
-        font-weight: 600;
-        font-size: 0.8rem;
-        color: #475569;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-    }
-
     input, select, textarea {
         padding: 14px 18px;
         border: 1px solid #d1d9e6;
@@ -400,191 +86,31 @@
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
-    .search-dropdown {
-        position: relative;
-        width: 100%;
-    }
-
-    .dropdown-list {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid #d1d9e6;
-        border-radius: 24px;
-        max-height: 250px;
-        overflow-y: auto;
-        z-index: 1000;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-        display: none;
-    }
-
-    .dropdown-item {
-        padding: 14px 18px;
-        cursor: pointer;
-        border-bottom: 1px solid #edf2f7;
-        font-size: 0.95rem;
-        transition: background 0.15s;
-    }
-
-    .dropdown-item:hover {
-        background: #f1f5f9;
-    }
-
-    .dropdown-item:last-child {
-        border-bottom: none;
-    }
-
-    /* ===== 學生資訊列表 ===== */
-    .student-row {
+    /* ===== 學生標籤 ===== */
+    .student-list {
+        margin-top: 16px;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #f8fafc;
-        padding: 18px 20px;
-        border-radius: 28px;
-        margin-bottom: 12px;
-        border: 1px solid #e9eef2;
         flex-wrap: wrap;
-        gap: 12px;
-        transition: 0.2s;
-    }
-
-    .student-row:hover {
-        background: #f1f5f9;
-    }
-
-    .student-row .details {
-        flex: 1;
-        min-width: 200px;
-    }
-
-    .student-row .details .name-with-icons {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 6px;
-    }
-
-    .student-row .details .icons {
-        font-size: 1.1rem;
-    }
-
-    .student-row .details .stats {
-        display: flex;
-        gap: 12px;
-        margin-top: 8px;
-        flex-wrap: wrap;
-    }
-
-    .student-row .details .note {
-        font-size: 0.85rem;
-        color: #64748b;
-        margin-top: 8px;
-        word-break: break-word;
-        background: white;
-        padding: 6px 14px;
-        border-radius: 30px;
-        display: inline-block;
-        border: 1px solid #e2e8f0;
-    }
-
-    .student-row .actions {
-        display: flex;
         gap: 10px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
     }
 
-    /* 狀態標籤 */
-    .leave-badge, .rental-badge, .class-badge-stat {
-        padding: 6px 16px;
-        border-radius: 40px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-
-    .leave-badge {
-        background: #ef4444;
-        color: white;
-    }
-
-    .rental-badge {
-        background: #0891b2;
-        color: white;
-    }
-
-    .class-badge-stat {
+    .student-tag {
         background: #2563eb;
         color: white;
-    }
-
-    .class-badge {
-        display: inline-block;
-        background: #2563eb;
-        color: white;
-        padding: 8px 20px;
+        padding: 10px 20px;
         border-radius: 40px;
-        margin: 0 8px 8px 0;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: 0.2s;
-        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
-        cursor: default;
-    }
-
-    .class-badge[onclick] {
-        cursor: pointer;
-    }
-
-    .class-badge[onclick]:hover {
-        filter: brightness(1.1);
-        transform: scale(1.02);
-    }
-
-    /* 折疊區塊 */
-    .class-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 24px 0 12px;
-        cursor: pointer;
-        user-select: none;
-        padding: 8px 16px;
-        background: #f1f5f9;
-        border-radius: 40px;
-    }
-
-    .class-header h3 {
-        margin: 0;
-        font-size: 1.2rem;
-    }
-
-    .class-header .toggle-icon {
         font-size: 1rem;
-        transition: transform 0.2s;
-        color: #475569;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.2s;
+        box-shadow: 0 4px 8px rgba(37,99,235,0.2);
+        display: inline-block;
     }
 
-    .class-header.collapsed .toggle-icon {
-        transform: rotate(-90deg);
-    }
-
-    .class-students {
-        transition: max-height 0.3s ease, opacity 0.3s;
-        max-height: 1000px;
-        opacity: 1;
-        overflow: hidden;
-    }
-
-    .class-students.collapsed {
-        max-height: 0;
-        opacity: 0;
-        margin: 0;
+    .student-tag:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(37,99,235,0.3);
+        filter: brightness(1.05);
     }
 
     /* ===== 訊息提示 ===== */
@@ -622,61 +148,25 @@
         color: white;
     }
 
-    /* ===== 登入表單 ===== */
-    #loginForm {
-        max-width: 400px;
-        margin: 80px auto;
-        background: white;
-        padding: 40px 30px;
-        border-radius: 48px;
-        box-shadow: 0 25px 40px -12px rgba(0,0,0,0.15);
-        text-align: center;
-    }
-
-    #loginForm h2 {
-        font-size: 2rem;
-        margin-bottom: 20px;
-        color: #0f172a;
-    }
-
-    #loginForm input {
-        margin: 12px 0;
-        padding: 16px;
-        border-radius: 40px;
-    }
-
-    /* ===== 載入中 ===== */
-    #loadingSpinner {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.7);
-        display: none;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 20000;
+    .message.loading {
+        background: #2563eb;
         color: white;
-        text-align: center;
-        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    #loadingSpinner .spinner {
-        border: 5px solid rgba(255,255,255,0.2);
-        border-top: 5px solid white;
+    /* ===== 載入中的小spinner ===== */
+    .spinner-small {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top: 2px solid white;
         border-radius: 50%;
-        width: 70px;
-        height: 70px;
-        animation: spin 1s linear infinite;
-        margin-bottom: 25px;
-    }
-
-    #loadingSpinner p {
-        font-size: 1.2rem;
-        font-weight: 500;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        animation: spin 0.6s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
     }
 
     @keyframes spin {
@@ -714,29 +204,118 @@
         to { opacity: 1; transform: scale(1); }
     }
 
-    .modal-content h3 {
+    .modal-content h2 {
+        font-size: 1.6rem;
+        font-weight: 600;
         margin-bottom: 20px;
         color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .modal-content h3 {
+        font-size: 1.2rem;
         font-weight: 600;
-        font-size: 1.5rem;
+        margin: 20px 0 12px;
+        color: #334155;
     }
 
-    .modal-content input,
-    .modal-content select,
-    .modal-content textarea {
+    .modal-info-row {
+        display: flex;
+        margin-bottom: 12px;
+        background: #f8fafc;
+        padding: 10px 16px;
+        border-radius: 28px;
+    }
+
+    .modal-info-label {
+        flex: 0 0 100px;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .modal-info-value {
+        flex: 1;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .warning-text {
+        background: #ffedd5;
+        border-left: 4px solid #f97316;
+        padding: 12px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: #9a3412;
+        margin: 16px 0;
+    }
+
+    /* ===== 記錄表格 ===== */
+    .record-table {
         width: 100%;
-        padding: 14px 18px;
-        border: 1px solid #d1d9e6;
-        border-radius: 30px;
-        margin-bottom: 20px;
-        font-size: 1rem;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-top: 16px;
     }
 
+    .record-table th {
+        text-align: left;
+        padding: 12px 8px;
+        background: #f1f5f9;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .record-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .record-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .makeup-row {
+        background-color: #fee2e2 !important;  /* 淡紅色背景表示補點名 */
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .badge.red {
+        background: #ef4444;
+        color: white;
+    }
+
+    .badge.green {
+        background: #16a34a;
+        color: white;
+    }
+
+    .badge.blue {
+        background: #2563eb;
+        color: white;
+    }
+
+    .badge.yellow {
+        background: #fbbf24;
+        color: #78350f;
+    }
+
+    /* ===== 模態框按鈕 ===== */
     .modal-buttons {
         display: flex;
         gap: 16px;
         justify-content: flex-end;
-        margin-top: 10px;
+        margin-top: 20px;
     }
 
     .modal-buttons button {
@@ -747,28 +326,15 @@
         cursor: pointer;
         transition: 0.2s;
         font-size: 0.95rem;
-    }
-
-    .modal-buttons .confirm {
         background: #2563eb;
         color: white;
         border: none;
         box-shadow: 0 6px 12px -4px #2563eb80;
     }
 
-    .modal-buttons .confirm:hover {
+    .modal-buttons button:hover {
         background: #1d4ed8;
         transform: translateY(-2px);
-    }
-
-    .modal-buttons .cancel {
-        background: #f1f5f9;
-        color: #334155;
-        border: 1px solid #cbd5e1;
-    }
-
-    .modal-buttons .cancel:hover {
-        background: #e2e8f0;
     }
 
     /* ===== 頁腳 ===== */
@@ -785,33 +351,33 @@
         margin-bottom: 5px;
     }
 
-    /* ===== 輔助類 ===== */
-    .info-box {
-        background: #eef2ff;
-        border-left: 4px solid #2563eb;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        border-radius: 28px;
+    /* ===== 教練浮動按鈕 ===== */
+    .coach-fab {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #1e293b;
+        color: white;
+        padding: 14px 24px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        z-index: 100;
+        transition: 0.2s;
         font-size: 0.95rem;
-        color: #1e3a8a;
     }
 
-    .trial-alert {
-        background: #fffbeb;
-        border: 1px solid #fcd34d;
-        border-radius: 28px;
-        padding: 16px 20px;
-        margin-bottom: 24px;
+    .coach-fab:hover {
+        background: #0f172a;
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.25);
     }
 
-    /* ===== 手機適配強化 ===== */
+    /* ===== 手機適配 ===== */
     @media screen and (max-width: 600px) {
         body {
             padding: 8px;
-        }
-
-        .user-bar {
-            padding: 10px 14px;
         }
 
         h1 {
@@ -819,43 +385,9 @@
             margin: 16px 0 12px;
         }
 
-        .button-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 12px 8px;
-            font-size: 0.9rem;
-        }
-
-        .section {
+        .search-area, .section {
             padding: 20px 16px;
             border-radius: 28px;
-        }
-
-        .section h2 {
-            font-size: 1.3rem;
-        }
-
-        .student-button, .rental-button {
-            font-size: 0.9rem;
-            padding: 10px 16px;
-            margin: 4px;
-        }
-
-        .student-row {
-            padding: 16px;
-        }
-
-        .student-row .actions {
-            width: 100%;
-            justify-content: flex-start;
-        }
-
-        .btn-sm {
-            padding: 6px 14px;
-            font-size: 0.8rem;
         }
 
         .modal-content {
@@ -863,39 +395,29 @@
             border-radius: 36px;
         }
 
-        .modal-content h3 {
-            font-size: 1.3rem;
+        .modal-content h2 {
+            font-size: 1.4rem;
         }
 
         .modal-buttons button {
             padding: 10px 20px;
         }
 
-        .notification-header {
-            padding: 16px;
-        }
-
-        .notification-item {
-            padding: 14px 16px;
+        .coach-fab {
+            bottom: 16px;
+            right: 16px;
+            padding: 12px 20px;
+            font-size: 0.85rem;
         }
     }
 
     @media screen and (max-width: 380px) {
-        .button-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .user-bar {
+        .student-list {
             flex-direction: column;
-            align-items: stretch;
         }
-
-        .user-info {
-            text-align: center;
-        }
-
-        .user-bar .btn-sm {
+        .student-tag {
             width: 100%;
+            text-align: center;
         }
     }
 
@@ -942,16 +464,16 @@
         const modalOverlay = document.getElementById('studentModal');
         const modalContent = document.getElementById('modalContent');
         let searchTimer;
-        let loadingTimeout = null; // 用於自動隱藏（以防萬一）
+        let loadingTimeout = null;
 
-        // 顯示載入中（頂部訊息條 + spinner）
+        // 顯示載中（頂部訊息條 + spinner）
         function showLoading(message = '載入中...') {
-            // 清除之前的定時器
             if (loadingTimeout) clearTimeout(loadingTimeout);
-            // 設定內容：文字 + spinner
             messageDiv.innerHTML = `
-                <span>${message}</span>
-                <span class="spinner-small"></span>
+                <div class="loading">
+                    ${message}
+                    <span class="spinner-small"></span>
+                </div>
             `;
             messageDiv.className = 'message loading';
             messageDiv.style.display = 'flex';
@@ -965,11 +487,10 @@
 
         // 顯示普通訊息（非載入狀態）
         function showMessage(msg, type = 'info') {
-            hideLoading(); // 先隱藏 loading
-            messageDiv.innerHTML = msg; // 純文字
-            messageDiv.className = `message ${type}`;
+            hideLoading();
+            const className = type === 'error' ? 'error' : 'success';
+            messageDiv.innerHTML = `<div class="${className}">${msg}</div>`;
             messageDiv.style.display = 'block';
-            // 3秒後自動隱藏
             setTimeout(() => {
                 messageDiv.style.display = 'none';
             }, 3000);
@@ -999,11 +520,10 @@
             }
         }
 
-        // 只顯示姓名和班級，不顯示剩餘堂數
         function renderStudentList(students) {
             studentListDiv.innerHTML = '';
             if (students.length === 0) {
-                studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
+                studentListDiv.innerHTML = '<span style="color:#71896;">查無符合學生，請聯繫教練。</span>';
                 return;
             }
             students.forEach(s => {
@@ -1031,7 +551,6 @@
         }
 
         function renderModal(d) {
-            // 請假次數徽章
             let leaveBadge = '';
             if (d.leaveCount >= 2) {
                 leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
@@ -1039,7 +558,6 @@
                 leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
             }
 
-            // 剩餘課堂顯示與警告
             let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
             let remainingWarning = '';
             if (d.remainingClasses <= 0) {
@@ -1050,7 +568,6 @@
                 remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
             }
 
-            // 合併上課與請假記錄
             let allRecords = [
                 ...d.classRecords.map(r => ({ ...r, type: '上課' })),
                 ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
@@ -1065,15 +582,15 @@
                     <table class="record-table">
                         <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                         <tbody>`;
-allRecords.slice(0, 30).forEach(rec => {
-    if (rec.type === '上課') {
-        const isMakeup = rec.reason === '補點名';
-        const rowClass = isMakeup ? 'makeup-row' : '';
-        recordsHtml += `<tr class="${rowClass}"><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
-    } else {
-        recordsHtml += `<tr><td>${rec.date}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
-    }
-});
+                allRecords.slice(0, 30).forEach(rec => {
+                    if (rec.type === '上課') {
+                        const isMakeup = rec.reason === '補點名';
+                        const rowClass = isMakeup ? 'makeup-row' : '';
+                        recordsHtml += `<tr class="${rowClass}"><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
+                    } else {
+                        recordsHtml += `<tr><td>${rec.date}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
+                    }
+                });
                 recordsHtml += `</tbody></table></div>`;
             }
 
@@ -1105,7 +622,6 @@ allRecords.slice(0, 30).forEach(rec => {
             modalOverlay.style.display = 'none';
         }
 
-        // 點擊遮罩層也可關閉
         modalOverlay.addEventListener('click', function(e) {
             if (e.target === modalOverlay) {
                 closeModal();
