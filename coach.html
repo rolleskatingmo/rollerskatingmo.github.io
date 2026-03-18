@@ -2804,74 +2804,74 @@
     }
 
     // ---------- 學生資訊列表 ----------
-    function renderNoteListByClass() {
-        const container = document.getElementById('noteListByClass');
-        if (!container) return;
+function renderNoteListByClass() {
+    const container = document.getElementById('noteListByClass');
+    if (!container) return;
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            if (!grouped[s.class]) grouped[s.class] = [];
-            grouped[s.class].push(s);
-            if (classCollapsed[s.class] === undefined) {
-                classCollapsed[s.class] = true;
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+        if (classCollapsed[s.class] === undefined) {
+            classCollapsed[s.class] = true;
+        }
+    });
+
+    let html = '';
+    const sortedClasses = sortClasses(Object.keys(grouped));
+    sortedClasses.forEach(className => {
+        const collapsed = classCollapsed[className] ? 'collapsed' : '';
+        const icon = classCollapsed[className] ? '▶' : '▼';
+        html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+            <span class="toggle-icon">${icon}</span>
+            <h3>${className}班</h3>
+        </div>`;
+        html += `<div class="class-students ${collapsed}" id="class-${className}">`;
+        grouped[className].forEach(s => {
+            const icons = [];
+            if (currentUser.role === 'admin') {
+                if (s.remainingClasses <= 0) icons.push('🔴');
             }
-        });
+            if (s.leaveCount >= 2) icons.push('🟡');
+            const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
 
-        let html = '';
-        const sortedClasses = sortClasses(Object.keys(grouped));
-        sortedClasses.forEach(className => {
-            const collapsed = classCollapsed[className] ? 'collapsed' : '';
-            const icon = classCollapsed[className] ? '▶' : '▼';
-            html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
-                <span class="toggle-icon">${icon}</span>
-                <h3>${className}班</h3>
-            </div>`;
-            html += `<div class="class-students ${collapsed}" id="class-${className}">`;
-            grouped[className].forEach(s => {
-                const icons = [];
+            html += `<div class="student-row">
+                <div class="details">
+                    <div class="name-with-icons">
+                        ${iconsHtml}
+                        <strong>${s.name}</strong>
+                    </div>
+                    <div class="stats">`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
+            }
+            html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
+                        <span class="rental-badge">租借 ${s.rentalCount}</span>
+                    </div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
+            }
+            html += `</div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<div class="actions">`;
                 if (currentUser.role === 'admin') {
-                    if (s.remainingClasses <= 0) icons.push('🔴');
-                }
-                if (s.leaveCount >= 2) icons.push('🟡');
-                const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
-
-                html += `<div class="student-row">
-                    <div class="details">
-                        <div class="name-with-icons">
-                            ${iconsHtml}
-                            <strong>${s.name}</strong>
-                        </div>
-                        <div class="stats">`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
-                }
-                html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
-                            <span class="rental-badge">租借 ${s.rentalCount}</span>
-                        </div>`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
+                    html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
+                    // 續費按鈕已移除，必須透過通知欄續費
+                    html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
+                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
+                } else if (currentUser.role === 'coach') {
+                    html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
+                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
                 }
                 html += `</div>`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += `<div class="actions">`;
-                    if (currentUser.role === 'admin') {
-                        html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
-                        html += `<button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>`;
-                        html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
-                        html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
-                    } else if (currentUser.role === 'coach') {
-                        html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
-                        html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
-                    }
-                    html += `</div>`;
-                }
-                html += `</div>`;
-            });
+            }
             html += `</div>`;
         });
-        container.innerHTML = html || '無學生資料';
-    }
+        html += `</div>`;
+    });
+    container.innerHTML = html || '無學生資料';
+}
 
     window.toggleClass = function(className) {
         classCollapsed[className] = !classCollapsed[className];
