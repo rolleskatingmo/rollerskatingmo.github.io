@@ -20,6 +20,8 @@
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        /* 提升觸控區域 */
+        -webkit-tap-highlight-color: transparent;
     }
 
     .container {
@@ -97,7 +99,7 @@
     .student-tag {
         background: #2563eb;
         color: white;
-        padding: 10px 20px;
+        padding: 12px 22px;  /* 增加點擊區域 */
         border-radius: 40px;
         font-size: 1rem;
         font-weight: 500;
@@ -105,12 +107,18 @@
         transition: 0.2s;
         box-shadow: 0 4px 8px rgba(37,99,235,0.2);
         display: inline-block;
+        -webkit-tap-highlight-color: rgba(37,99,235,0.3);
     }
 
     .student-tag:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 16px rgba(37,99,235,0.3);
         filter: brightness(1.05);
+    }
+
+    .student-tag:active {
+        transform: translateY(0);
+        opacity: 0.9;
     }
 
     /* ===== 訊息提示 ===== */
@@ -226,7 +234,7 @@
         display: flex;
         margin-bottom: 12px;
         background: #f8fafc;
-        padding: 10px 16px;
+        padding: 12px 16px;  /* 增加內距 */
         border-radius: 28px;
     }
 
@@ -278,7 +286,7 @@
     }
 
     .makeup-row {
-        background-color: #fee2e2 !important;  /* 淡紅色背景表示補點名 */
+        background-color: #fee2e2 !important;
     }
 
     .badge {
@@ -330,11 +338,17 @@
         color: white;
         border: none;
         box-shadow: 0 6px 12px -4px #2563eb80;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .modal-buttons button:hover {
         background: #1d4ed8;
         transform: translateY(-2px);
+    }
+
+    .modal-buttons button:active {
+        transform: translateY(0);
+        opacity: 0.9;
     }
 
     /* ===== 頁腳 ===== */
@@ -351,30 +365,37 @@
         margin-bottom: 5px;
     }
 
-    /* ===== 教練浮動按鈕 ===== */
+    /* ===== 教練浮動按鈕（改為藍色，避免黑色）===== */
     .coach-fab {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #1e293b;
+        background: #2563eb;  /* 原本黑色改為藍色 */
         color: white;
         padding: 14px 24px;
         border-radius: 50px;
         text-decoration: none;
         font-weight: 600;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 25px rgba(37,99,235,0.3);
         z-index: 100;
         transition: 0.2s;
         font-size: 0.95rem;
+        -webkit-tap-highlight-color: transparent;
+        border: none;
     }
 
     .coach-fab:hover {
-        background: #0f172a;
+        background: #1d4ed8;
         transform: translateY(-3px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+        box-shadow: 0 15px 30px rgba(37,99,235,0.4);
     }
 
-    /* ===== 手機適配 ===== */
+    .coach-fab:active {
+        transform: translateY(0);
+        opacity: 0.9;
+    }
+
+    /* ===== 手機適配強化 ===== */
     @media screen and (max-width: 600px) {
         body {
             padding: 8px;
@@ -401,6 +422,7 @@
 
         .modal-buttons button {
             padding: 10px 20px;
+            font-size: 0.9rem;
         }
 
         .coach-fab {
@@ -408,6 +430,20 @@
             right: 16px;
             padding: 12px 20px;
             font-size: 0.85rem;
+        }
+
+        .student-tag {
+            padding: 10px 18px;
+            font-size: 0.95rem;
+        }
+
+        .modal-info-row {
+            padding: 10px 14px;
+        }
+
+        .modal-info-label {
+            flex-basis: 80px;
+            font-size: 0.9rem;
         }
     }
 
@@ -426,6 +462,11 @@
         background: transparent;
         padding: 4px;
         cursor: pointer;
+    }
+
+    /* 改善觸控回饋 */
+    button, .student-tag, .coach-fab {
+        touch-action: manipulation;
     }
 </style>
 </head>
