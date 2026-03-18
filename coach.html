@@ -1351,7 +1351,7 @@ function scrollToSection(sectionId) {
 }
     // ---------- 載入所有資料 ----------
 // ---------- 載入所有資料（並行優化）----------
-async function loadAllData() {
+ function loadAllData() {
     try {
         document.getElementById('loadingSpinner').style.display = 'flex';
 
@@ -1433,7 +1433,7 @@ function applyRoleRestrictions() {
 
     // ---------- 區塊切換 ----------
 // ---------- 區塊切換（顯示載入中） ----------
-async function showSection(sectionId) {
+ function showSection(sectionId) {
     if (!currentUser) return;
 
     const role = currentUser.role;
@@ -1609,7 +1609,127 @@ function getFilteredStudents() {
             showError(result.message);
         }
     }
+// 顯示學生詳細記錄（教練調閱用）
+async function showStudentRecords(name) {
+    showLoadingSpinner('載入學生記錄...');
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
 
+        // 渲染模態框內容（包含時間欄位）
+        renderCoachStudentModal(data);
+        document.getElementById('coachStudentRecordModal').style.display = 'flex';
+        // 滾動到頂部
+        const modalContent = document.getElementById('coachStudentRecordContent');
+        if (modalContent) modalContent.scrollTop = 0;
+    } catch (err) {
+        showError('無法載入記錄：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+    }
+}
+
+// 渲染教練端學生記錄模態框（包含時間）
+function renderCoachStudentModal(d) {
+    let leaveBadge = '';
+    if (d.leaveCount >= 2) {
+        leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
+    } else {
+        leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
+    }
+
+    let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
+    let remainingWarning = '';
+    if (d.remainingClasses <= 0) {
+        remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
+        remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫家長繳費。</div>`;
+    } else if (d.remainingClasses <= 2) {
+        remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
+        remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請提醒家長續費。</div>`;
+    }
+
+    // 合併上課與請假記錄
+    let allRecords = [
+        ...d.classRecords.map(r => ({ ...r, type: '上課' })),
+        ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
+    ];
+    allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 輔助函數：取得星期幾
+    function getWeekday(dateStr) {
+        if (!dateStr) return '';
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const normalized = dateStr.replace(/\//g, '-');
+        const d = new Date(normalized + 'T00:00:00');
+        if (isNaN(d.getTime())) return '';
+        return weekdays[d.getDay()];
+    }
+
+    let recordsHtml = '';
+    if (allRecords.length === 0) {
+        recordsHtml = '<p style="color:#718096;">尚無任何上課或請假記錄。</p>';
+    } else {
+        recordsHtml = `<div style="overflow-x: auto;">
+            <table class="record-table">
+                <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
+                <tbody>`;
+        allRecords.slice(0, 50).forEach(rec => {
+            const weekday = getWeekday(rec.date);
+            const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
+            if (rec.type === '上課') {
+                const isMakeup = rec.reason === '補點名';
+                const rowClass = isMakeup ? 'makeup-row' : '';
+                const typeLabel = isMakeup ? '補點名' : '上課';
+                recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td>${rec.time || ''}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
+            } else {
+                recordsHtml += `<tr><td>${dateWithWeekday}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
+            }
+        });
+        recordsHtml += `</tbody></table></div>`;
+    }
+
+    const modalContent = document.getElementById('coachStudentRecordContent');
+    modalContent.innerHTML = `
+        <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
+        ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
+        <div class="modal-info-row">
+            <span class="modal-info-label">班級</span>
+            <span class="modal-info-value">${d.class}</span>
+        </div>
+        <div class="modal-info-row">
+            <span class="modal-info-label">剩餘課堂</span>
+            <span class="modal-info-value">${remainingDisplay}</span>
+        </div>
+        ${remainingWarning}
+        <div class="modal-info-row">
+            <span class="modal-info-label">租借裝備</span>
+            <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
+        </div>
+        <h3>📋 完整記錄</h3>
+        ${recordsHtml}
+        <div class="modal-buttons">
+            <button onclick="closeCoachStudentModal()">關閉</button>
+        </div>
+    `;
+}
+
+// 關閉教練端學生記錄模態框
+function closeCoachStudentModal() {
+    document.getElementById('coachStudentRecordModal').style.display = 'none';
+}
+
+// 為模態框添加點擊遮罩關閉功能
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('coachStudentRecordModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeCoachStudentModal();
+            }
+        });
+    }
+});
     async function deleteClass(className) {
         if (currentUser.role !== 'admin') { showError('無權限'); return; }
         if (!confirm(`確定刪除班級「${className}」？`)) return;
@@ -2634,73 +2754,78 @@ searchInput.addEventListener('input', function(e) {
     }
 
     // ---------- 學生資訊列表 ----------
-    function renderNoteListByClass() {
-        const container = document.getElementById('noteListByClass');
-        if (!container) return;
+function renderNoteListByClass() {
+    const container = document.getElementById('noteListByClass');
+    if (!container) return;
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            if (!grouped[s.class]) grouped[s.class] = [];
-            grouped[s.class].push(s);
-        });
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        if (!grouped[s.class]) grouped[s.class] = [];
+        grouped[s.class].push(s);
+        // 初始化摺疊狀態為 true（預設摺疊）
+        if (classCollapsed[s.class] === undefined) {
+            classCollapsed[s.class] = true;
+        }
+    });
 
-        let html = '';
-        const sortedClasses = sortClasses(Object.keys(grouped));
-        sortedClasses.forEach(className => {
-            const collapsed = classCollapsed[className] ? 'collapsed' : '';
-            const icon = classCollapsed[className] ? '▶' : '▼';
-            html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
-                <span class="toggle-icon">${icon}</span>
-                <h3>${className}班</h3>
-            </div>`;
-            html += `<div class="class-students ${collapsed}" id="class-${className}">`;
-            grouped[className].forEach(s => {
-                const icons = [];
+    let html = '';
+    const sortedClasses = sortClasses(Object.keys(grouped));
+    sortedClasses.forEach(className => {
+        const collapsed = classCollapsed[className] ? 'collapsed' : '';
+        const icon = classCollapsed[className] ? '▶' : '▼';
+        html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+            <span class="toggle-icon">${icon}</span>
+            <h3>${className}班</h3>
+        </div>`;
+        html += `<div class="class-students ${collapsed}" id="class-${className}">`;
+        grouped[className].forEach(s => {
+            const icons = [];
+            if (currentUser.role === 'admin') {
+                if (s.remainingClasses <= 0) icons.push('🔴');
+            }
+            if (s.leaveCount >= 2) icons.push('🟡');
+            const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
+
+            html += `<div class="student-row">
+                <div class="details">
+                    <div class="name-with-icons">
+                        ${iconsHtml}
+                        <strong>${s.name}</strong>
+                    </div>
+                    <div class="stats">`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
+            }
+            html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
+                        <span class="rental-badge">租借 ${s.rentalCount}</span>
+                    </div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
+            }
+            html += `</div>`;
+            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+                html += `<div class="actions">`;
                 if (currentUser.role === 'admin') {
-                    if (s.remainingClasses <= 0) icons.push('🔴');
-                }
-                if (s.leaveCount >= 2) icons.push('🟡');
-                const iconsHtml = icons.length ? `<span class="icons">${icons.join(' ')}</span>` : '';
-
-                html += `<div class="student-row">
-                    <div class="details">
-                        <div class="name-with-icons">
-                            ${iconsHtml}
-                            <strong>${s.name}</strong>
-                        </div>
-                        <div class="stats">`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += `<span class="class-badge-stat">剩 ${s.remainingClasses} 堂</span>`;
-                }
-                html += `<span class="leave-badge">請假 ${s.leaveCount}</span>
-                            <span class="rental-badge">租借 ${s.rentalCount}</span>
-                        </div>`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += s.note ? `<div class="note">📝 ${s.note}</div>` : '<div class="note" style="color:#a0aec0;">無備註</div>';
+                    html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
+                    // 已刪除：清零請假、清零租借
+                    html += `<button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>`;
+                    html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
+                    // 新增調閱記錄按鈕
+                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
+                } else if (currentUser.role === 'coach') {
+                    html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
+                    // 教練也加上調閱記錄按鈕
+                    html += `<button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋調閱記錄</button>`;
                 }
                 html += `</div>`;
-                if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                    html += `<div class="actions">`;
-                    if (currentUser.role === 'admin') {
-                        html += `<button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️編輯備註</button>`;
-                        html += `<button class="btn-sm" onclick="clearStudentLeave('${s.name}', event)">🧹清零請假</button>`;
-                        html += `<button class="btn-sm" onclick="clearStudentRental('${s.name}', event)">🛞清零租借</button>`;
-                        html += `<button class="btn-sm" onclick="quickRenew('${s.name}', '${s.class}')">💰續費</button>`;
-                        html += `<button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除學生</button>`;
-                    } else if (currentUser.role === 'coach') {
-                        // 教練僅保留刪除（需審批）
-                        html += `<button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除學生</button>`;
-                    }
-                    html += `</div>`;
-                }
-                html += `</div>`;
-            });
+            }
             html += `</div>`;
         });
-        container.innerHTML = html || '無學生資料';
-    }
-
+        html += `</div>`;
+    });
+    container.innerHTML = html || '無學生資料';
+}
     window.toggleClass = function(className) {
         classCollapsed[className] = !classCollapsed[className];
         renderNoteListByClass();
@@ -3658,6 +3783,12 @@ window.addEventListener('DOMContentLoaded', async function() {
         }
     }
 });
+    <!-- 學生詳細記錄模態框（教練調閱用） -->
+    <div id="coachStudentRecordModal" class="modal-overlay">
+        <div class="modal-content" id="coachStudentRecordContent">
+            <!-- 動態填入 -->
+        </div>
+    </div>
 </script>
 </body>
 </html>
