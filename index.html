@@ -549,7 +549,6 @@
                 showMessage('❌ 無法載入記錄：' + err.message, 'error');
             }
         }
-
         function renderModal(d) {
             let leaveBadge = '';
             if (d.leaveCount >= 2) {
@@ -568,8 +567,10 @@
                 remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
             }
 
+            // 只保留實際的上課記錄（點名扣課 和 補點名），忽略新增、續費、調整等
+            let classRecordsFiltered = d.classRecords.filter(r => r.reason === '點名扣課' || r.reason === '補點名');
             let allRecords = [
-                ...d.classRecords.map(r => ({ ...r, type: '上課' })),
+                ...classRecordsFiltered.map(r => ({ ...r, type: '上課' })),
                 ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
             ];
             allRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -586,7 +587,8 @@
                     if (rec.type === '上課') {
                         const isMakeup = rec.reason === '補點名';
                         const rowClass = isMakeup ? 'makeup-row' : '';
-                        recordsHtml += `<tr class="${rowClass}"><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">上課</span></td><td>${rec.remainingClasses}</td></tr>`;
+                        const typeLabel = isMakeup ? '補點名' : '上課';
+                        recordsHtml += `<tr class="${rowClass}"><td>${rec.date}</td><td>${rec.time || ''}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
                     } else {
                         recordsHtml += `<tr><td>${rec.date}</td><td>—</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
                     }
