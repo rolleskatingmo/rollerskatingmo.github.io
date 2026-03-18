@@ -876,7 +876,7 @@
             </div>
 
             <!-- 教練代請假區塊 -->
-            <div id="coachLeave" class="section" style="display: none;">
+                       <div id="coachLeave" class="section" style="display: none;">
                 <h2>📝 教練代為請假</h2>
                 <div class="info-box">🔍 輸入姓名關鍵字選擇學生。</div>
                 <div class="form-row">
@@ -888,6 +888,7 @@
                         </div>
                     </div>
                     <div class="form-group"><label>班級</label><input type="text" id="coachLeaveSelectedClass" readonly></div>
+                    <div class="form-group"><label>請假日期</label><input type="date" id="coachLeaveDate" value=""></div>
                     <button class="btn btn-purple" onclick="submitCoachLeave()" style="width:100%;">提交請假</button>
                 </div>
                 <div id="coachLeaveMessage"></div>
@@ -1051,7 +1052,7 @@
 
    <script>
     // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzF8JqFUmYrSq_HR_3TOwDoywSFuJZA8cIFzupT3v0hsfhKIdTb7u2vu0bVvEav9qXb1A/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzD94eYw4_TnWZBiD6ehsVeP5ciYHP9siyQY90nqshZRt69j-cHJuEzS5f2jCB2c2ipyA/exec';
 
     let allStudents = [];
     let isMakeupMode = false;      // 是否處於補點名模式
@@ -1171,9 +1172,14 @@ function scrollToSection(sectionId) {
     setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const rect = element.getBoundingClientRect();
+            const absoluteTop = rect.top + window.pageYOffset - 20; // 向上偏移 20px，避免貼齊頂部
+            window.scrollTo({
+                top: absoluteTop,
+                behavior: 'smooth'
+            });
         }
-    }, 150); // 延遲 150ms 確保內容已渲染
+    }, 350); // 增加延遲確保 DOM 已更新
 }
     // ---------- 載入所有資料 ----------
 // ---------- 載入所有資料（並行優化）----------
@@ -2782,7 +2788,7 @@ coachSearch.addEventListener('input', function(e) {
         coachDropdown.style.display = 'none';
     };
 
-    async function submitCoachLeave() {
+        async function submitCoachLeave() {
         if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
         if (processing.coachLeave) {
             showError('正在處理中...');
@@ -2798,16 +2804,21 @@ coachSearch.addEventListener('input', function(e) {
         try {
             const name = document.getElementById('coachLeaveSearchInput').value.trim();
             const className = document.getElementById('coachLeaveSelectedClass').value;
+            let leaveDate = document.getElementById('coachLeaveDate').value;
+            if (!leaveDate) {
+                leaveDate = getTodayUTC8();  // 預設為今天
+            }
+
             if (!name || !className) {
                 showError('請選擇學生');
                 return;
             }
             const student = allStudents.find(s => s.name === name);
-            let msg = `確定為 ${name} 提交請假？`;
+            let msg = `確定為 ${name} 提交請假？\n請假日期：${leaveDate}`;
             if (student && student.leaveCount >= 2) msg += '\n⚠️ 將扣1堂課！';
             if (!confirm(msg)) return;
 
-            const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
+            const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}&date=${encodeURIComponent(leaveDate)}`);
             const result = await res.json();
             if (result.success) {
                 showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
@@ -2816,6 +2827,7 @@ coachSearch.addEventListener('input', function(e) {
                 renderNoteListByClass();
                 document.getElementById('coachLeaveSearchInput').value = '';
                 document.getElementById('coachLeaveSelectedClass').value = '';
+                document.getElementById('coachLeaveDate').value = '';
             } else {
                 showError(result.error || '請假失敗');
             }
@@ -2829,7 +2841,6 @@ coachSearch.addEventListener('input', function(e) {
             delete processing.coachLeave;
         }
     }
-
     // ---------- 班級選擇器函數 ----------
     function renderClassSelection() {
         const container = document.getElementById('classSelectionContainer');
