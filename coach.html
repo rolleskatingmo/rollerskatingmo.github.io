@@ -1427,7 +1427,18 @@
             <!-- 動態填入 -->
         </div>
     </div>
-
+    
+    <div id="editStudentNameModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✏️ 修改學生姓名</h3>
+            <p>原姓名：<span id="oldStudentName"></span></p>
+            <input type="text" id="newStudentNameInput" placeholder="請輸入新姓名" autocomplete="off">
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeEditStudentNameModal()">取消</button>
+                <button class="confirm" onclick="submitEditStudentName()">確認修改</button>
+            </div>
+        </div>
+    </div>
     <script>
     // ========== 後端網址 ==========
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzD94eYw4_TnWZBiD6ehsVeP5ciYHP9siyQY90nqshZRt69j-cHJuEzS5f2jCB2c2ipyA/exec';
@@ -2941,6 +2952,7 @@ function renderNoteListByClass() {
                     <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
                     <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
                     <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
+                    <button class="btn-sm" onclick="openEditStudentNameModal('${s.name}')">✏️改名</button>
                 `;
             } else if (currentUser.role === 'coach') {
                 actionsHtml = `
