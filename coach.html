@@ -1903,7 +1903,51 @@
     function closeCoachStudentModal() {
         document.getElementById('coachStudentRecordModal').style.display = 'none';
     }
+   // 開啟修改姓名模態框
+function openEditStudentNameModal(oldName) {
+    document.getElementById('oldStudentName').textContent = oldName;
+    document.getElementById('newStudentNameInput').value = oldName;
+    document.getElementById('editStudentNameModal').style.display = 'flex';
+    window.currentEditingStudent = oldName;
+}
 
+// 關閉修改姓名模態框
+function closeEditStudentNameModal() {
+    document.getElementById('editStudentNameModal').style.display = 'none';
+    window.currentEditingStudent = null;
+}
+
+// 提交修改姓名
+async function submitEditStudentName() {
+    const oldName = window.currentEditingStudent;
+    const newName = document.getElementById('newStudentNameInput').value.trim();
+    if (!newName) {
+        showError('請輸入新姓名');
+        return;
+    }
+    if (oldName === newName) {
+        showError('新姓名與原姓名相同');
+        return;
+    }
+
+    showLoadingSpinner('修改姓名中...');
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=updateStudentName&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(newName)}&operator=${encodeURIComponent(currentUser.username)}`);
+        const result = await res.json();
+        if (result.success) {
+            showSuccess('學生姓名修改成功');
+            closeEditStudentNameModal();
+            await fetchAllStudents();
+            renderNoteListByClass();
+        } else {
+            showError(result.error || '修改失敗');
+        }
+    } catch (err) {
+        showError('網路錯誤：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+    }
+}
     async function deleteClass(className) {
         if (currentUser.role !== 'admin') { showError('無權限'); return; }
         if (!confirm(`確定刪除班級「${className}」？`)) return;
