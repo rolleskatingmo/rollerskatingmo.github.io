@@ -1961,7 +1961,6 @@ async function confirmRenewQuantity() {
 
 // 實際執行續費的邏輯
 // 實際執行續費的邏輯
-// 實際執行續費的邏輯
 async function executeRenew(name, className, delta) {
     const lockKey = `renew_${name}`;
     if (processing[lockKey]) {
@@ -1972,15 +1971,21 @@ async function executeRenew(name, className, delta) {
     showLoadingSpinner('續費處理中...');
 
     try {
-        // 再次確認學生當前班級（使用最新的 allStudents）
-        const student = allStudents.find(s => s.name === name);
+        // 再次確認學生是否存在（使用當前 allStudents）
+        await fetchAllStudents(); // 確保最新
+        const student = allStudents.find(s => 
+            s.name === name || 
+            s.name.trim() === name.trim() || 
+            s.name.toLowerCase() === name.toLowerCase()
+        );
         if (!student) {
-            throw new Error('找不到該學生，請重新整理頁面');
+            throw new Error(`找不到學生「${name}」，請確認學生是否存在`);
         }
-        const currentClass = student.class;
-        if (currentClass !== className) {
-            console.warn(`班級不一致：傳入班級 ${className}，實際班級 ${currentClass}，將使用實際班級`);
-            className = currentClass;
+        // 使用學生的實際班級（可能與傳入的不同）
+        const actualClass = student.class;
+        if (actualClass !== className) {
+            console.warn(`班級不一致：傳入班級 ${className}，實際班級 ${actualClass}，將使用實際班級`);
+            className = actualClass;
         }
 
         // 清零請假次數
@@ -2039,13 +2044,41 @@ async function executeRenew(name, className, delta) {
 }
 
 // 修改原本的 quickRenew 函數，改為調用模態框
-async function quickRenew(name, className) {
+// 修改原本的 quickRenew 函數，先獲取學生當前班級
+async function quickRenew(name, classNameFromNotification) {
     if (currentUser.role !== 'admin') {
         showError('只有管理員可以執行續費操作');
         return;
     }
-    // 開啟續費數量模態框
-    openRenewQuantityModal(name, className);
+    
+    // 刷新學生列表，確保是最新的
+    await fetchAllStudents();
+    
+    // 從 allStudents 中獲取該學生的最新班級（忽略大小寫、前後空格）
+    const student = allStudents.find(s => 
+        s.name === name || 
+        s.name.trim() === name.trim() || 
+        s.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (!student) {
+        // 嘗試從繳費記錄的班級繼續，但警告用戶
+        if (confirm(`找不到學生「${name}」，是否仍使用繳費記錄中的班級「${classNameFromNotification}」進行續費？\n注意：如果學生已改名或轉班，可能導致錯誤。`)) {
+            openRenewQuantityModal(name, classNameFromNotification);
+        }
+        return;
+    }
+    
+    const currentClass = student.class;
+    
+    // 如果通知欄傳入的班級與當前班級不同，提示使用者
+    if (classNameFromNotification && classNameFromNotification !== currentClass) {
+        const confirmMsg = `此學生目前的班級為「${currentClass}」，但繳費記錄中的班級是「${classNameFromNotification}」。\n是否仍要使用目前班級「${currentClass}」進行續費？`;
+        if (!confirm(confirmMsg)) return;
+    }
+    
+    // 開啟續費數量模態框，傳入正確的班級
+    openRenewQuantityModal(student.name, currentClass);
 }
 
 // ---------- 新增學生數量模態框 ----------
