@@ -2011,6 +2011,7 @@ async function quickRenew(name, className) {
         showError('只有管理員可以執行續費操作');
         return;
     }
+    // 開啟續費數量模態框
     openRenewQuantityModal(name, className);
 }
 
@@ -2100,7 +2101,10 @@ async function executeAddStudent(name, className, note, classes) {
 
 // 修改原本的 submitAddStudent 函數，改為先彈出模態框
 async function submitAddStudent() {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
+    if (currentUser.role !== 'admin' && currentUser.role !== 'coach') {
+        showError('無權限');
+        return;
+    }
 
     const name = document.getElementById('newStudentName').value.trim();
     const className = document.getElementById('newStudentClass').value;
@@ -2110,7 +2114,7 @@ async function submitAddStudent() {
         return;
     }
 
-    // 彈出自訂模態框輸入數量
+    // 開啟新增學生數量模態框
     openAddStudentQuantityModal(name, className, note);
 }
    // 開啟修改姓名模態框
