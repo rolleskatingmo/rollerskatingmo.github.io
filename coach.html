@@ -1310,7 +1310,7 @@
 </div>
     <script>
         // ========== 後端網址 ==========
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUrM-mYyGTJozaKYQzSY30wuJjq5KdZuyzp6NUx_Dvtp6e-ugqerjnNSAE87U1h9ot5Q/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyOTUFecky1CXIIcUPNrS8v7Ge2DU1pw2RUvAu-0lrSHUBD6qfE_dofKzQSYigpvdmoA/exec';
 
         let allStudents = [];
         let isMakeupMode = false;
@@ -1668,6 +1668,8 @@
             }
         }
 // 略過繳費通知（僅新學生可用）
+// 略過繳費通知（僅新學生可用）
+// 略過繳費通知（僅新學生可用）
 async function skipPaymentNotification(studentName, time) {
     const student = allStudents.find(s => s.name === studentName);
     if (!student || student.flags !== 'new') {
@@ -1678,18 +1680,36 @@ async function skipPaymentNotification(studentName, time) {
     }
     showLoadingSpinner('處理中...');
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=skipPaymentNotification&time=${encodeURIComponent(time)}&studentName=${encodeURIComponent(studentName)}`);
-        const result = await res.json();
-        if (result.success) {
-            // 從 paymentNotifications 中移除該記錄
-            paymentNotifications = paymentNotifications.filter(p => !(p.studentName === studentName && p.time === time));
-            renderNotificationBody();
-            showSuccess('已略過該繳費通知');
-        } else {
-            showError(result.error || '略過失敗');
+        // 先標記繳費記錄為已處理（使用現有 action）
+        const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(time)}&studentName=${encodeURIComponent(studentName)}`);
+        const markResult = await markRes.json();
+        if (!markResult.success) {
+            throw new Error(markResult.error || '標記繳費記錄失敗');
         }
+
+        // 再清除學生的 new 標記
+        const clearRes = await fetch(`${SCRIPT_URL}?action=clearStudentNewFlag&name=${encodeURIComponent(studentName)}`);
+        const clearResult = await clearRes.json();
+        if (!clearResult.success) {
+            throw new Error(clearResult.error || '清除新學生標記失敗');
+        }
+
+        // 更新本地 allStudents 中的 flags
+        const studentIndex = allStudents.findIndex(s => s.name === studentName);
+        if (studentIndex !== -1) {
+            allStudents[studentIndex].flags = '';
+        }
+
+        // 從 paymentNotifications 中移除該記錄
+        paymentNotifications = paymentNotifications.filter(p => !(p.studentName === studentName && p.time === time));
+        
+        // 重新渲染通知欄與學生資訊列表
+        renderNotificationBody();
+        renderNoteListByClass();
+        
+        showSuccess('已略過該繳費通知，並移除新學生標記');
     } catch (err) {
-        showError('網路錯誤：' + err.message);
+        showError('操作失敗：' + err.message);
     } finally {
         hideLoadingSpinner();
     }
