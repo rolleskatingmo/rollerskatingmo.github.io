@@ -1961,6 +1961,7 @@ async function confirmRenewQuantity() {
 
 // 實際執行續費的邏輯
 // 實際執行續費的邏輯
+// 實際執行續費的邏輯
 async function executeRenew(name, className, delta) {
     const lockKey = `renew_${name}`;
     if (processing[lockKey]) {
@@ -1971,45 +1972,66 @@ async function executeRenew(name, className, delta) {
     showLoadingSpinner('續費處理中...');
 
     try {
+        // 再次確認學生當前班級（使用最新的 allStudents）
+        const student = allStudents.find(s => s.name === name);
+        if (!student) {
+            throw new Error('找不到該學生，請重新整理頁面');
+        }
+        const currentClass = student.class;
+        if (currentClass !== className) {
+            console.warn(`班級不一致：傳入班級 ${className}，實際班級 ${currentClass}，將使用實際班級`);
+            className = currentClass;
+        }
+
+        // 清零請假次數
         let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
         let result = await res.json();
         if (!result.success) throw new Error(result.error || '清零請假失敗');
 
+        // 清零租借次數
         res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
         result = await res.json();
         if (!result.success) throw new Error(result.error || '清零租借失敗');
 
+        // 增加課堂
         const payload = { name, class: className, classesChange: delta, reason: '已續費' };
+        console.log('續費 payload:', JSON.stringify(payload));
         res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
         result = await res.json();
-        if (!result.success) throw new Error(result.error || '增加課堂失敗');
+        console.log('addClasses 回應:', result);
+        if (!result.success) {
+            throw new Error(result.message || '增加課堂失敗');
+        }
 
-        // 標記繳費記錄並立即更新前端
+        // 標記繳費記錄（無論後端是否成功，前端都移除）
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
         for (let p of pendingForStudent) {
             if (!p.time || !p.studentName) continue;
-            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
-            const markResult = await markRes.json();
-            if (markResult.success) {
-                // 從本地 paymentNotifications 中移除已處理的記錄
-                paymentNotifications = paymentNotifications.filter(item => !(item.time === p.time && item.studentName === p.studentName));
-            } else {
-                console.error('標記繳費記錄失敗', markResult);
-                showError(`標記失敗：${markResult.error || '未知錯誤'}`);
+            try {
+                const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
+                const markResult = await markRes.json();
+                if (!markResult.success) {
+                    console.error('標記繳費記錄失敗', markResult);
+                    showError(`標記失敗：${markResult.error || '未知錯誤'}`);
+                }
+            } catch (err) {
+                console.error('標記請求錯誤', err);
             }
+            // 從本地陣列中移除該記錄
+            paymentNotifications = paymentNotifications.filter(item => !(item.time === p.time && item.studentName === p.studentName));
         }
-        // 立即重新渲染通知欄
         renderNotificationBody();
 
         showSuccess(`${name} 續費成功！已增加 ${delta} 堂課，請假/租借次數歸零。`);
 
-        // 重新從後端載入最新資料以確保同步（可選）
+        // 重新從後端載入最新資料
         await fetchAllStudents();
-        await loadPaymentNotifications(); // 這會再次更新 paymentNotifications 並渲染
+        await loadPaymentNotifications(); // 這會重新獲取後端資料，並更新 paymentNotifications
         renderNoteListByClass();
         updateRentalList();
     } catch (err) {
         showError(err.message);
+        console.error('續費錯誤:', err);
     } finally {
         hideLoadingSpinner();
         delete processing[lockKey];
