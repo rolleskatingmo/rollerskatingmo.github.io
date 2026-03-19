@@ -1471,7 +1471,7 @@
     </div>
     <script>
     // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyde4mFbgYdWIbN5V4U_t1R84MW2B1TqXYaHG9Dw6TJ7nniJviCTfaOvPlftWqyQwEiKA/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnvs2DZ-bEhrjGa8Lfm542227lt_S2jTdMfBbxtkq2Zi5XAuNFCnc3DR6mSzZFgfaiDg/exec';
 
     let allStudents = [];
     let isMakeupMode = false;
@@ -2075,7 +2075,15 @@ async function confirmAddStudentQuantity() {
 }
 
 // 實際執行新增學生的邏輯
+// 實際執行新增學生的邏輯
 async function executeAddStudent(name, className, note, classes) {
+    // 確保姓名已 trim
+    name = name.trim();
+    if (!name) {
+        showError('姓名不能為空');
+        return;
+    }
+
     const btn = document.querySelector('#addStudent .btn-indigo');
     if (btn) {
         btn.disabled = true;
@@ -2090,10 +2098,12 @@ async function executeAddStudent(name, className, note, classes) {
 
     try {
         const payload = { name, class: className, classes: classes, note };
+        console.log('新增學生 payload:', JSON.stringify(payload)); // 檢查傳送資料
 
         if (currentUser.role === 'admin') {
             const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
             const result = await res.json();
+            console.log('addStudent 回應:', result); // 檢查後端回應
             if (result.success) {
                 showSuccess(`學生 ${name} 新增成功！已獲得 ${classes} 堂課。`);
                 newStudentNotifications.push({ name: name, time: new Date().toISOString() });
@@ -2112,6 +2122,7 @@ async function executeAddStudent(name, className, note, classes) {
             // 教練提交審批
             const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
             const result = await res.json();
+            console.log('submitApprovalRequest 回應:', result);
             if (result.success) {
                 showSuccess('請求已提交，等待管理員審批');
                 document.getElementById('newStudentName').value = '';
@@ -2123,6 +2134,7 @@ async function executeAddStudent(name, className, note, classes) {
         }
     } catch (err) {
         showError('網路錯誤');
+        console.error('executeAddStudent 錯誤:', err);
     } finally {
         if (btn) {
             btn.disabled = false;
