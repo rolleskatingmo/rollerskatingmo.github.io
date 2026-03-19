@@ -1029,7 +1029,7 @@
             <!-- 新增/扣課區塊 -->
             <div id="addClasses" class="section" style="display: none;">
                 <h2>➕ 新增 / 扣減課堂</h2>
-                <div class="info-box">💡 輸入姓名關鍵字選擇學生，班級自動帶入。教練操作需管理員審批。</div>
+                <div class="info-box">💡 輸入姓名關鍵字選擇學生，輸入正數增加課堂，負數扣除。</div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>🔍 搜尋學生</label>
@@ -1039,8 +1039,8 @@
                         </div>
                     </div>
                     <div class="form-group"><label>班級</label><input type="text" id="selectedClass" readonly></div>
-                    <div class="form-group"><label>課堂變動</label><input type="number" id="addClassDelta" value="10"></div>
-                    <div class="form-group"><label>原因</label><textarea id="addClassReason" placeholder="續費10堂"></textarea></div>
+                    <div class="form-group"><label>課堂變動</label><input type="number" id="addClassDelta"></div>
+                    <div class="form-group"><label>原因</label><textarea id="addClassReason" placeholder="無特殊原因"></textarea></div>
                     <button class="btn btn-success" onclick="submitAddClasses()" style="width:100%;">提交審批</button>
                 </div>
                 <div id="addClassesMessage"></div>
@@ -1048,8 +1048,8 @@
 
             <!-- 新增學生區塊 -->
             <div id="addStudent" class="section" style="display: none;">
-                <h2>👤 新增學生（預設10堂）</h2>
-                <div class="info-box">🎁 新學生自動獲得 10 堂課，租借次數0。特別備註僅完整權限可見。教練操作需管理員審批。</div>
+                <h2>👤 新增學生</h2>
+                <div class="info-box">🎁 教練操作需管理員審批，記得上傳繳費截圖。</div>
                 <div class="form-row">
                     <div class="form-group"><label>姓名</label><input type="text" id="newStudentName"></div>
                     <div class="form-group"><label>班級</label><select id="newStudentClass"></select></div>
