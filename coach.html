@@ -1427,7 +1427,37 @@
             <!-- 動態填入 -->
         </div>
     </div>
-    
+   <!-- 續費數量輸入模態框 -->
+<div id="renewQuantityModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>💰 續費課堂數量</h3>
+        <p>學生：<span id="renewStudentName"></span>（<span id="renewStudentClass"></span>）</p>
+        <div class="form-group">
+            <label>增加課堂數</label>
+            <input type="number" id="renewQuantityInput" value="10" min="1" step="1">
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeRenewQuantityModal()">取消</button>
+            <button class="confirm" onclick="confirmRenewQuantity()">確認續費</button>
+        </div>
+    </div>
+</div>
+
+<!-- 新增學生初始課堂數輸入模態框 -->
+<div id="addStudentQuantityModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>👤 設定初始課堂數</h3>
+        <p>學生：<span id="addStudentNameDisplay"></span>（<span id="addStudentClassDisplay"></span>）</p>
+        <div class="form-group">
+            <label>初始課堂數</label>
+            <input type="number" id="addStudentQuantityInput" value="10" min="0" step="1">
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeAddStudentQuantityModal()">取消</button>
+            <button class="confirm" onclick="confirmAddStudentQuantity()">確認新增</button>
+        </div>
+    </div>
+</div>
     <div id="editStudentNameModal" class="modal-overlay">
         <div class="modal-content">
             <h3>✏️ 修改學生姓名</h3>
@@ -1903,6 +1933,186 @@
     function closeCoachStudentModal() {
         document.getElementById('coachStudentRecordModal').style.display = 'none';
     }
+// ---------- 續費數量模態框 ----------
+let pendingRenewData = { name: '', className: '' };
+
+function openRenewQuantityModal(name, className) {
+    pendingRenewData = { name, className };
+    document.getElementById('renewStudentName').textContent = name;
+    document.getElementById('renewStudentClass').textContent = className;
+    document.getElementById('renewQuantityInput').value = 10;
+    document.getElementById('renewQuantityModal').style.display = 'flex';
+}
+
+function closeRenewQuantityModal() {
+    document.getElementById('renewQuantityModal').style.display = 'none';
+    pendingRenewData = { name: '', className: '' };
+}
+
+async function confirmRenewQuantity() {
+    const delta = parseInt(document.getElementById('renewQuantityInput').value);
+    if (isNaN(delta) || delta <= 0) {
+        showError('請輸入有效的正整數');
+        return;
+    }
+    closeRenewQuantityModal();
+    await executeRenew(pendingRenewData.name, pendingRenewData.className, delta);
+}
+
+// 實際執行續費的邏輯
+async function executeRenew(name, className, delta) {
+    const lockKey = `renew_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    processing[lockKey] = true;
+    showLoadingSpinner('續費處理中...');
+
+    try {
+        let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
+        let result = await res.json();
+        if (!result.success) throw new Error(result.error || '清零請假失敗');
+
+        res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
+        result = await res.json();
+        if (!result.success) throw new Error(result.error || '清零租借失敗');
+
+        const payload = { name, class: className, classesChange: delta, reason: '已續費' };
+        res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
+        result = await res.json();
+        if (!result.success) throw new Error(result.error || '增加課堂失敗');
+
+        // 標記繳費記錄
+        const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
+        for (let p of pendingForStudent) {
+            if (!p.time || !p.studentName) continue;
+            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
+            await markRes.json();
+        }
+
+        showSuccess(`${name} 續費成功！已增加 ${delta} 堂課，請假/租借次數歸零。`);
+
+        await fetchAllStudents();
+        await loadPaymentNotifications();
+        renderNoteListByClass();
+        updateRentalList();
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        hideLoadingSpinner();
+        delete processing[lockKey];
+    }
+}
+
+// 修改原本的 quickRenew 函數，改為調用模態框
+async function quickRenew(name, className) {
+    if (currentUser.role !== 'admin') {
+        showError('只有管理員可以執行續費操作');
+        return;
+    }
+    openRenewQuantityModal(name, className);
+}
+
+// ---------- 新增學生數量模態框 ----------
+let pendingAddStudentData = { name: '', className: '', note: '' };
+
+function openAddStudentQuantityModal(name, className, note) {
+    pendingAddStudentData = { name, className, note };
+    document.getElementById('addStudentNameDisplay').textContent = name;
+    document.getElementById('addStudentClassDisplay').textContent = className;
+    document.getElementById('addStudentQuantityInput').value = 10;
+    document.getElementById('addStudentQuantityModal').style.display = 'flex';
+}
+
+function closeAddStudentQuantityModal() {
+    document.getElementById('addStudentQuantityModal').style.display = 'none';
+    pendingAddStudentData = { name: '', className: '', note: '' };
+}
+
+async function confirmAddStudentQuantity() {
+    const classes = parseInt(document.getElementById('addStudentQuantityInput').value);
+    if (isNaN(classes) || classes < 0) {
+        showError('請輸入有效的非負整數');
+        return;
+    }
+    closeAddStudentQuantityModal();
+    await executeAddStudent(pendingAddStudentData.name, pendingAddStudentData.className, pendingAddStudentData.note, classes);
+}
+
+// 實際執行新增學生的邏輯
+async function executeAddStudent(name, className, note, classes) {
+    const btn = document.querySelector('#addStudent .btn-indigo');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+    }
+    const lockKey = 'addStudent';
+    if (processing[lockKey]) {
+        showError('正在新增中...');
+        return;
+    }
+    processing[lockKey] = true;
+
+    try {
+        const payload = { name, class: className, classes: classes, note };
+
+        if (currentUser.role === 'admin') {
+            const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`學生 ${name} 新增成功！已獲得 ${classes} 堂課。`);
+                newStudentNotifications.push({ name: name, time: new Date().toISOString() });
+                renderNotificationBody();
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentClass').value = '';
+                document.getElementById('newStudentNote').value = '';
+                await fetchAllStudents();
+                updateAttendanceList();
+                updateRentalList();
+                renderNoteListByClass();
+            } else {
+                showError(result.message || '新增失敗');
+            }
+        } else {
+            // 教練提交審批
+            const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('請求已提交，等待管理員審批');
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentClass').value = '';
+                document.getElementById('newStudentNote').value = '';
+            } else {
+                showError(result.error);
+            }
+        }
+    } catch (err) {
+        showError('網路錯誤');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '提交審批';
+        }
+        delete processing[lockKey];
+    }
+}
+
+// 修改原本的 submitAddStudent 函數，改為先彈出模態框
+async function submitAddStudent() {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
+
+    const name = document.getElementById('newStudentName').value.trim();
+    const className = document.getElementById('newStudentClass').value;
+    const note = document.getElementById('newStudentNote').value.trim();
+    if (!name || !className) {
+        showError('請填寫姓名與班級');
+        return;
+    }
+
+    // 彈出自訂模態框輸入數量
+    openAddStudentQuantityModal(name, className, note);
+}
    // 開啟修改姓名模態框
 function openEditStudentNameModal(oldName) {
     document.getElementById('oldStudentName').textContent = oldName;
@@ -3910,6 +4120,21 @@ function renderNoteListByClass() {
         }
 
         // 為調閱記錄模態框添加點擊遮罩關閉
+        // 為續費數量模態框添加點擊遮罩關閉
+const renewModal = document.getElementById('renewQuantityModal');
+if (renewModal) {
+    renewModal.addEventListener('click', function(e) {
+        if (e.target === renewModal) closeRenewQuantityModal();
+    });
+}
+
+// 為新增學生數量模態框添加點擊遮罩關閉
+const addStudentModal = document.getElementById('addStudentQuantityModal');
+if (addStudentModal) {
+    addStudentModal.addEventListener('click', function(e) {
+        if (e.target === addStudentModal) closeAddStudentQuantityModal();
+    });
+}
         const modal = document.getElementById('coachStudentRecordModal');
         if (modal) {
             modal.addEventListener('click', function(e) {
