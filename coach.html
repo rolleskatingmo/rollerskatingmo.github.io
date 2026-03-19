@@ -1960,6 +1960,7 @@ async function confirmRenewQuantity() {
 }
 
 // 實際執行續費的邏輯
+// 實際執行續費的邏輯
 async function executeRenew(name, className, delta) {
     const lockKey = `renew_${name}`;
     if (processing[lockKey]) {
@@ -1983,18 +1984,28 @@ async function executeRenew(name, className, delta) {
         result = await res.json();
         if (!result.success) throw new Error(result.error || '增加課堂失敗');
 
-        // 標記繳費記錄
+        // 標記繳費記錄並立即更新前端
         const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
         for (let p of pendingForStudent) {
             if (!p.time || !p.studentName) continue;
             const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
-            await markRes.json();
+            const markResult = await markRes.json();
+            if (markResult.success) {
+                // 從本地 paymentNotifications 中移除已處理的記錄
+                paymentNotifications = paymentNotifications.filter(item => !(item.time === p.time && item.studentName === p.studentName));
+            } else {
+                console.error('標記繳費記錄失敗', markResult);
+                showError(`標記失敗：${markResult.error || '未知錯誤'}`);
+            }
         }
+        // 立即重新渲染通知欄
+        renderNotificationBody();
 
         showSuccess(`${name} 續費成功！已增加 ${delta} 堂課，請假/租借次數歸零。`);
 
+        // 重新從後端載入最新資料以確保同步（可選）
         await fetchAllStudents();
-        await loadPaymentNotifications();
+        await loadPaymentNotifications(); // 這會再次更新 paymentNotifications 並渲染
         renderNoteListByClass();
         updateRentalList();
     } catch (err) {
