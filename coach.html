@@ -1299,7 +1299,15 @@
             </div>
         </div>
     </div>
-
+<div id="alertModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>⚠️ 操作警告，只能用於新學生，否則可能出現未知BUG</h3>
+        <p id="alertMessage"></p>
+        <div class="modal-buttons">
+            <button class="confirm" onclick="closeAlertModal()">確定</button>
+        </div>
+    </div>
+</div>
     <script>
         // ========== 後端網址 ==========
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnvs2DZ-bEhrjGa8Lfm542227lt_S2jTdMfBbxtkq2Zi5XAuNFCnc3DR6mSzZFgfaiDg/exec';
@@ -1659,7 +1667,33 @@
                 showError(result.message);
             }
         }
-
+// 略過繳費通知（僅新學生可用）
+async function skipPaymentNotification(studentName, time) {
+    const student = allStudents.find(s => s.name === studentName);
+    if (!student || student.flags !== 'new') {
+        // 顯示警告模態框
+        document.getElementById('alertMessage').textContent = '只有新增學生方可略過本通知，其他學生請按續費流程，否則可能出現未知錯誤。';
+        document.getElementById('alertModal').style.display = 'flex';
+        return;
+    }
+    showLoadingSpinner('處理中...');
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=skipPaymentNotification&time=${encodeURIComponent(time)}&studentName=${encodeURIComponent(studentName)}`);
+        const result = await res.json();
+        if (result.success) {
+            // 從 paymentNotifications 中移除該記錄
+            paymentNotifications = paymentNotifications.filter(p => !(p.studentName === studentName && p.time === time));
+            renderNotificationBody();
+            showSuccess('已略過該繳費通知');
+        } else {
+            showError(result.error || '略過失敗');
+        }
+    } catch (err) {
+        showError('網路錯誤：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+    }
+}
         // 顯示學生詳細記錄（教練調閱用）
         async function showStudentRecords(name) {
             showLoadingSpinner('載入學生記錄...');
@@ -1906,6 +1940,7 @@ function openRenewQuantityModal(name, className, remaining, leaveCount, deducted
 
         // 修改原本的 quickRenew 函數，先獲取學生當前班級
 // 修改原本的 quickRenew 函數，先獲取學生當前班級及相關數據
+        // 略過繳費通知（僅新學生可用）
 async function quickRenew(name, classNameFromNotification) {
     if (currentUser.role !== 'admin') {
         showError('只有管理員可以執行續費操作');
@@ -2571,21 +2606,29 @@ async function quickRenew(name, classNameFromNotification) {
                 html += `</div></div>`;
             });
 
-            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                paymentNotifications.forEach(p => {
-                    total++;
-                    html += `<div class="notification-item">
-                        <span class="type-tag">待續費</span>
-                        <div class="content">${p.studentName} 已上傳繳費憑證，請管理員點擊續費</div>
-                        <div class="actions">`;
-                    if (currentUser.role === 'admin') {
-                        html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費按此</button>`;
-                    } else {
-                        html += `<span style="color:#718096;">等待管理員處理</span>`;
-                    }
-                    html += `</div></div>`;
-                });
+if (currentUser.role === 'admin' || currentUser.role === 'coach') {
+    paymentNotifications.forEach(p => {
+        total++;
+        html += `<div class="notification-item">
+            <span class="type-tag">待續費</span>
+            <div class="content">${p.studentName} 已上傳繳費憑證，請管理員點擊續費</div>
+            <div class="actions">`;
+        if (currentUser.role === 'admin') {
+            // 續費按鈕
+            html += `<button class="btn-sm" onclick="quickRenew('${p.studentName}', '${p.className}')">💰續費按此</button>`;
+            
+            // 檢查是否為新學生
+            const student = allStudents.find(s => s.name === p.studentName);
+            if (student && student.flags === 'new') {
+                // 新學生才顯示略過按鈕
+                html += `<button class="btn-sm" onclick="skipPaymentNotification('${p.studentName}', '${p.time}')">🚫略過</button>`;
             }
+        } else {
+            html += `<span style="color:#718096;">等待管理員處理</span>`;
+        }
+        html += `</div></div>`;
+    });
+}
 
             if (currentUser.role === 'admin') {
                 newStudentNotifications.forEach(n => {
@@ -3875,7 +3918,9 @@ async function quickRenew(name, classNameFromNotification) {
             cancelBtn.disabled = false;
             currentConfirmCallback = null;
         }
-
+function closeAlertModal() {
+    document.getElementById('alertModal').style.display = 'none';
+}
         function showLoadingSpinner(message) {
             const spinner = document.getElementById('loadingSpinner');
             const p = spinner.querySelector('p');
@@ -3901,6 +3946,13 @@ async function quickRenew(name, classNameFromNotification) {
 
         // ---------- 頁面載入時自動登入 ----------
         window.addEventListener('DOMContentLoaded', async function() {
+            // 為警告模態框添加點擊遮罩關閉
+const alertModal = document.getElementById('alertModal');
+if (alertModal) {
+    alertModal.addEventListener('click', function(e) {
+        if (e.target === alertModal) closeAlertModal();
+    });
+}
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 try {
