@@ -2559,70 +2559,86 @@ async function submitEditStudentName() {
     }
 
     // ---------- 快速續費 ----------
-    async function quickRenew(name, className) {
-        if (currentUser.role !== 'admin') {
-            showError('只有管理員可以執行續費操作');
-            return;
-        }
-        const lockKey = `renew_${name}`;
-        if (processing[lockKey]) {
-            showError('正在處理中，請稍後...');
-            return;
-        }
-        processing[lockKey] = true;
-        showLoadingSpinner('續費處理中...');
-
-        try {
-            let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            let result = await res.json();
-            if (!result.success) throw new Error(result.error || '清零請假失敗');
-
-            res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            result = await res.json();
-            if (!result.success) throw new Error(result.error || '清零租借失敗');
-
-            const payload = { name, class: className, classesChange: 10, reason: '已續費' };
-            res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
-            result = await res.json();
-            if (!result.success) throw new Error(result.error || '增加課堂失敗');
-
-            console.log('當前 paymentNotifications:', paymentNotifications);
-            const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
-            console.log('待標記的繳費記錄 (pendingForStudent):', JSON.stringify(pendingForStudent, null, 2));
-
-            for (let p of pendingForStudent) {
-                console.log('處理單筆記錄:', p);
-                if (!p.time || !p.studentName) {
-                    console.error('❌ 記錄缺少必要屬性', p);
-                    showError('繳費記錄資料不完整，無法自動標記');
-                    continue;
-                }
-                console.log(`標記繳費記錄：time=${p.time}, studentName=${p.studentName}, 類型: ${typeof p.time}`);
-                const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
-                const markResult = await markRes.json();
-                console.log('標記結果:', markResult);
-                if (!markResult.success) {
-                    console.error('標記失敗：', markResult.error);
-                    showError(`標記失敗：${markResult.error}`);
-                } else {
-                    console.log('✅ 標記成功');
-                }
-            }
-
-            showSuccess(`${name} 續費成功！已增加10堂課，請假/租借次數歸零。`);
-
-            await fetchAllStudents();
-            await loadPaymentNotifications();
-            renderNoteListByClass();
-            updateRentalList();
-
-        } catch (err) {
-            showError(err.message);
-        } finally {
-            hideLoadingSpinner();
-            delete processing[lockKey];
-        }
+// ---------- 快速續費（可自訂堂數）----------
+async function quickRenew(name, className) {
+    // 僅允許管理員執行續費
+    if (currentUser.role !== 'admin') {
+        showError('只有管理員可以執行續費操作');
+        return;
     }
+
+    // 彈窗詢問增加多少堂課（預設10）
+    const additionalClasses = prompt(`請輸入要為 ${name} 增加的課堂數量：`, '10');
+    if (additionalClasses === null) return; // 使用者取消
+    const delta = parseInt(additionalClasses);
+    if (isNaN(delta) || delta <= 0) {
+        showError('請輸入有效的正整數');
+        return;
+    }
+
+    const lockKey = `renew_${name}`;
+    if (processing[lockKey]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    processing[lockKey] = true;
+    showLoadingSpinner('續費處理中...');
+
+    try {
+        // 清零請假次數
+        let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
+        let result = await res.json();
+        if (!result.success) throw new Error(result.error || '清零請假失敗');
+
+        // 清零租借次數
+        res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
+        result = await res.json();
+        if (!result.success) throw new Error(result.error || '清零租借失敗');
+
+        // 增加課堂（使用用戶輸入的數量）
+        const payload = { name, class: className, classesChange: delta, reason: '已續費' };
+        res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
+        result = await res.json();
+        if (!result.success) throw new Error(result.error || '增加課堂失敗');
+
+        // 標記相關繳費記錄為已處理
+        console.log('當前 paymentNotifications:', paymentNotifications);
+        const pendingForStudent = paymentNotifications.filter(p => p.studentName === name);
+        console.log('待標記的繳費記錄 (pendingForStudent):', JSON.stringify(pendingForStudent, null, 2));
+
+        for (let p of pendingForStudent) {
+            console.log('處理單筆記錄:', p);
+            if (!p.time || !p.studentName) {
+                console.error('❌ 記錄缺少必要屬性', p);
+                showError('繳費記錄資料不完整，無法自動標記');
+                continue;
+            }
+            console.log(`標記繳費記錄：time=${p.time}, studentName=${p.studentName}, 類型: ${typeof p.time}`);
+            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
+            const markResult = await markRes.json();
+            console.log('標記結果:', markResult);
+            if (!markResult.success) {
+                console.error('標記失敗：', markResult.error);
+                showError(`標記失敗：${markResult.error}`);
+            } else {
+                console.log('✅ 標記成功');
+            }
+        }
+
+        showSuccess(`${name} 續費成功！已增加 ${delta} 堂課，請假/租借次數歸零。`);
+
+        await fetchAllStudents();
+        await loadPaymentNotifications();
+        renderNoteListByClass();
+        updateRentalList();
+
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        hideLoadingSpinner();
+        delete processing[lockKey];
+    }
+}
 
     function uploadPaymentForNewStudent(name, className) {
         pendingNewStudent = { name, className };
@@ -2889,69 +2905,81 @@ async function submitEditStudentName() {
     }
 
     // ---------- 新增學生 ----------
-    async function submitAddStudent() {
-        if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
-        if (processing.addStudent) {
-            showError('正在新增中...');
-            return;
-        }
-        const btn = document.querySelector('#addStudent .btn-indigo');
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = '提交中...';
-        }
-        processing.addStudent = true;
-
-        try {
-            const name = document.getElementById('newStudentName').value.trim();
-            const className = document.getElementById('newStudentClass').value;
-            const note = document.getElementById('newStudentNote').value.trim();
-            if (!name || !className) {
-                showError('請填寫姓名與班級');
-                return;
-            }
-            const payload = { name, class: className, classes: 10, note };
-
-            if (currentUser.role === 'admin') {
-                const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess(`學生 ${name} 新增成功！已獲得 10 堂課。`);
-                    newStudentNotifications.push({ name: name, time: new Date().toISOString() });
-                    renderNotificationBody();
-                    document.getElementById('newStudentName').value = '';
-                    document.getElementById('newStudentClass').value = '';
-                    document.getElementById('newStudentNote').value = '';
-                    await fetchAllStudents();
-                    updateAttendanceList();
-                    updateRentalList();
-                    renderNoteListByClass();
-                } else {
-                    showError(result.message || '新增失敗');
-                }
-            } else {
-                const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
-                if (result.success) {
-                    showSuccess('請求已提交，等待管理員審批');
-                    document.getElementById('newStudentName').value = '';
-                    document.getElementById('newStudentClass').value = '';
-                    document.getElementById('newStudentNote').value = '';
-                } else {
-                    showError(result.error);
-                }
-            }
-        } catch (err) {
-            showError('網路錯誤');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = '提交審批';
-            }
-            delete processing.addStudent;
-        }
+// ---------- 新增學生（可自訂初始課堂數）----------
+async function submitAddStudent() {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
+    if (processing.addStudent) {
+        showError('正在新增中...');
+        return;
     }
 
+    const name = document.getElementById('newStudentName').value.trim();
+    const className = document.getElementById('newStudentClass').value;
+    const note = document.getElementById('newStudentNote').value.trim();
+    if (!name || !className) {
+        showError('請填寫姓名與班級');
+        return;
+    }
+
+    // 彈窗詢問初始課堂數（預設10）
+    const initialClasses = prompt(`請輸入 ${name} 的初始課堂數量：`, '10');
+    if (initialClasses === null) return; // 使用者取消
+    const classes = parseInt(initialClasses);
+    if (isNaN(classes) || classes < 0) {
+        showError('請輸入有效的非負整數');
+        return;
+    }
+
+    const btn = document.querySelector('#addStudent .btn-indigo');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+    }
+    processing.addStudent = true;
+
+    try {
+        const payload = { name, class: className, classes: classes, note };
+
+        if (currentUser.role === 'admin') {
+            const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess(`學生 ${name} 新增成功！已獲得 ${classes} 堂課。`);
+                newStudentNotifications.push({ name: name, time: new Date().toISOString() });
+                renderNotificationBody();
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentClass').value = '';
+                document.getElementById('newStudentNote').value = '';
+                await fetchAllStudents();
+                updateAttendanceList();
+                updateRentalList();
+                renderNoteListByClass();
+            } else {
+                showError(result.message || '新增失敗');
+            }
+        } else {
+            // 教練提交審批
+            const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
+            const result = await res.json();
+            if (result.success) {
+                showSuccess('請求已提交，等待管理員審批');
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentClass').value = '';
+                document.getElementById('newStudentNote').value = '';
+            } else {
+                showError(result.error);
+            }
+        }
+    } catch (err) {
+        showError('網路錯誤');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '提交審批';
+        }
+        delete processing.addStudent;
+    }
+}
     // ---------- 學生資訊列表 ----------
 function renderNoteListByClass() {
     const container = document.getElementById('noteListByClass');
