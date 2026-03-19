@@ -1253,22 +1253,24 @@
             <!-- 動態填入 -->
         </div>
     </div>
-
-    <!-- 續費數量輸入模態框 -->
-    <div id="renewQuantityModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3>💰 續費課堂數量</h3>
-            <p>學生：<span id="renewStudentName"></span>（<span id="renewStudentClass"></span>）</p>
-            <div class="form-group">
-                <label>增加課堂數</label>
-                <input type="number" id="renewQuantityInput" value="10" min="1" step="1">
-            </div>
-            <div class="modal-buttons">
-                <button class="cancel" onclick="closeRenewQuantityModal()">取消</button>
-                <button class="confirm" onclick="confirmRenewQuantity()">確認續費</button>
-            </div>
+    
+<!-- 續費數量輸入模態框 -->
+<div id="renewQuantityModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>💰 續費課堂數量</h3>
+        <p>學生：<span id="renewStudentName"></span>（<span id="renewStudentClass"></span>）</p>
+        <!-- 警告區塊（預設隱藏） -->
+        <div id="renewWarning" style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none;"></div>
+        <div class="form-group">
+            <label>增加課堂數</label>
+            <input type="number" id="renewQuantityInput" value="10" min="1" step="1">
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeRenewQuantityModal()">取消</button>
+            <button class="confirm" onclick="confirmRenewQuantity()">確認續費</button>
         </div>
     </div>
+</div>
 
     <!-- 新增學生初始課堂數輸入模態框 -->
     <div id="addStudentQuantityModal" class="modal-overlay">
@@ -1766,17 +1768,32 @@
         // ---------- 續費數量模態框 ----------
         let pendingRenewData = { name: '', className: '' };
 
-        function openRenewQuantityModal(name, className) {
-            if (!name || !className) {
-                showError('學生資料不完整，無法開啟續費');
-                return;
-            }
-            pendingRenewData = { name, className };
-            document.getElementById('renewStudentName').textContent = name;
-            document.getElementById('renewStudentClass').textContent = className;
-            document.getElementById('renewQuantityInput').value = 10;
-            document.getElementById('renewQuantityModal').style.display = 'flex';
-        }
+function openRenewQuantityModal(name, className, remaining, leaveCount, deductedClasses) {
+    if (!name || !className) {
+        showError('學生資料不完整，無法開啟續費');
+        return;
+    }
+    pendingRenewData = { name, className };
+    document.getElementById('renewStudentName').textContent = name;
+    document.getElementById('renewStudentClass').textContent = className;
+    document.getElementById('renewQuantityInput').value = 10;
+    
+    // 處理警告訊息
+    const warningDiv = document.getElementById('renewWarning');
+    if (remaining < 0) {
+        warningDiv.style.display = 'block';
+        warningDiv.innerHTML = `
+            ⚠️ 目前剩餘課堂數為 <strong>${remaining}</strong> 堂（負數表示已欠課）。<br>
+            該學生已請假 <strong>${leaveCount}</strong> 次，其中因請假超過2次已扣除 <strong>${deductedClasses}</strong> 堂課。<br>
+            請確認續費數量時一併考慮這些因素。
+        `;
+    } else {
+        warningDiv.style.display = 'none';
+        warningDiv.innerHTML = ''; // 清空內容
+    }
+    
+    document.getElementById('renewQuantityModal').style.display = 'flex';
+}
 
         function closeRenewQuantityModal() {
             document.getElementById('renewQuantityModal').style.display = 'none';
@@ -1888,41 +1905,46 @@
         }
 
         // 修改原本的 quickRenew 函數，先獲取學生當前班級
-        async function quickRenew(name, classNameFromNotification) {
-            if (currentUser.role !== 'admin') {
-                showError('只有管理員可以執行續費操作');
-                return;
-            }
-            
-            // 刷新學生列表，確保是最新的
-            await fetchAllStudents();
-            
-            // 從 allStudents 中獲取該學生的最新班級（忽略大小寫、前後空格）
-            const student = allStudents.find(s => 
-                s.name === name || 
-                s.name.trim() === name.trim() || 
-                s.name.toLowerCase() === name.toLowerCase()
-            );
-            
-            if (!student) {
-                // 嘗試從繳費記錄的班級繼續，但警告用戶
-                if (confirm(`找不到學生「${name}」，是否仍使用繳費記錄中的班級「${classNameFromNotification}」進行續費？\n注意：如果學生已改名或轉班，可能導致錯誤。`)) {
-                    openRenewQuantityModal(name, classNameFromNotification);
-                }
-                return;
-            }
-            
-            const currentClass = student.class;
-            
-            // 如果通知欄傳入的班級與當前班級不同，提示使用者
-            if (classNameFromNotification && classNameFromNotification !== currentClass) {
-                const confirmMsg = `此學生目前的班級為「${currentClass}」，但繳費記錄中的班級是「${classNameFromNotification}」。\n是否仍要使用目前班級「${currentClass}」進行續費？`;
-                if (!confirm(confirmMsg)) return;
-            }
-            
-            // 開啟續費數量模態框，傳入正確的班級
-            openRenewQuantityModal(student.name, currentClass);
+// 修改原本的 quickRenew 函數，先獲取學生當前班級及相關數據
+async function quickRenew(name, classNameFromNotification) {
+    if (currentUser.role !== 'admin') {
+        showError('只有管理員可以執行續費操作');
+        return;
+    }
+    
+    // 刷新學生列表，確保是最新的
+    await fetchAllStudents();
+    
+    // 從 allStudents 中獲取該學生的最新資訊
+    const student = allStudents.find(s => 
+        s.name === name || 
+        s.name.trim() === name.trim() || 
+        s.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (!student) {
+        // 嘗試從繳費記錄的班級繼續，但警告用戶
+        if (confirm(`找不到學生「${name}」，是否仍使用繳費記錄中的班級「${classNameFromNotification}」進行續費？\n注意：如果學生已改名或轉班，可能導致錯誤。`)) {
+            openRenewQuantityModal(name, classNameFromNotification, 0, 0, 0); // 無法取得學生數據，不顯示警告
         }
+        return;
+    }
+    
+    const currentClass = student.class;
+    const leaveCount = student.leaveCount;
+    // 計算因請假超過2次而被扣除的課堂數（每2次請假扣1堂）
+    const deductedClasses = Math.floor(leaveCount / 2);
+    const remaining = student.remainingClasses;
+    
+    // 如果通知欄傳入的班級與當前班級不同，提示使用者
+    if (classNameFromNotification && classNameFromNotification !== currentClass) {
+        const confirmMsg = `此學生目前的班級為「${currentClass}」，但繳費記錄中的班級是「${classNameFromNotification}」。\n是否仍要使用目前班級「${currentClass}」進行續費？`;
+        if (!confirm(confirmMsg)) return;
+    }
+    
+    // 開啟續費數量模態框，傳入完整資訊
+    openRenewQuantityModal(student.name, currentClass, remaining, leaveCount, deductedClasses);
+}
 
         // ---------- 新增學生數量模態框 ----------
         let pendingAddStudentData = { name: '', className: '', note: '' };
