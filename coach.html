@@ -3187,6 +3187,10 @@ function renderNoteListByClass() {
   let html = '';
   const sortedClasses = sortClasses(Object.keys(grouped));
   sortedClasses.forEach(className => {
+    // 確保每個班級有預設折疊狀態（首次載入時折疊）
+    if (classCollapsed[className] === undefined) {
+      classCollapsed[className] = true;
+    }
     const collapsed = classCollapsed[className] ? 'collapsed' : '';
     const icon = classCollapsed[className] ? '▶' : '▼';
     html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
