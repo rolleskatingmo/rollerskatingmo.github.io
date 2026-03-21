@@ -1312,9 +1312,24 @@
         </div>
     </div>
 </div>
+<div id="editStudentClassModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>✏️ 修改學生班級</h3>
+        <p>學生：<span id="editClassStudentName"></span></p>
+        <div class="form-group">
+            <label>班級（可複選）</label>
+            <div id="editClassContainer" class="class-badge-container" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            <input type="hidden" id="editClassValue" value="">
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel" onclick="closeEditClassModal()">取消</button>
+            <button class="confirm" onclick="confirmEditClass()">確認修改</button>
+        </div>
+    </div>
+</div>
 <script>
     // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxC_E9X5ae0fwl6mqJu58lLq4NL7DGivC19dYi-OFTZYam1vA1Vx9_-L4MhWusFUJ8ToA/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8J4esK-Uf6kSVWC5B-BFB06fmZbpa0zo8xbawMnJJZAvR9MiAR97Yjw1z5mf_WzdG8g/exec';
 
     let allStudents = [];
     let isMakeupMode = false;
@@ -2161,7 +2176,77 @@ async function loadClassList() {
         document.getElementById('editStudentNameModal').style.display = 'flex';
         window.currentEditingStudent = oldName;
     }
+// 修改班級相關變數
+let editClassStudentName = '';
+let editClassSelected = new Set();
 
+function openEditClassModal(studentName, currentClassesStr) {
+    editClassStudentName = studentName;
+    document.getElementById('editClassStudentName').textContent = studentName;
+    
+    // 解析現有班級
+    const currentClasses = currentClassesStr ? currentClassesStr.split(',') : [];
+    editClassSelected.clear();
+    currentClasses.forEach(c => editClassSelected.add(c.trim()));
+    
+    // 渲染班級按鈕
+    renderEditClassButtons();
+    document.getElementById('editStudentClassModal').style.display = 'flex';
+}
+
+function renderEditClassButtons() {
+    const container = document.getElementById('editClassContainer');
+    if (!container) return;
+    let html = '';
+    allClasses.forEach(className => {
+        const isSelected = editClassSelected.has(className);
+        html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClass('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+    });
+    container.innerHTML = html;
+    document.getElementById('editClassValue').value = Array.from(editClassSelected).join(',');
+}
+
+function toggleEditClass(className) {
+    if (editClassSelected.has(className)) {
+        editClassSelected.delete(className);
+    } else {
+        editClassSelected.add(className);
+    }
+    renderEditClassButtons();
+}
+
+function closeEditClassModal() {
+    document.getElementById('editStudentClassModal').style.display = 'none';
+    editClassSelected.clear();
+    editClassStudentName = '';
+}
+
+async function confirmEditClass() {
+    const newClassStr = document.getElementById('editClassValue').value;
+    if (!newClassStr) {
+        showError('請至少選擇一個班級');
+        return;
+    }
+    closeEditClassModal();
+    showLoadingSpinner('更新班級中...');
+    try {
+        const res = await fetch(`${SCRIPT_URL}?action=updateStudentClasses&name=${encodeURIComponent(editClassStudentName)}&classes=${encodeURIComponent(newClassStr)}&operator=${encodeURIComponent(currentUser.username)}`);
+        const result = await res.json();
+        if (result.success) {
+            showSuccess(`學生 ${editClassStudentName} 班級已更新`);
+            await fetchAllStudents();
+            renderNoteListByClass();
+            updateAttendanceList();
+            updateRentalList();
+        } else {
+            showError(result.error || '更新失敗');
+        }
+    } catch (err) {
+        showError('網路錯誤：' + err.message);
+    } finally {
+        hideLoadingSpinner();
+    }
+}
     function closeEditStudentNameModal() {
         document.getElementById('editStudentNameModal').style.display = 'none';
         window.currentEditingStudent = null;
@@ -3124,6 +3209,7 @@ function renderNoteListByClass() {
       if (currentUser.role === 'admin') {
         actionsHtml = `
           <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
+          <button class="btn-sm" onclick="openEditClassModal('${s.name}', '${s.class.join(',')}')">🏷️修改班級</button>
           <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
           <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
           <button class="btn-sm" onclick="openEditStudentNameModal('${s.name}')">✏️改名</button>
@@ -3160,7 +3246,7 @@ function renderNoteListByClass() {
       `;
     });
 
-    html += `</div>`; // 關閉 class-students
+    html += `</div>`;
   });
   container.innerHTML = html || '無學生資料';
 }
@@ -4000,6 +4086,13 @@ function renderNoteListByClass() {
 
     // ---------- 頁面載入時自動登入 ----------
     window.addEventListener('DOMContentLoaded', async function() {
+        // 為修改班級模態框添加點擊遮罩關閉
+const editClassModal = document.getElementById('editStudentClassModal');
+if (editClassModal) {
+    editClassModal.addEventListener('click', function(e) {
+        if (e.target === editClassModal) closeEditClassModal();
+    });
+}
         const alertModal = document.getElementById('alertModal');
         if (alertModal) {
             alertModal.addEventListener('click', function(e) {
