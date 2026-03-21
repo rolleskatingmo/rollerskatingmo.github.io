@@ -2217,8 +2217,6 @@ function toggleEditClass(className) {
 
 function closeEditClassModal() {
     document.getElementById('editStudentClassModal').style.display = 'none';
-    editClassSelected.clear();
-    editClassStudentName = '';
 }
 
 async function confirmEditClass() {
@@ -2227,13 +2225,14 @@ async function confirmEditClass() {
         showError('請至少選擇一個班級');
         return;
     }
-    closeEditClassModal();
+    const studentName = editClassStudentName;  // 先保存一份
+    closeEditClassModal();                     // 關閉模態框（此時不清空變數）
     showLoadingSpinner('更新班級中...');
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=updateStudentClasses&name=${encodeURIComponent(editClassStudentName)}&classes=${encodeURIComponent(newClassStr)}&operator=${encodeURIComponent(currentUser.username)}`);
+        const res = await fetch(`${SCRIPT_URL}?action=updateStudentClasses&name=${encodeURIComponent(studentName)}&classes=${encodeURIComponent(newClassStr)}&operator=${encodeURIComponent(currentUser.username)}`);
         const result = await res.json();
         if (result.success) {
-            showSuccess(`學生 ${editClassStudentName} 班級已更新`);
+            showSuccess(`學生 ${studentName} 班級已更新`);
             await fetchAllStudents();
             renderNoteListByClass();
             updateAttendanceList();
@@ -2245,6 +2244,9 @@ async function confirmEditClass() {
         showError('網路錯誤：' + err.message);
     } finally {
         hideLoadingSpinner();
+        // 可選：清空變數（但下次打開時會重新賦值）
+        editClassStudentName = '';
+        editClassSelected.clear();
     }
 }
     function closeEditStudentNameModal() {
