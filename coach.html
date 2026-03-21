@@ -1558,10 +1558,16 @@
                 scrollToSection('clear');
             } else if (sectionId === 'addClasses') {
                 scrollToSection('addClasses');
-            } else if (sectionId === 'addStudent') {
-                renderClassCheckboxes();
-                scrollToSection('addStudent');
-            } else if (sectionId === 'attendance') {
+} else if (sectionId === 'addStudent') {
+    // 清除先前選擇
+    selectedNewStudentClasses.clear();
+    renderClassCheckboxes();          // 渲染多選按鈕
+    document.getElementById('newStudentName').value = '';
+    document.getElementById('newStudentNote').value = '';
+    document.getElementById('newStudentClass').value = '';  // 清空隱藏欄位
+    scrollToSection('addStudent');
+}
+                else if (sectionId === 'attendance') {
                 updateAttendanceList();
                 scrollToSection('attendance');
                 const attendanceDiv = document.getElementById('attendance');
@@ -1659,27 +1665,32 @@
     }
 
     // ---------- 取得班級列表 ----------
-    async function loadClassList() {
-        const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
-        let classes = await res.json();
-        classes = sortClasses(classes);
-        
-        if (currentUser && currentUser.role !== 'admin') {
-            const allowed = getAuthorizedClasses();
-            if (allowed !== '*') {
-                classes = classes.filter(c => allowed.includes(c));
-            }
+async function loadClassList() {
+    const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
+    let classes = await res.json();
+    classes = sortClasses(classes);
+    
+    if (currentUser && currentUser.role !== 'admin') {
+        const allowed = getAuthorizedClasses();
+        if (allowed !== '*') {
+            classes = classes.filter(c => allowed.includes(c));
         }
-        
-        allClasses = classes;
-        
-        renderClassList(classes);
-        renderClassSelection();
-        renderClassCheckboxes();  // 更新新增學生區塊的班級按鈕
-        
-        return classes;
     }
-
+    
+    allClasses = classes;
+    
+    renderClassList(classes);
+    
+    // 更新新增學生區塊的多選按鈕
+    selectedNewStudentClasses.clear();
+    renderClassCheckboxes();
+    document.getElementById('newStudentClass').value = '';  // 清空隱藏欄位
+    
+    renderClassSelection();
+    
+    return classes;
+}
+    
     function getFilteredStudents() {
         const allowedClasses = getAuthorizedClasses();
         if (allowedClasses === '*') return allStudents;
@@ -2293,70 +2304,68 @@
             selectedCountSpan.textContent = makeupSelectedStudents.size;
         }
     }
+function updateAttendanceList() {
+  const container = document.getElementById('attendanceList');
+  if (!container) return;
 
-    function updateAttendanceList() {
-        const container = document.getElementById('attendanceList');
-        if (!container) return;
+  const filteredStudents = getFilteredStudents();
+  const grouped = {};
+  filteredStudents.forEach(s => {
+    (s.class || []).forEach(className => {
+      if (!grouped[className]) grouped[className] = [];
+      grouped[className].push(s);
+    });
+  });
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            (s.class || []).forEach(className => {
-                if (!grouped[className]) grouped[className] = [];
-                grouped[className].push(s);
-            });
-        });
+  let html = '';
+  for (let className in grouped) {
+    html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+    grouped[className].forEach(s => {
+      const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+      const isSelectedMakeup = makeupSelectedStudents.has(s.name);
+      
+      let buttonClass = 'student-button';
+      let disabled = false;
+      let onClick = '';
 
-        let html = '';
-        for (let className in grouped) {
-            html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-            grouped[className].forEach(s => {
-                const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-                const isSelectedMakeup = makeupSelectedStudents.has(s.name);
-                
-                let buttonClass = 'student-button';
-                let disabled = false;
-                let onClick = '';
-
-                if (isMakeupMode) {
-                    if (currentUser.role === 'coach') {
-                        if (isCheckedNormal) {
-                            buttonClass += ' checked';
-                            disabled = true;
-                        } else {
-                            onClick = `markMakeupAttendance('${s.name}')`;
-                        }
-                    } else {
-                        if (isCheckedNormal) {
-                            buttonClass += ' checked';
-                            disabled = true;
-                        } else {
-                            buttonClass += isSelectedMakeup ? ' selected' : '';
-                            onClick = `toggleMakeupStudent('${s.name}')`;
-                        }
-                    }
-                } else {
-                    if (isCheckedNormal) {
-                        buttonClass += ' checked';
-                        disabled = true;
-                    }
-                    onClick = `markAttendance('${s.name}')`;
-                }
-
-                let buttonText = s.name;
-                if (currentUser.role === 'coach' || currentUser.role === 'admin') {
-                    const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
-                    if (zeroClass) buttonClass += ' zero-class';
-                    buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
-                }
-
-                html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
-            });
-            html += '</div>';
+      if (isMakeupMode) {
+        if (currentUser.role === 'coach') {
+          if (isCheckedNormal) {
+            buttonClass += ' checked';
+            disabled = true;
+          } else {
+            onClick = `markMakeupAttendance('${s.name}')`;
+          }
+        } else {
+          if (isCheckedNormal) {
+            buttonClass += ' checked';
+            disabled = true;
+          } else {
+            buttonClass += isSelectedMakeup ? ' selected' : '';
+            onClick = `toggleMakeupStudent('${s.name}')`;
+          }
         }
-        container.innerHTML = html;
-    }
+      } else {
+        if (isCheckedNormal) {
+          buttonClass += ' checked';
+          disabled = true;
+        }
+        onClick = `markAttendance('${s.name}')`;
+      }
 
+      let buttonText = s.name;
+      if (currentUser.role === 'coach' || currentUser.role === 'admin') {
+        const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+        if (zeroClass) buttonClass += ' zero-class';
+        buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+      }
+
+      html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+    });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
     async function coachRequestDeleteStudent(name) {
         if (currentUser.role !== 'coach') {
             showError('無權限');
@@ -3075,87 +3084,86 @@
     }
 
     // ---------- 學生資訊列表 ----------
-    function renderNoteListByClass() {
-        const container = document.getElementById('noteListByClass');
-        if (!container) return;
+function renderNoteListByClass() {
+  const container = document.getElementById('noteListByClass');
+  if (!container) return;
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            (s.class || []).forEach(className => {
-                if (!grouped[className]) grouped[className] = [];
-                grouped[className].push(s);
-            });
-            // 初始化折疊狀態（如果沒有）
-            if (s.class && s.class.length) {
-                s.class.forEach(cls => {
-                    if (classCollapsed[cls] === undefined) {
-                        classCollapsed[cls] = true;
-                    }
-                });
-            }
-        });
+  const filteredStudents = getFilteredStudents();
+  const grouped = {};
+  filteredStudents.forEach(s => {
+    (s.class || []).forEach(className => {
+      if (!grouped[className]) grouped[className] = [];
+      grouped[className].push(s);
+    });
+  });
 
-        let html = '';
-        const sortedClasses = sortClasses(Object.keys(grouped));
-        sortedClasses.forEach(className => {
-            const collapsed = classCollapsed[className] ? 'collapsed' : '';
-            const icon = classCollapsed[className] ? '▶' : '▼';
-            html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
-                <span class="toggle-icon">${icon}</span>
-                <h3>${className}班</h3>
-            </div>`;
-            html += `<div class="class-students ${collapsed}" id="class-${className}">`;
-            grouped[className].forEach(s => {
-                const icons = [];
-                if (currentUser.role === 'admin' && s.remainingClasses <= 0) icons.push('🔴');
-                if (s.leaveCount >= 2) icons.push('🟡');
-                const iconsHtml = icons.length ? `<span class="student-icons">${icons.join(' ')}</span>` : '';
+  let html = '';
+  const sortedClasses = sortClasses(Object.keys(grouped));
+  sortedClasses.forEach(className => {
+    const collapsed = classCollapsed[className] ? 'collapsed' : '';
+    const icon = classCollapsed[className] ? '▶' : '▼';
+    html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+        <span class="toggle-icon">${icon}</span>
+        <h3>${className}班</h3>
+      </div>`;
+    html += `<div class="class-students ${collapsed}" id="class-${className}">`;
 
-                const remainingClass = s.remainingClasses <= 0 ? 'remaining-zero' : '';
-                const remainingDisplay = `<span class="remaining-class ${remainingClass}">${s.remainingClasses} 堂</span>`;
+    grouped[className].forEach(s => {
+      // 狀態圖示
+      const icons = [];
+      if (currentUser.role === 'admin' && s.remainingClasses <= 0) icons.push('🔴');
+      if (s.leaveCount >= 2) icons.push('🟡');
+      const iconsHtml = icons.length ? `<span class="student-icons">${icons.join(' ')}</span>` : '';
 
-                let actionsHtml = '';
-                if (currentUser.role === 'admin') {
-                    actionsHtml = `
-                        <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
-                        <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
-                        <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
-                        <button class="btn-sm" onclick="openEditStudentNameModal('${s.name}')">✏️改名</button>
-                    `;
-                } else if (currentUser.role === 'coach') {
-                    actionsHtml = `
-                        <button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除</button>
-                        <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
-                    `;
-                }
+      // 剩餘堂數顯示（若0堂則紅字）
+      const remainingClass = s.remainingClasses <= 0 ? 'remaining-zero' : '';
+      const remainingDisplay = `<span class="remaining-class ${remainingClass}">${s.remainingClasses} 堂</span>`;
 
-                const noteHtml = s.note ? `<div class="student-note">📝 ${s.note}</div>` : '';
+      // 操作按鈕（根據權限）
+      let actionsHtml = '';
+      if (currentUser.role === 'admin') {
+        actionsHtml = `
+          <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
+          <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
+          <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
+          <button class="btn-sm" onclick="openEditStudentNameModal('${s.name}')">✏️改名</button>
+        `;
+      } else if (currentUser.role === 'coach') {
+        actionsHtml = `
+          <button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除</button>
+          <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
+        `;
+      }
 
-                html += `
-                    <div class="student-card">
-                        <div class="student-card-header">
-                            <div class="student-name-icons">
-                                ${iconsHtml}
-                                <span class="student-name"><strong>${s.name}</strong></span>
-                            </div>
-                            ${remainingDisplay}
-                        </div>
-                        <div class="student-stats">
-                            <span class="leave-badge">請假 ${s.leaveCount}</span>
-                            <span class="rental-badge">租借 ${s.rentalCount}</span>
-                        </div>
-                        ${noteHtml}
-                        <div class="student-actions">
-                            ${actionsHtml}
-                        </div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-        });
-        container.innerHTML = html || '無學生資料';
-    }
+      // 備註（若存在）
+      const noteHtml = s.note ? `<div class="student-note">📝 ${s.note}</div>` : '';
+
+      // 學生卡片 HTML
+      html += `
+        <div class="student-card">
+          <div class="student-card-header">
+            <div class="student-name-icons">
+              ${iconsHtml}
+              <span class="student-name"><strong>${s.name}</strong></span>
+            </div>
+            ${remainingDisplay}
+          </div>
+          <div class="student-stats">
+            <span class="leave-badge">請假 ${s.leaveCount}</span>
+            <span class="rental-badge">租借 ${s.rentalCount}</span>
+          </div>
+          ${noteHtml}
+          <div class="student-actions">
+            ${actionsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`; // 關閉 class-students
+  });
+  container.innerHTML = html || '無學生資料';
+}
 
     window.toggleClass = function(className) {
         classCollapsed[className] = !classCollapsed[className];
