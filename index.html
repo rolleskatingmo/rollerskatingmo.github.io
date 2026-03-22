@@ -496,6 +496,8 @@
     const modalContent = document.getElementById('modalContent');
     let searchTimer;
     let loadingTimeout = null;
+    let cachedStudents = [];
+    let loadingStudentsPromise = null;  // 用于确保只加载一次
 
     function getWeekday(dateStr) {
         if (!dateStr) return '';
@@ -533,23 +535,37 @@
         }, 3000);
     }
 
-    searchInput.addEventListener('input', function(e) {
-        clearTimeout(searchTimer);
-        const keyword = e.target.value.trim();
-        if (keyword === '') {
-            studentListDiv.innerHTML = '';
-            return;
-        }
-        searchTimer = setTimeout(() => performSearch(keyword), 300);
-    });
+    // 预加载所有学生
+    async function loadAllStudents() {
+        if (cachedStudents.length > 0) return cachedStudents;
+        if (loadingStudentsPromise) return loadingStudentsPromise;
+        loadingStudentsPromise = (async () => {
+            try {
+                showLoading('載入學生資料...');
+                const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
+                const data = await res.json();
+                cachedStudents = data || [];
+                hideLoading();
+                return cachedStudents;
+            } catch (err) {
+                hideLoading();
+                showMessage('載入學生資料失敗，請重新整理頁面', 'error');
+                throw err;
+            } finally {
+                loadingStudentsPromise = null;
+            }
+        })();
+        return loadingStudentsPromise;
+    }
 
+    // 前端搜索
     async function performSearch(keyword) {
         showLoading('搜尋中...');
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=searchStudent&keyword=${encodeURIComponent(keyword)}`);
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || '搜尋失敗');
-            renderStudentList(data.students || []);
+            // 确保学生列表已加载
+            await loadAllStudents();
+            const filtered = cachedStudents.filter(s => s.name.toLowerCase().includes(keyword.toLowerCase()));
+            renderStudentList(filtered);
             hideLoading();
         } catch (err) {
             hideLoading();
@@ -572,12 +588,26 @@
         });
     }
 
+    // 学生详情请求缓存（简单内存缓存，5分钟过期）
+    let studentDetailCache = {};
     async function loadStudentDetail(name) {
+        const cacheKey = name;
+        const now = Date.now();
+        const cached = studentDetailCache[cacheKey];
+        if (cached && (now - cached.timestamp) < 300000) { // 5分钟内
+            renderModal(cached.data);
+            modalOverlay.style.display = 'flex';
+            modalContent.scrollTop = 0;
+            return;
+        }
+
         showLoading('載入詳細記錄...');
         try {
             const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
             const data = await res.json();
             if (data.error) throw new Error(data.error);
+            // 存储缓存
+            studentDetailCache[cacheKey] = { data, timestamp: Date.now() };
             renderModal(data);
             modalOverlay.style.display = 'flex';
             modalContent.scrollTop = 0;
@@ -588,12 +618,13 @@
         }
     }
 
-    // 將後端的原因轉換為前端顯示的類型
+    // 类型映射（保持与后端一致）
     function getDisplayType(reason) {
         const mapping = {
             '點名扣課': '上課',
             '補點名': '補點名',
             '續費': '續費',
+            '已續費': '續費',
             '課堂改動': '課堂改動',
             '請假扣課': '請假扣課'
         };
@@ -618,12 +649,11 @@
             remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
         }
 
-        // 不再過濾，顯示所有課堂記錄（包括續費、課堂改動等）
+        // 显示所有课堂记录，包括续费、改动等
         let allRecords = [
             ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
             ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
         ];
-        // 按日期降序排列
         allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         let recordsHtml = '';
@@ -682,7 +712,22 @@
             closeModal();
         }
     });
+
+    // 搜索防抖
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimer);
+        const keyword = e.target.value.trim();
+        if (keyword === '') {
+            studentListDiv.innerHTML = '';
+            return;
+        }
+        searchTimer = setTimeout(() => performSearch(keyword), 300);
+    });
+
+    // 页面加载时预加载学生
+    window.addEventListener('DOMContentLoaded', function() {
+        loadAllStudents().catch(console.error);
+    });
 </script>
-    </script>
 </body>
 </html>
