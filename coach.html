@@ -1548,48 +1548,58 @@
     }
 
     // ---------- 載入所有資料 ----------
-    async function loadAllData() {
-        try {
-            document.getElementById('loadingSpinner').style.display = 'flex';
-            const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
-            const data = await res.json();
+async function loadAllData() {
+    try {
+        document.getElementById('loadingSpinner').style.display = 'flex';
+        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
+        const data = await res.json();
 
-            allStudents = normalizeStudentClasses(data.students || []);
-            allClasses = data.classes || [];
-            pendingApprovals = data.pendingApprovals || [];
+        allStudents = normalizeStudentClasses(data.students || []);
+        allClasses = data.classes || [];
+        pendingApprovals = data.pendingApprovals || [];
 
-            paymentNotifications = (data.paymentRecords || [])
-                .filter(p => !p.processed)
-                .map(p => ({
-                    studentName: p.studentName,
-                    className: p.className,
-                    paymentDate: p.paymentDate,
-                    time: p.time,
-                    imageUrl: p.imageUrl
-                }));
+        // --- 新增：取得授權班級（用於過濾）---
+        const authClasses = getAuthorizedClasses();
+        const isAuthorizedForClass = (className) => {
+            if (authClasses === '*') return true;
+            if (!className) return false;
+            return authClasses.includes(className);
+        };
 
-            trialNotifications = (data.trialStudents || [])
-                .filter(t => !t.paid || t.date >= getTodayUTC8());
+        // 過濾待續費通知
+        paymentNotifications = (data.paymentRecords || [])
+            .filter(p => !p.processed && isAuthorizedForClass(p.className))
+            .map(p => ({
+                studentName: p.studentName,
+                className: p.className,
+                paymentDate: p.paymentDate,
+                time: p.time,
+                imageUrl: p.imageUrl
+            }));
 
-            const paidStudentNames = new Set((data.paymentRecords || []).map(p => p.studentName));
-            newStudentNotifications = allStudents
-                .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name))
-                .map(s => ({ name: s.name, className: s.class.join(',') }));
+        trialNotifications = (data.trialStudents || [])
+            .filter(t => !t.paid || t.date >= getTodayUTC8());
 
-            renderNotificationBody();
+        // 過濾新學生通知
+        const paidStudentNames = new Set((data.paymentRecords || []).map(p => p.studentName));
+        newStudentNotifications = allStudents
+            .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
+            .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-            document.getElementById('loadingSpinner').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
+        renderNotificationBody();
 
-            applyRoleRestrictions();
-        } catch (error) {
-            console.error(error);
-            document.getElementById('loadingSpinner').innerHTML = `
-                <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
-                <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
-            `;
-        }
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+
+        applyRoleRestrictions();
+    } catch (error) {
+        console.error(error);
+        document.getElementById('loadingSpinner').innerHTML = `
+            <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
+            <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
+        `;
     }
+}
 
     // ---------- 權限控制 ----------
     function applyRoleRestrictions() {
@@ -1726,11 +1736,10 @@ function renderClassCheckboxes() {
     const container = document.getElementById('newStudentClassContainer');
     if (!container) return;
     
-    // 獲取當前用戶的授權班級（已過濾）
     const allowed = getAuthorizedClasses();
     let displayClasses = [];
     if (allowed === '*') {
-        displayClasses = [...allClasses];  // 全部班級
+        displayClasses = [...allClasses];
     } else {
         displayClasses = allClasses.filter(c => allowed.includes(c));
     }
@@ -1741,7 +1750,6 @@ function renderClassCheckboxes() {
     });
     container.innerHTML = html;
     
-    // 更新視覺狀態
     Array.from(container.children).forEach(child => {
         const cls = child.textContent.trim();
         if (selectedNewStudentClasses.has(cls)) {
@@ -2303,7 +2311,6 @@ function renderEditClassButtons() {
     const container = document.getElementById('editClassContainer');
     if (!container) return;
     
-    // 獲取當前用戶的授權班級（已過濾）
     const allowed = getAuthorizedClasses();
     let displayClasses = [];
     if (allowed === '*') {
@@ -2771,29 +2778,34 @@ function renderEditClassButtons() {
     }
 
     // ---------- 繳費通知 ----------
-    async function loadPaymentNotifications() {
-        console.log('loadPaymentNotifications 開始');
-        const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
-        const payments = await res.json();
-        console.log('從後端獲取的繳費記錄 (原始):', JSON.stringify(payments, null, 2));
+async function loadPaymentNotifications() {
+    const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
+    const payments = await res.json();
 
-        paymentNotifications = payments.filter(p => !p.processed).map(p => ({
+    const authClasses = getAuthorizedClasses();
+    const isAuthorizedForClass = (className) => {
+        if (authClasses === '*') return true;
+        if (!className) return false;
+        return authClasses.includes(className);
+    };
+
+    paymentNotifications = payments
+        .filter(p => !p.processed && isAuthorizedForClass(p.className))
+        .map(p => ({
             studentName: p.studentName,
             className: p.className,
             paymentDate: p.paymentDate,
             time: p.time,
             imageUrl: p.imageUrl
         }));
-        console.log('過濾後的 paymentNotifications:', JSON.stringify(paymentNotifications, null, 2));
 
-        const paidStudentNames = new Set(payments.map(p => p.studentName));
-        newStudentNotifications = allStudents
-            .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name))
-            .map(s => ({ name: s.name, className: s.class.join(',') }));
-        console.log('newStudentNotifications:', newStudentNotifications);
+    const paidStudentNames = new Set(payments.map(p => p.studentName));
+    newStudentNotifications = allStudents
+        .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
+        .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-        renderNotificationBody();
-    }
+    renderNotificationBody();
+}
 
     // ---------- 待審批請求 ----------
     async function loadPendingApprovals() {
