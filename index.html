@@ -462,7 +462,7 @@
 <body>
     <a href="coach.html" class="coach-fab">⚙️ 教練入口 →</a>
     <div class="container">
-        <h1>🛼 輪滑課程管理系統 · 家長查詢</h1>
+        <h1>🛼 輪滑課程查詢系統</h1>
         <div class="search-area">
             <label class="search-label">🔍 輸入學生姓名關鍵字</label>
             <input type="text" id="searchInput" placeholder="例如：王小明可輸入'王','小','小明'或'明'即可搜尋" autocomplete="off">
@@ -486,193 +486,203 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz3UbuYFs6TYWyQBsdZ-cQDzpZs7ZItQ9UMv0OBQFDGvED8trPl9p2ABKoXbquLLkGcWQ/exec';
+       <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz3UbuYFs6TYWyQBsdZ-cQDzpZs7ZItQ9UMv0OBQFDGvED8trPl9p2ABKoXbquLLkGcWQ/exec';
 
-        const searchInput = document.getElementById('searchInput');
-        const studentListDiv = document.getElementById('studentList');
-        const messageDiv = document.getElementById('message');
-        const modalOverlay = document.getElementById('studentModal');
-        const modalContent = document.getElementById('modalContent');
-        let searchTimer;
-        let loadingTimeout = null;
+    const searchInput = document.getElementById('searchInput');
+    const studentListDiv = document.getElementById('studentList');
+    const messageDiv = document.getElementById('message');
+    const modalOverlay = document.getElementById('studentModal');
+    const modalContent = document.getElementById('modalContent');
+    let searchTimer;
+    let loadingTimeout = null;
 
-        // 改進的 getWeekday：支援 yyyy/MM/dd 和 yyyy-MM-dd
-        function getWeekday(dateStr) {
-            if (!dateStr) return '';
-            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            // 將 'yyyy/MM/dd' 轉為 'yyyy-MM-dd'
-            const normalized = dateStr.replace(/\//g, '-');
-            const d = new Date(normalized + 'T00:00:00');
-            if (isNaN(d.getTime())) return '';
-            return weekdays[d.getDay()];
-        }
+    function getWeekday(dateStr) {
+        if (!dateStr) return '';
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const normalized = dateStr.replace(/\//g, '-');
+        const d = new Date(normalized + 'T00:00:00');
+        if (isNaN(d.getTime())) return '';
+        return weekdays[d.getDay()];
+    }
 
-        function showLoading(message = '載入中...') {
-            if (loadingTimeout) clearTimeout(loadingTimeout);
-            messageDiv.innerHTML = `
-                <div class="loading">
-                    ${message}
-                    <span class="spinner-small"></span>
-                </div>
-            `;
-            messageDiv.className = 'message loading';
-            messageDiv.style.display = 'flex';
-        }
+    function showLoading(message = '載入中...') {
+        if (loadingTimeout) clearTimeout(loadingTimeout);
+        messageDiv.innerHTML = `
+            <div class="loading">
+                ${message}
+                <span class="spinner-small"></span>
+            </div>
+        `;
+        messageDiv.className = 'message loading';
+        messageDiv.style.display = 'flex';
+    }
 
-        function hideLoading() {
+    function hideLoading() {
+        messageDiv.style.display = 'none';
+        if (loadingTimeout) clearTimeout(loadingTimeout);
+    }
+
+    function showMessage(msg, type = 'info') {
+        hideLoading();
+        const className = type === 'error' ? 'error' : 'success';
+        messageDiv.innerHTML = `<div class="${className}">${msg}</div>`;
+        messageDiv.style.display = 'block';
+        setTimeout(() => {
             messageDiv.style.display = 'none';
-            if (loadingTimeout) clearTimeout(loadingTimeout);
-        }
+        }, 3000);
+    }
 
-        function showMessage(msg, type = 'info') {
-            hideLoading();
-            const className = type === 'error' ? 'error' : 'success';
-            messageDiv.innerHTML = `<div class="${className}">${msg}</div>`;
-            messageDiv.style.display = 'block';
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 3000);
-        }
-
-        searchInput.addEventListener('input', function(e) {
-            clearTimeout(searchTimer);
-            const keyword = e.target.value.trim();
-            if (keyword === '') {
-                studentListDiv.innerHTML = '';
-                return;
-            }
-            searchTimer = setTimeout(() => performSearch(keyword), 300);
-        });
-
-        async function performSearch(keyword) {
-            showLoading('搜尋中...');
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=searchStudent&keyword=${encodeURIComponent(keyword)}`);
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error || '搜尋失敗');
-                renderStudentList(data.students || []);
-                hideLoading();
-            } catch (err) {
-                hideLoading();
-                showMessage('❌ ' + err.message, 'error');
-            }
-        }
-
-        function renderStudentList(students) {
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimer);
+        const keyword = e.target.value.trim();
+        if (keyword === '') {
             studentListDiv.innerHTML = '';
-            if (students.length === 0) {
-                studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
-                return;
-            }
-            students.forEach(s => {
-                const tag = document.createElement('span');
-                tag.className = 'student-tag';
-                tag.textContent = `${s.name} (${s.class})`;
-                tag.addEventListener('click', () => loadStudentDetail(s.name));
-                studentListDiv.appendChild(tag);
-            });
+            return;
         }
+        searchTimer = setTimeout(() => performSearch(keyword), 300);
+    });
 
-        async function loadStudentDetail(name) {
-            showLoading('載入詳細記錄...');
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
-                renderModal(data);
-                modalOverlay.style.display = 'flex';
-                // 強制滾動到頂部
-                modalContent.scrollTop = 0;
-                hideLoading();
-            } catch (err) {
-                hideLoading();
-                showMessage('❌ 無法載入記錄：' + err.message, 'error');
-            }
+    async function performSearch(keyword) {
+        showLoading('搜尋中...');
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=searchStudent&keyword=${encodeURIComponent(keyword)}`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || '搜尋失敗');
+            renderStudentList(data.students || []);
+            hideLoading();
+        } catch (err) {
+            hideLoading();
+            showMessage('❌ ' + err.message, 'error');
         }
+    }
 
-        function renderModal(d) {
-            let leaveBadge = '';
-            if (d.leaveCount >= 2) {
-                leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
-            } else {
-                leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
-            }
-
-            let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
-            let remainingWarning = '';
-            if (d.remainingClasses <= 0) {
-                remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
-                remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練繳費。</div>`;
-            } else if (d.remainingClasses <= 2) {
-                remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
-                remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
-            }
-
-            // 只保留實際的上課記錄（點名扣課 和 補點名），忽略新增、續費、調整等
-            let classRecordsFiltered = d.classRecords.filter(r => r.reason === '點名扣課' || r.reason === '補點名');
-            let allRecords = [
-                ...classRecordsFiltered.map(r => ({ ...r, type: '上課' })),
-                ...d.leaveRecords.map(r => ({ date: r.date, type: '請假' }))
-            ];
-            // 按日期降序排列（最新的在上）
-            allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            let recordsHtml = '';
-            if (allRecords.length === 0) {
-                recordsHtml = '<p style="color:#718096;">尚無任何上課或請假記錄。</p>';
-            } else {
-                recordsHtml = `<div style="overflow-x: auto;">
-                    <table class="record-table">
-                        <thead><tr><th>日期</th><th>類型</th><th>剩餘堂數</th></tr></thead>
-                        <tbody>`;
-                allRecords.slice(0, 30).forEach(rec => {
-                    const weekday = getWeekday(rec.date);
-                    const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
-                    if (rec.type === '上課') {
-                        const isMakeup = rec.reason === '補點名';
-                        const rowClass = isMakeup ? 'makeup-row' : '';
-                        const typeLabel = isMakeup ? '補點名' : '上課';
-                        recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
-                    } else {
-                        recordsHtml += `<tr><td>${dateWithWeekday}</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
-                    }
-                });
-                recordsHtml += `</tbody></table></div>`;
-            }
-
-            modalContent.innerHTML = `
-                <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
-                ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
-                <div class="modal-info-row">
-                    <span class="modal-info-label">班級</span>
-                    <span class="modal-info-value">${d.class}</span>
-                </div>
-                <div class="modal-info-row">
-                    <span class="modal-info-label">剩餘課堂</span>
-                    <span class="modal-info-value">${remainingDisplay}</span>
-                </div>
-                ${remainingWarning}
-                <div class="modal-info-row">
-                    <span class="modal-info-label">租借裝備</span>
-                    <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
-                </div>
-                <h3>📋 近期記錄</h3>
-                ${recordsHtml}
-                <div class="modal-buttons">
-                    <button onclick="closeModal()">關閉</button>
-                </div>
-            `;
+    function renderStudentList(students) {
+        studentListDiv.innerHTML = '';
+        if (students.length === 0) {
+            studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
+            return;
         }
-
-        function closeModal() {
-            modalOverlay.style.display = 'none';
-        }
-
-        modalOverlay.addEventListener('click', function(e) {
-            if (e.target === modalOverlay) {
-                closeModal();
-            }
+        students.forEach(s => {
+            const tag = document.createElement('span');
+            tag.className = 'student-tag';
+            tag.textContent = `${s.name} (${s.class})`;
+            tag.addEventListener('click', () => loadStudentDetail(s.name));
+            studentListDiv.appendChild(tag);
         });
+    }
+
+    async function loadStudentDetail(name) {
+        showLoading('載入詳細記錄...');
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            renderModal(data);
+            modalOverlay.style.display = 'flex';
+            modalContent.scrollTop = 0;
+            hideLoading();
+        } catch (err) {
+            hideLoading();
+            showMessage('❌ 無法載入記錄：' + err.message, 'error');
+        }
+    }
+
+    // 將後端的原因轉換為前端顯示的類型
+    function getDisplayType(reason) {
+        const mapping = {
+            '點名扣課': '上課',
+            '補點名': '補點名',
+            '續費': '續費',
+            '課堂改動': '課堂改動',
+            '請假扣課': '請假扣課'
+        };
+        return mapping[reason] || reason;
+    }
+
+    function renderModal(d) {
+        let leaveBadge = '';
+        if (d.leaveCount >= 2) {
+            leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
+        } else {
+            leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
+        }
+
+        let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
+        let remainingWarning = '';
+        if (d.remainingClasses <= 0) {
+            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
+            remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練繳費。</div>`;
+        } else if (d.remainingClasses <= 2) {
+            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
+            remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
+        }
+
+        // 不再過濾，顯示所有課堂記錄（包括續費、課堂改動等）
+        let allRecords = [
+            ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
+            ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
+        ];
+        // 按日期降序排列
+        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        let recordsHtml = '';
+        if (allRecords.length === 0) {
+            recordsHtml = '<p style="color:#718096;">尚無任何記錄。</p>';
+        } else {
+            recordsHtml = `<div style="overflow-x: auto;">
+                <table class="record-table">
+                    <thead><tr><th>日期</th><th>類型</th><th>剩餘堂數</th></tr></thead>
+                    <tbody>`;
+            allRecords.slice(0, 30).forEach(rec => {
+                const weekday = getWeekday(rec.date);
+                const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
+                if (rec.type === '課堂') {
+                    const isMakeup = rec.reason === '補點名';
+                    const rowClass = isMakeup ? 'makeup-row' : '';
+                    const typeLabel = rec.displayType;
+                    recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
+                } else {
+                    recordsHtml += `<tr><td>${dateWithWeekday}</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
+                }
+            });
+            recordsHtml += `</tbody></table></div>`;
+        }
+
+        modalContent.innerHTML = `
+            <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
+            ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
+            <div class="modal-info-row">
+                <span class="modal-info-label">班級</span>
+                <span class="modal-info-value">${d.class}</span>
+            </div>
+            <div class="modal-info-row">
+                <span class="modal-info-label">剩餘課堂</span>
+                <span class="modal-info-value">${remainingDisplay}</span>
+            </div>
+            ${remainingWarning}
+            <div class="modal-info-row">
+                <span class="modal-info-label">租借裝備</span>
+                <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
+            </div>
+            <h3>📋 近期記錄</h3>
+            ${recordsHtml}
+            <div class="modal-buttons">
+                <button onclick="closeModal()">關閉</button>
+            </div>
+        `;
+    }
+
+    function closeModal() {
+        modalOverlay.style.display = 'none';
+    }
+
+    modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+    });
+</script>
     </script>
 </body>
 </html>
