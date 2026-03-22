@@ -1722,23 +1722,35 @@
     }
 
     // ---------- 班級排序 ----------
-    function renderClassCheckboxes() {
-        const container = document.getElementById('newStudentClassContainer');
-        if (!container) return;
-        let html = '';
-        allClasses.forEach(className => {
-            html += `<span class="class-badge" style="cursor:pointer; background:#4299e1;" onclick="toggleNewStudentClass('${className}')">${className}</span>`;
-        });
-        container.innerHTML = html;
-        Array.from(container.children).forEach(child => {
-            const cls = child.textContent.trim();
-            if (selectedNewStudentClasses.has(cls)) {
-                child.style.background = '#48bb78';
-            } else {
-                child.style.background = '#4299e1';
-            }
-        });
+function renderClassCheckboxes() {
+    const container = document.getElementById('newStudentClassContainer');
+    if (!container) return;
+    
+    // 獲取當前用戶的授權班級（已過濾）
+    const allowed = getAuthorizedClasses();
+    let displayClasses = [];
+    if (allowed === '*') {
+        displayClasses = [...allClasses];  // 全部班級
+    } else {
+        displayClasses = allClasses.filter(c => allowed.includes(c));
     }
+    
+    let html = '';
+    displayClasses.forEach(className => {
+        html += `<span class="class-badge" style="cursor:pointer; background:#4299e1;" onclick="toggleNewStudentClass('${className}')">${className}</span>`;
+    });
+    container.innerHTML = html;
+    
+    // 更新視覺狀態
+    Array.from(container.children).forEach(child => {
+        const cls = child.textContent.trim();
+        if (selectedNewStudentClasses.has(cls)) {
+            child.style.background = '#48bb78';
+        } else {
+            child.style.background = '#4299e1';
+        }
+    });
+}
 
     let selectedNewStudentClasses = new Set();
 
@@ -2287,17 +2299,27 @@
         document.getElementById('editStudentClassModal').style.display = 'flex';
     }
 
-    function renderEditClassButtons() {
-        const container = document.getElementById('editClassContainer');
-        if (!container) return;
-        let html = '';
-        allClasses.forEach(className => {
-            const isSelected = editClassSelected.has(className);
-            html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClass('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
-        });
-        container.innerHTML = html;
-        document.getElementById('editClassValue').value = Array.from(editClassSelected).join(',');
+function renderEditClassButtons() {
+    const container = document.getElementById('editClassContainer');
+    if (!container) return;
+    
+    // 獲取當前用戶的授權班級（已過濾）
+    const allowed = getAuthorizedClasses();
+    let displayClasses = [];
+    if (allowed === '*') {
+        displayClasses = [...allClasses];
+    } else {
+        displayClasses = allClasses.filter(c => allowed.includes(c));
     }
+    
+    let html = '';
+    displayClasses.forEach(className => {
+        const isSelected = editClassSelected.has(className);
+        html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClass('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+    });
+    container.innerHTML = html;
+    document.getElementById('editClassValue').value = Array.from(editClassSelected).join(',');
+}
 
     function toggleEditClass(className) {
         if (editClassSelected.has(className)) {
