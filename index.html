@@ -484,9 +484,7 @@
             <!-- 動態填入 -->
         </div>
     </div>
-
-    <script>
-       <script>
+<script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
 
     const searchInput = document.getElementById('searchInput');
@@ -497,7 +495,7 @@
     let searchTimer;
     let loadingTimeout = null;
     let cachedStudents = [];
-    let loadingStudentsPromise = null;  // 用于确保只加载一次
+    let loadingStudentsPromise = null;
 
     function getWeekday(dateStr) {
         if (!dateStr) return '';
@@ -535,21 +533,31 @@
         }, 3000);
     }
 
-    // 预加载所有学生
+    // 預載所有學生，處理後端可能回傳的物件或陣列
     async function loadAllStudents() {
         if (cachedStudents.length > 0) return cachedStudents;
         if (loadingStudentsPromise) return loadingStudentsPromise;
+
         loadingStudentsPromise = (async () => {
             try {
                 showLoading('載入學生資料...');
                 const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
-                const data = await res.json();
-                cachedStudents = data || [];
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                let data = await res.json();
+                
+                // 容錯：若後端回傳的是物件且包含 students 陣列，則取該陣列
+                if (data && !Array.isArray(data) && data.students) {
+                    data = data.students;
+                }
+                if (!Array.isArray(data)) {
+                    throw new Error('後端回傳的學生資料格式錯誤');
+                }
+                cachedStudents = data;
                 hideLoading();
                 return cachedStudents;
             } catch (err) {
                 hideLoading();
-                showMessage('載入學生資料失敗，請重新整理頁面', 'error');
+                showMessage('載入學生資料失敗：' + err.message, 'error');
                 throw err;
             } finally {
                 loadingStudentsPromise = null;
@@ -558,18 +566,20 @@
         return loadingStudentsPromise;
     }
 
-    // 前端搜索
+    // 前端搜尋
     async function performSearch(keyword) {
         showLoading('搜尋中...');
         try {
-            // 确保学生列表已加载
-            await loadAllStudents();
-            const filtered = cachedStudents.filter(s => s.name.toLowerCase().includes(keyword.toLowerCase()));
+            await loadAllStudents(); // 確保資料已載入
+            const lowerKeyword = keyword.toLowerCase();
+            const filtered = cachedStudents.filter(s => 
+                s.name && s.name.toLowerCase().includes(lowerKeyword)
+            );
             renderStudentList(filtered);
             hideLoading();
         } catch (err) {
             hideLoading();
-            showMessage('❌ ' + err.message, 'error');
+            showMessage('❌ 搜尋失敗：' + err.message, 'error');
         }
     }
 
@@ -582,19 +592,31 @@
         students.forEach(s => {
             const tag = document.createElement('span');
             tag.className = 'student-tag';
-            tag.textContent = `${s.name} (${s.class})`;
+            // 內嵌樣式確保背景為藍色，防止被其他樣式覆蓋
+            tag.style.backgroundColor = '#2563eb';
+            tag.style.color = 'white';
+            tag.style.padding = '12px 22px';
+            tag.style.borderRadius = '40px';
+            tag.style.fontSize = '1rem';
+            tag.style.fontWeight = '500';
+            tag.style.cursor = 'pointer';
+            tag.style.display = 'inline-block';
+            tag.style.boxShadow = '0 4px 8px rgba(37,99,235,0.2)';
+            // 顯示班級（若班級為陣列則轉為字串）
+            const classDisplay = Array.isArray(s.class) ? s.class.join(',') : (s.class || '');
+            tag.textContent = `${s.name} (${classDisplay})`;
             tag.addEventListener('click', () => loadStudentDetail(s.name));
             studentListDiv.appendChild(tag);
         });
     }
 
-    // 学生详情请求缓存（简单内存缓存，5分钟过期）
+    // 學生詳情快取（5分鐘）
     let studentDetailCache = {};
     async function loadStudentDetail(name) {
         const cacheKey = name;
         const now = Date.now();
         const cached = studentDetailCache[cacheKey];
-        if (cached && (now - cached.timestamp) < 300000) { // 5分钟内
+        if (cached && (now - cached.timestamp) < 300000) {
             renderModal(cached.data);
             modalOverlay.style.display = 'flex';
             modalContent.scrollTop = 0;
@@ -606,7 +628,6 @@
             const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
             const data = await res.json();
             if (data.error) throw new Error(data.error);
-            // 存储缓存
             studentDetailCache[cacheKey] = { data, timestamp: Date.now() };
             renderModal(data);
             modalOverlay.style.display = 'flex';
@@ -618,7 +639,6 @@
         }
     }
 
-    // 类型映射（保持与后端一致）
     function getDisplayType(reason) {
         const mapping = {
             '點名扣課': '上課',
@@ -649,7 +669,6 @@
             remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
         }
 
-        // 显示所有课堂记录，包括续费、改动等
         let allRecords = [
             ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
             ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
@@ -670,8 +689,7 @@
                 if (rec.type === '課堂') {
                     const isMakeup = rec.reason === '補點名';
                     const rowClass = isMakeup ? 'makeup-row' : '';
-                    const typeLabel = rec.displayType;
-                    recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td><span class="badge blue">${typeLabel}</span></td><td>${rec.remainingClasses}</td></tr>`;
+                    recordsHtml += `<tr class="${rowClass}"><td>${dateWithWeekday}</td><td><span class="badge blue">${rec.displayType}</span></td><td>${rec.remainingClasses}</td></tr>`;
                 } else {
                     recordsHtml += `<tr><td>${dateWithWeekday}</td><td><span class="badge yellow">請假</span></td><td>—</td></tr>`;
                 }
@@ -684,7 +702,7 @@
             ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
             <div class="modal-info-row">
                 <span class="modal-info-label">班級</span>
-                <span class="modal-info-value">${d.class}</span>
+                <span class="modal-info-value">${Array.isArray(d.class) ? d.class.join(',') : d.class}</span>
             </div>
             <div class="modal-info-row">
                 <span class="modal-info-label">剩餘課堂</span>
@@ -713,7 +731,7 @@
         }
     });
 
-    // 搜索防抖
+    // 搜尋防抖
     searchInput.addEventListener('input', function(e) {
         clearTimeout(searchTimer);
         const keyword = e.target.value.trim();
@@ -724,7 +742,7 @@
         searchTimer = setTimeout(() => performSearch(keyword), 300);
     });
 
-    // 页面加载时预加载学生
+    // 頁面載入時預載學生資料
     window.addEventListener('DOMContentLoaded', function() {
         loadAllStudents().catch(console.error);
     });
