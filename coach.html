@@ -1957,7 +1957,7 @@
         } else {
             recordsHtml = `<div style="overflow-x: auto;">
                 <table class="record-table">
-                    <thead>汽水<th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th> </thead>
+                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
                     <tbody>`;
             allRecords.slice(0, 50).forEach(rec => {
                 const weekday = getWeekday(rec.date);
@@ -1971,7 +1971,7 @@
                     recordsHtml += `<tr>  on<td>${dateWithWeekday}</td>  on<td>—</td>  on<td><span class="badge yellow">請假</span></td>  on<td>—</td>  on</tr>`;
                 }
             });
-            recordsHtml += `</tbody>  on</table></div>`;
+            recordsHtml += `</tbody></table></div>`;
         }
 
         const modalContent = document.getElementById('coachStudentRecordContent');
