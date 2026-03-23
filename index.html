@@ -5,8 +5,449 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>輪滑課程管理系統</title>
 <style>
-    /* 样式保持不变，省略以节省篇幅，实际使用时请保留完整样式 */
-    /* 此处保留原文件中的所有 CSS 样式 */
+    /* ===== 全局重置與變數 ===== */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f7fa;
+        padding: 12px;
+        color: #1e293b;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: transparent;
+        padding: 0;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 20px 0 16px;
+        letter-spacing: -0.02em;
+        padding: 0 4px;
+    }
+
+    .search-area {
+        background: white;
+        border-radius: 32px;
+        padding: 24px 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    .search-label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+
+    #searchInput {
+        padding: 14px 18px;
+        border: 1px solid #d1d9e6;
+        border-radius: 28px;
+        font-size: 1rem;
+        width: 100%;
+        background: #ffffff;
+        transition: border 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    #searchInput:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .search-hint {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin: 12px 0 8px;
+        background: #f1f5f9;
+        padding: 10px 14px;
+        border-radius: 40px;
+    }
+
+    .student-list {
+        margin-top: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* 修改为白色背景深色文字 */
+    .student-tag {
+        background: white;
+        color: #1e293b;
+        padding: 12px 22px;
+        border-radius: 40px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.2s;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        border: 1px solid #e2e8f0;
+        display: inline-block;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+        touch-action: manipulation;
+    }
+
+    .student-tag:active {
+        transform: scale(0.98);
+        background: #f1f5f9;
+    }
+
+    .message {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        min-width: 240px;
+        max-width: 90%;
+        border-radius: 50px;
+        font-size: 1rem;
+        font-weight: 500;
+        text-align: center;
+        z-index: 30000;
+        pointer-events: none;
+        background: transparent;
+    }
+
+    .message > div {
+        padding: 14px 24px;
+        border-radius: 50px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    .message.loading {
+        background: #2563eb;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    .spinner-small {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .success {
+        background: rgba(34, 197, 94, 0.9);
+        color: white;
+    }
+
+    .error {
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        backdrop-filter: blur(6px);
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 40px;
+        padding: 32px;
+        max-width: 90%;
+        width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 30px 50px -20px rgba(0,0,0,0.3);
+        animation: modalFadeIn 0.3s ease;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-content h2 {
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .modal-content h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 20px 0 12px;
+        color: #334155;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .badge.red {
+        background: #ef4444;
+        color: white;
+    }
+
+    .badge.green {
+        background: #16a34a;
+        color: white;
+    }
+
+    .badge.blue {
+        background: #2563eb;
+        color: white;
+    }
+
+    .badge.yellow {
+        background: #fbbf24;
+        color: #78350f;
+    }
+
+    .warning-text {
+        background: #ffedd5;
+        border-left: 4px solid #f97316;
+        padding: 12px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: #9a3412;
+        margin: 16px 0;
+    }
+
+    .modal-info-row {
+        display: flex;
+        margin-bottom: 12px;
+        background: #f8fafc;
+        padding: 12px 16px;
+        border-radius: 28px;
+    }
+
+    .modal-info-label {
+        flex: 0 0 100px;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .modal-info-value {
+        flex: 1;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .record-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-top: 16px;
+    }
+
+    .record-table th {
+        text-align: left;
+        padding: 12px 8px;
+        background: #f1f5f9;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .record-table td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+
+    .record-table td:first-child {
+        white-space: nowrap;
+    }
+
+    .record-table td:last-child {
+        text-align: right;
+    }
+
+    .record-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .makeup-row {
+        background-color: #fee2e2 !important;
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    .modal-buttons button {
+        padding: 12px 28px;
+        border: none;
+        border-radius: 40px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.95rem;
+        background: #2563eb;
+        color: white;
+        box-shadow: 0 6px 12px -4px #2563eb80;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .modal-buttons button:active {
+        transform: translateY(0);
+        opacity: 0.9;
+    }
+
+    .footer {
+        margin-top: 40px;
+        font-size: 0.8rem;
+        color: #64748b;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 20px;
+    }
+
+    .footer p {
+        margin-bottom: 5px;
+    }
+
+    .coach-fab {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #2563eb;
+        color: white;
+        padding: 14px 24px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(37,99,235,0.3);
+        z-index: 100;
+        transition: 0.2s;
+        font-size: 0.95rem;
+        -webkit-tap-highlight-color: transparent;
+        border: none;
+        touch-action: manipulation;
+    }
+
+    .coach-fab:active {
+        transform: translateY(0);
+        opacity: 0.9;
+    }
+
+    @media screen and (max-width: 600px) {
+        body {
+            padding: 8px;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            margin: 16px 0 12px;
+        }
+
+        .search-area {
+            padding: 20px 16px;
+            border-radius: 28px;
+        }
+
+        .modal-content {
+            padding: 28px 20px;
+            border-radius: 36px;
+        }
+
+        .modal-content h2 {
+            font-size: 1.4rem;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+
+        .coach-fab {
+            bottom: 16px;
+            right: 16px;
+            padding: 12px 20px;
+            font-size: 0.85rem;
+        }
+
+        .student-tag {
+            padding: 10px 18px;
+            font-size: 0.95rem;
+        }
+
+        .modal-info-row {
+            padding: 10px 14px;
+        }
+
+        .modal-info-label {
+            flex-basis: 80px;
+            font-size: 0.9rem;
+        }
+    }
+
+    @media screen and (max-width: 380px) {
+        .student-list {
+            flex-direction: column;
+        }
+        .student-tag {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    button, .student-tag, .coach-fab {
+        touch-action: manipulation;
+    }
 </style>
 </head>
 <body>
@@ -28,286 +469,246 @@
         </div>
     </div>
 
-    <!-- 學生詳細資訊模態框 -->
     <div id="studentModal" class="modal-overlay">
         <div class="modal-content" id="modalContent">
             <!-- 動態填入 -->
         </div>
     </div>
 
-<script>
-    // ========== 双后端备援配置 ==========
-    const PRIMARY_URL = 'http://rollerskatingmo.sytes.net:3000';
-    const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
+    <script>
+        // ========== 双后端备援配置 ==========
+        const PRIMARY_URL = 'http://rollerskatingmo.sytes.net:3000';
+        const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
 
-    // 统一请求函数，自动切换主备
-    async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
-        const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
-        try {
-            const options = { method, timeout: 5000 };
-            if (body && method === 'POST') {
-                options.body = body;
-                options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-            }
-            const res = await fetch(url, options);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return await res.json();
-        } catch (err) {
-            console.warn('主服务器不可用，切换至备用', err);
-            const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
-            const fallbackRes = await fetch(fallbackUrl);
-            return await fallbackRes.json();
-        }
-    }
-
-    const searchInput = document.getElementById('searchInput');
-    const studentListDiv = document.getElementById('studentList');
-    const messageDiv = document.getElementById('message');
-    const modalOverlay = document.getElementById('studentModal');
-    const modalContent = document.getElementById('modalContent');
-    let searchTimer;
-    let loadingTimeout = null;
-    let cachedStudents = [];
-    let loadingStudentsPromise = null;
-
-    function getWeekday(dateStr) {
-        if (!dateStr) return '';
-        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-        const normalized = dateStr.replace(/\//g, '-');
-        const d = new Date(normalized + 'T00:00:00');
-        if (isNaN(d.getTime())) return '';
-        return weekdays[d.getDay()];
-    }
-
-    function showLoading(message = '載入中...') {
-        if (loadingTimeout) clearTimeout(loadingTimeout);
-        messageDiv.innerHTML = `
-            <div class="loading">
-                ${message}
-                <span class="spinner-small"></span>
-            </div>
-        `;
-        messageDiv.className = 'message loading';
-        messageDiv.style.display = 'flex';
-    }
-
-    function hideLoading() {
-        messageDiv.style.display = 'none';
-        if (loadingTimeout) clearTimeout(loadingTimeout);
-    }
-
-    function showMessage(msg, type = 'info') {
-        hideLoading();
-        const className = type === 'error' ? 'error' : 'success';
-        messageDiv.innerHTML = `<div class="${className}">${msg}</div>`;
-        messageDiv.style.display = 'block';
-        setTimeout(() => {
-            messageDiv.style.display = 'none';
-        }, 3000);
-    }
-
-    async function loadAllStudents() {
-        if (cachedStudents.length > 0) return cachedStudents;
-        if (loadingStudentsPromise) return loadingStudentsPromise;
-
-        loadingStudentsPromise = (async () => {
+        // 统一请求函数，自动切换主备
+        async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
+            const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
             try {
-                showLoading('載入學生資料...');
-                const data = await fetchWithFallback('getAllStudents');
-                let students = data;
-                if (data && !Array.isArray(data) && data.students) {
-                    students = data.students;
+                const options = { method, timeout: 5000 };
+                if (body && method === 'POST') {
+                    options.body = body;
+                    options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
                 }
-                if (!Array.isArray(students)) {
-                    throw new Error('後端回傳的學生資料格式錯誤');
-                }
-                cachedStudents = students;
+                const res = await fetch(url, options);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.warn('主服务器不可用，切换至备用', err);
+                const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
+                const fallbackRes = await fetch(fallbackUrl);
+                return await fallbackRes.json();
+            }
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        const studentListDiv = document.getElementById('studentList');
+        const messageDiv = document.getElementById('message');
+        const modalOverlay = document.getElementById('studentModal');
+        const modalContent = document.getElementById('modalContent');
+        let searchTimer;
+        let loadingTimeout = null;
+        let studentDetailCache = {};  // 详情缓存，5分钟
+
+        function getWeekday(dateStr) {
+            if (!dateStr) return '';
+            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const normalized = dateStr.replace(/\//g, '-');
+            const d = new Date(normalized + 'T00:00:00');
+            if (isNaN(d.getTime())) return '';
+            return weekdays[d.getDay()];
+        }
+
+        function showLoading(message = '載入中...') {
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            messageDiv.innerHTML = `
+                <div class="loading">
+                    ${message}
+                    <span class="spinner-small"></span>
+                </div>
+            `;
+            messageDiv.className = 'message loading';
+            messageDiv.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            messageDiv.style.display = 'none';
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+        }
+
+        function showMessage(msg, type = 'info') {
+            hideLoading();
+            const className = type === 'error' ? 'error' : 'success';
+            messageDiv.innerHTML = `<div class="${className}">${msg}</div>`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // 实时搜索（不预加载所有学生）
+        async function performSearch(keyword) {
+            if (!keyword.trim()) {
+                studentListDiv.innerHTML = '';
+                return;
+            }
+            showLoading('搜尋中...');
+            try {
+                const result = await fetchWithFallback('searchStudent', { keyword });
+                if (!result.success) throw new Error(result.error || '搜尋失敗');
+                renderStudentList(result.students || []);
                 hideLoading();
-                return cachedStudents;
             } catch (err) {
                 hideLoading();
-                showMessage('載入學生資料失敗：' + err.message, 'error');
-                throw err;
-            } finally {
-                loadingStudentsPromise = null;
+                showMessage('❌ 搜尋失敗：' + err.message, 'error');
             }
-        })();
-        return loadingStudentsPromise;
-    }
-
-    async function performSearch(keyword) {
-        showLoading('搜尋中...');
-        try {
-            await loadAllStudents();
-            const lowerKeyword = keyword.toLowerCase();
-            const filtered = cachedStudents.filter(s => 
-                s.name && s.name.toLowerCase().includes(lowerKeyword)
-            );
-            renderStudentList(filtered);
-            hideLoading();
-        } catch (err) {
-            hideLoading();
-            showMessage('❌ 搜尋失敗：' + err.message, 'error');
-        }
-    }
-
-    function renderStudentList(students) {
-        studentListDiv.innerHTML = '';
-        if (students.length === 0) {
-            studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
-            return;
-        }
-        students.forEach(s => {
-            const tag = document.createElement('span');
-            tag.className = 'student-tag';
-            tag.style.backgroundColor = '#2563eb';
-            tag.style.color = 'white';
-            tag.style.padding = '12px 22px';
-            tag.style.borderRadius = '40px';
-            tag.style.fontSize = '1rem';
-            tag.style.fontWeight = '500';
-            tag.style.cursor = 'pointer';
-            tag.style.display = 'inline-block';
-            tag.style.boxShadow = '0 4px 8px rgba(37,99,235,0.2)';
-            const classDisplay = Array.isArray(s.class) ? s.class.join(',') : (s.class || '');
-            tag.textContent = `${s.name} (${classDisplay})`;
-            tag.addEventListener('click', () => loadStudentDetail(s.name));
-            studentListDiv.appendChild(tag);
-        });
-    }
-
-    let studentDetailCache = {};
-    async function loadStudentDetail(name) {
-        const cacheKey = name;
-        const now = Date.now();
-        const cached = studentDetailCache[cacheKey];
-        if (cached && (now - cached.timestamp) < 300000) {
-            renderModal(cached.data);
-            modalOverlay.style.display = 'flex';
-            modalContent.scrollTop = 0;
-            return;
         }
 
-        showLoading('載入詳細記錄...');
-        try {
-            const data = await fetchWithFallback('getStudentDetails', { name });
-            if (data.error) throw new Error(data.error);
-            studentDetailCache[cacheKey] = { data, timestamp: Date.now() };
-            renderModal(data);
-            modalOverlay.style.display = 'flex';
-            modalContent.scrollTop = 0;
-            hideLoading();
-        } catch (err) {
-            hideLoading();
-            showMessage('❌ 無法載入記錄：' + err.message, 'error');
-        }
-    }
-
-    function getDisplayType(reason) {
-        const mapping = {
-            '點名扣課': '上課',
-            '補點名': '補點名',
-            '續費': '續費',
-            '已續費': '續費',
-            '課堂改動': '課堂改動',
-            '請假扣課': '請假扣課'
-        };
-        return mapping[reason] || reason;
-    }
-
-    function renderModal(d) {
-        let leaveBadge = '';
-        if (d.leaveCount >= 2) {
-            leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
-        } else {
-            leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
-        }
-
-        let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
-        let remainingWarning = '';
-        if (d.remainingClasses <= 0) {
-            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
-            remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練繳費。</div>`;
-        } else if (d.remainingClasses <= 2) {
-            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
-            remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
-        }
-
-        let allRecords = [
-            ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
-            ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
-        ];
-        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        let recordsHtml = '';
-        if (allRecords.length === 0) {
-            recordsHtml = '<p style="color:#718096;">尚無任何記錄。</p>';
-        } else {
-            recordsHtml = `<div style="overflow-x: auto;">
-                <table class="record-table">
-                    <thead>汽水<th>日期</th><th>類型</th><th>剩餘堂數</th> </thead>
-                    <tbody>`;
-            allRecords.slice(0, 30).forEach(rec => {
-                const weekday = getWeekday(rec.date);
-                const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
-                if (rec.type === '課堂') {
-                    const isMakeup = rec.reason === '補點名';
-                    const rowClass = isMakeup ? 'makeup-row' : '';
-                    recordsHtml += `<tr class="${rowClass}"> <td>${dateWithWeekday}  on<td><span class="badge blue">${rec.displayType}</span>  on<td>${rec.remainingClasses}  on </tr>`;
-                } else {
-                    recordsHtml += `<tr>  on<td>${dateWithWeekday}  on<td><span class="badge yellow">請假</span>  on<td>—  on </tr>`;
-                }
-            });
-            recordsHtml += `</tbody>  </table></div>`;
-        }
-
-        modalContent.innerHTML = `
-            <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
-            ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
-            <div class="modal-info-row">
-                <span class="modal-info-label">班級</span>
-                <span class="modal-info-value">${Array.isArray(d.class) ? d.class.join(',') : d.class}</span>
-            </div>
-            <div class="modal-info-row">
-                <span class="modal-info-label">剩餘課堂</span>
-                <span class="modal-info-value">${remainingDisplay}</span>
-            </div>
-            ${remainingWarning}
-            <div class="modal-info-row">
-                <span class="modal-info-label">租借裝備</span>
-                <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
-            </div>
-            <h3>📋 近期記錄</h3>
-            ${recordsHtml}
-            <div class="modal-buttons">
-                <button onclick="closeModal()">關閉</button>
-            </div>
-        `;
-    }
-
-    function closeModal() {
-        modalOverlay.style.display = 'none';
-    }
-
-    modalOverlay.addEventListener('click', function(e) {
-        if (e.target === modalOverlay) {
-            closeModal();
-        }
-    });
-
-    searchInput.addEventListener('input', function(e) {
-        clearTimeout(searchTimer);
-        const keyword = e.target.value.trim();
-        if (keyword === '') {
+        function renderStudentList(students) {
             studentListDiv.innerHTML = '';
-            return;
+            if (students.length === 0) {
+                studentListDiv.innerHTML = '<span style="color:#718096;">查無符合學生，請聯繫教練。</span>';
+                return;
+            }
+            students.forEach(s => {
+                const tag = document.createElement('span');
+                tag.className = 'student-tag';
+                // 样式已在 CSS 中定义，无需内联
+                const classDisplay = Array.isArray(s.class) ? s.class.join(',') : (s.class || '');
+                tag.textContent = `${s.name} (${classDisplay})`;
+                tag.addEventListener('click', () => loadStudentDetail(s.name));
+                studentListDiv.appendChild(tag);
+            });
         }
-        searchTimer = setTimeout(() => performSearch(keyword), 300);
-    });
 
-    window.addEventListener('DOMContentLoaded', function() {
-        loadAllStudents().catch(console.error);
-    });
-</script>
+        // 学生详情请求缓存（5分钟）
+        async function loadStudentDetail(name) {
+            const cacheKey = name;
+            const now = Date.now();
+            const cached = studentDetailCache[cacheKey];
+            if (cached && (now - cached.timestamp) < 300000) {
+                renderModal(cached.data);
+                modalOverlay.style.display = 'flex';
+                modalContent.scrollTop = 0;
+                return;
+            }
+
+            showLoading('載入詳細記錄...');
+            try {
+                const data = await fetchWithFallback('getStudentDetails', { name });
+                if (data.error) throw new Error(data.error);
+                studentDetailCache[cacheKey] = { data, timestamp: Date.now() };
+                renderModal(data);
+                modalOverlay.style.display = 'flex';
+                modalContent.scrollTop = 0;
+                hideLoading();
+            } catch (err) {
+                hideLoading();
+                showMessage('❌ 無法載入記錄：' + err.message, 'error');
+            }
+        }
+
+        function getDisplayType(reason) {
+            const mapping = {
+                '點名扣課': '上課',
+                '補點名': '補點名',
+                '續費': '續費',
+                '已續費': '續費',
+                '課堂改動': '課堂改動',
+                '請假扣課': '請假扣課'
+            };
+            return mapping[reason] || reason;
+        }
+
+        function renderModal(d) {
+            let leaveBadge = '';
+            if (d.leaveCount >= 2) {
+                leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
+            } else {
+                leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
+            }
+
+            let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
+            let remainingWarning = '';
+            if (d.remainingClasses <= 0) {
+                remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
+                remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫教練繳費。</div>`;
+            } else if (d.remainingClasses <= 2) {
+                remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
+                remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請適時續費。</div>`;
+            }
+
+            let allRecords = [
+                ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
+                ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
+            ];
+            allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            let recordsHtml = '';
+            if (allRecords.length === 0) {
+                recordsHtml = '<p style="color:#718096;">尚無任何記錄。</p>';
+            } else {
+                recordsHtml = `<div style="overflow-x: auto;">
+                    <table class="record-table">
+                        <thead>汽水<th>日期</th><th>類型</th><th>剩餘堂數</th> </thead>
+                        <tbody>`;
+                allRecords.slice(0, 30).forEach(rec => {
+                    const weekday = getWeekday(rec.date);
+                    const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
+                    if (rec.type === '課堂') {
+                        const isMakeup = rec.reason === '補點名';
+                        const rowClass = isMakeup ? 'makeup-row' : '';
+                        recordsHtml += `<tr class="${rowClass}">  on<td>${dateWithWeekday}</td>  on<td><span class="badge blue">${rec.displayType}</span></td>  on<td>${rec.remainingClasses}</td>  on</tr>`;
+                    } else {
+                        recordsHtml += `<tr>  on<td>${dateWithWeekday}</td>  on<td><span class="badge yellow">請假</span></td>  on<td>—</td>  on</tr>`;
+                    }
+                });
+                recordsHtml += `</tbody>  on</table></div>`;
+            }
+
+            modalContent.innerHTML = `
+                <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
+                ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
+                <div class="modal-info-row">
+                    <span class="modal-info-label">班級</span>
+                    <span class="modal-info-value">${Array.isArray(d.class) ? d.class.join(',') : d.class}</span>
+                </div>
+                <div class="modal-info-row">
+                    <span class="modal-info-label">剩餘課堂</span>
+                    <span class="modal-info-value">${remainingDisplay}</span>
+                </div>
+                ${remainingWarning}
+                <div class="modal-info-row">
+                    <span class="modal-info-label">租借裝備</span>
+                    <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
+                </div>
+                <h3>📋 近期記錄</h3>
+                ${recordsHtml}
+                <div class="modal-buttons">
+                    <button onclick="closeModal()">關閉</button>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            modalOverlay.style.display = 'none';
+        }
+
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        // 搜索防抖
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimer);
+            const keyword = e.target.value.trim();
+            if (keyword === '') {
+                studentListDiv.innerHTML = '';
+                return;
+            }
+            searchTimer = setTimeout(() => performSearch(keyword), 300);
+        });
+    </script>
 </body>
 </html>
