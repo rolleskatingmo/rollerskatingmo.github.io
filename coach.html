@@ -2588,49 +2588,54 @@
         });
     }
 
-    async function markAttendance(name) {
-        if (processing[`attendance_${name}`]) {
-            showError('正在處理中，請稍後...');
-            return;
-        }
-        const btn = document.querySelector(`.student-button[data-name="${name}"]`);
-        if (btn && (btn.disabled || btn.classList.contains('checked'))) {
-            showError('此學生已完成點名');
-            return;
-        }
-        if (btn) {
-            btn.disabled = true;
-            btn.classList.add('checked');
-            localStorage.setItem(`attendance_${name}`, 'checked');
-        }
-        processing[`attendance_${name}`] = true;
+async function markAttendance(name) {
+    if (processing[`attendance_${name}`]) {
+        showError('正在處理中，請稍後...');
+        return;
+    }
+    const btn = document.querySelector(`.student-button[data-name="${name}"]`);
+    if (btn && (btn.disabled || btn.classList.contains('checked'))) {
+        showError('此學生已完成點名');
+        return;
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('checked');
+        localStorage.setItem(`attendance_${name}`, 'checked');
+    }
+    processing[`attendance_${name}`] = true;
 
-        try {
-            const data = await fetchWithFallback('markAttendance', { name, operator: currentUser.username });
-            if (data.success) {
-                showSuccess(`${name} 點名成功！`);
-                await fetchAllStudents();
-                updateAttendanceList();
-                renderNoteListByClass();
-            } else {
-                showError(data.message || '點名失敗');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.classList.remove('checked');
-                    localStorage.removeItem(`attendance_${name}`);
-                }
+    try {
+        const data = await fetchWithFallback('markAttendance', { name, operator: currentUser.username });
+        if (data.success) {
+            // 更新本地学生数据
+            const student = allStudents.find(s => s.name === name);
+            if (student) {
+                student.remainingClasses = data.remaining;
             }
-        } catch (err) {
-            showError('網路錯誤，點名失敗');
+            showSuccess(`${name} 點名成功！`);
+            // 刷新点名单和学生信息列表（使用更新后的 allStudents）
+            updateAttendanceList();
+            renderNoteListByClass();
+        } else {
+            showError(data.message || '點名失敗');
             if (btn) {
                 btn.disabled = false;
                 btn.classList.remove('checked');
                 localStorage.removeItem(`attendance_${name}`);
             }
-        } finally {
-            delete processing[`attendance_${name}`];
         }
+    } catch (err) {
+        showError('網路錯誤，點名失敗');
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('checked');
+            localStorage.removeItem(`attendance_${name}`);
+        }
+    } finally {
+        delete processing[`attendance_${name}`];
     }
+}
 
     function resetAttendance() {
         document.querySelectorAll('.student-button.checked').forEach(b => {
