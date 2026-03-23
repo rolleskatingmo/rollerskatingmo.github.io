@@ -1328,8 +1328,29 @@
     </div>
 </div>
 <script>
-    // ========== 後端網址 ==========
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
+    // ========== 双后端备援配置 ==========
+    const PRIMARY_URL = 'http://rollerskatingmo.sytes.net:3000';
+    const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
+
+    // 统一请求函数，自动切换主备
+    async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
+        const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
+        try {
+            const options = { method, timeout: 5000 };
+            if (body && method === 'POST') {
+                options.body = body;
+                options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            }
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (err) {
+            console.warn('主服务器不可用，切换至备用', err);
+            const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
+            const fallbackRes = await fetch(fallbackUrl);
+            return await fallbackRes.json();
+        }
+    }
 
     let allStudents = [];
     let isMakeupMode = false;
@@ -1358,7 +1379,7 @@
 
     let notificationCollapsed = false;
 
-    // 輔助：將學生的班級統一轉為陣列
+    // 辅助：将学⽣的班级统一转为数组
     function normalizeStudentClasses(students) {
         return students.map(s => {
             if (typeof s.class === 'string') {
@@ -1370,7 +1391,7 @@
         });
     }
 
-    // ---------- 通用模態框函數 ----------
+    // ---------- 通用模态框函数 ----------
     function showConfirm(message, callback) {
         const modal = document.getElementById('confirmModal');
         const msgElem = document.getElementById('confirmMessage');
@@ -1391,17 +1412,19 @@
             }
         };
     }
-function getDisplayType(reason) {
-    const mapping = {
-        '點名扣課': '上課',
-        '補點名': '補點名',
-        '續費': '續費',
-        '已續費': '續費',
-        '課堂改動': '課堂改動',
-        '請假扣課': '請假扣課'
-    };
-    return mapping[reason] || reason;
-}
+
+    function getDisplayType(reason) {
+        const mapping = {
+            '點名扣課': '上課',
+            '補點名': '補點名',
+            '續費': '續費',
+            '已續費': '續費',
+            '課堂改動': '課堂改動',
+            '請假扣課': '請假扣課'
+        };
+        return mapping[reason] || reason;
+    }
+
     function showAlert(message) {
         const modal = document.getElementById('alertModal');
         const msgElem = document.getElementById('alertMessage');
@@ -1418,11 +1441,9 @@ function getDisplayType(reason) {
         if (modal) modal.style.display = 'none';
     }
 
-    // 通用 prompt 模態框
     function showPrompt(title, defaultValue, callback) {
         let modal = document.getElementById('promptModal');
         if (!modal) {
-            // 若不存在則動態建立
             const modalDiv = document.createElement('div');
             modalDiv.id = 'promptModal';
             modalDiv.className = 'modal-overlay';
@@ -1480,14 +1501,7 @@ function getDisplayType(reason) {
 
         try {
             console.log('發送登入請求，用戶名:', username);
-            const url = `${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-            console.log('請求網址:', url);
-            const res = await fetch(url);
-            console.log('回應狀態碼:', res.status);
-            if (!res.ok) {
-                throw new Error(`HTTP 錯誤 ${res.status}`);
-            }
-            const data = await res.json();
+            const data = await fetchWithFallback('verifyUser', { username, password });
             console.log('後端回應資料:', data);
             if (data.success) {
                 const role = (data.role || '').toLowerCase();
@@ -1558,60 +1572,55 @@ function getDisplayType(reason) {
     }
 
     // ---------- 載入所有資料 ----------
-async function loadAllData() {
-    try {
-        document.getElementById('loadingSpinner').style.display = 'flex';
-        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
-        const data = await res.json();
+    async function loadAllData() {
+        try {
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            const data = await fetchWithFallback('getInitialData');
 
-        allStudents = normalizeStudentClasses(data.students || []);
-        allClasses = data.classes || [];
-        pendingApprovals = data.pendingApprovals || [];
+            allStudents = normalizeStudentClasses(data.students || []);
+            allClasses = data.classes || [];
+            pendingApprovals = data.pendingApprovals || [];
 
-        // --- 新增：取得授權班級（用於過濾）---
-        const authClasses = getAuthorizedClasses();
-        const isAuthorizedForClass = (className) => {
-            if (authClasses === '*') return true;
-            if (!className) return false;
-            return authClasses.includes(className);
-        };
+            const authClasses = getAuthorizedClasses();
+            const isAuthorizedForClass = (className) => {
+                if (authClasses === '*') return true;
+                if (!className) return false;
+                return authClasses.includes(className);
+            };
 
-        // 過濾待續費通知
-        paymentNotifications = (data.paymentRecords || [])
-            .filter(p => !p.processed && isAuthorizedForClass(p.className))
-            .map(p => ({
-                studentName: p.studentName,
-                className: p.className,
-                paymentDate: p.paymentDate,
-                time: p.time,
-                imageUrl: p.imageUrl
-            }));
+            paymentNotifications = (data.paymentRecords || [])
+                .filter(p => !p.processed && isAuthorizedForClass(p.className))
+                .map(p => ({
+                    studentName: p.studentName,
+                    className: p.className,
+                    paymentDate: p.paymentDate,
+                    time: p.time,
+                    imageUrl: p.imageUrl
+                }));
 
-        trialNotifications = (data.trialStudents || [])
-            .filter(t => !t.paid || t.date >= getTodayUTC8());
+            trialNotifications = (data.trialStudents || [])
+                .filter(t => !t.paid || t.date >= getTodayUTC8());
 
-        // 過濾新學生通知
-        const paidStudentNames = new Set((data.paymentRecords || []).map(p => p.studentName));
-        newStudentNotifications = allStudents
-            .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
-            .map(s => ({ name: s.name, className: s.class.join(',') }));
+            const paidStudentNames = new Set((data.paymentRecords || []).map(p => p.studentName));
+            newStudentNotifications = allStudents
+                .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
+                .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-        renderNotificationBody();
+            renderNotificationBody();
 
-        document.getElementById('loadingSpinner').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
 
-        applyRoleRestrictions();
-    } catch (error) {
-        console.error(error);
-        document.getElementById('loadingSpinner').innerHTML = `
-            <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
-            <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
-        `;
+            applyRoleRestrictions();
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingSpinner').innerHTML = `
+                <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
+                <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
+            `;
+        }
     }
-}
-
-    // ---------- 權限控制 ----------
+        // ---------- 权限控制 ----------
     function applyRoleRestrictions() {
         const role = currentUser.role;
         const isAdmin = role === 'admin';
@@ -1633,7 +1642,7 @@ async function loadAllData() {
         document.getElementById('trialAddForm').style.display = isAdmin ? 'flex' : 'none';
     }
 
-    // ---------- 區塊切換 ----------
+    // ---------- 区块切换 ----------
     async function showSection(sectionId) {
         if (!currentUser) return;
 
@@ -1733,42 +1742,41 @@ async function loadAllData() {
         }
     }
 
-    // ---------- 取得所有學生 ----------
+    // ---------- 取得所有学生 ----------
     async function fetchAllStudents() {
-        const res = await fetch(`${SCRIPT_URL}?action=getAllStudents`);
-        const data = await res.json();
+        const data = await fetchWithFallback('getAllStudents');
         allStudents = normalizeStudentClasses(data || []);
         return allStudents;
     }
 
-    // ---------- 班級排序 ----------
-function renderClassCheckboxes() {
-    const container = document.getElementById('newStudentClassContainer');
-    if (!container) return;
-    
-    const allowed = getAuthorizedClasses();
-    let displayClasses = [];
-    if (allowed === '*') {
-        displayClasses = [...allClasses];
-    } else {
-        displayClasses = allClasses.filter(c => allowed.includes(c));
-    }
-    
-    let html = '';
-    displayClasses.forEach(className => {
-        html += `<span class="class-badge" style="cursor:pointer; background:#4299e1;" onclick="toggleNewStudentClass('${className}')">${className}</span>`;
-    });
-    container.innerHTML = html;
-    
-    Array.from(container.children).forEach(child => {
-        const cls = child.textContent.trim();
-        if (selectedNewStudentClasses.has(cls)) {
-            child.style.background = '#48bb78';
+    // ---------- 班级排序 ----------
+    function renderClassCheckboxes() {
+        const container = document.getElementById('newStudentClassContainer');
+        if (!container) return;
+        
+        const allowed = getAuthorizedClasses();
+        let displayClasses = [];
+        if (allowed === '*') {
+            displayClasses = [...allClasses];
         } else {
-            child.style.background = '#4299e1';
+            displayClasses = allClasses.filter(c => allowed.includes(c));
         }
-    });
-}
+        
+        let html = '';
+        displayClasses.forEach(className => {
+            html += `<span class="class-badge" style="cursor:pointer; background:#4299e1;" onclick="toggleNewStudentClass('${className}')">${className}</span>`;
+        });
+        container.innerHTML = html;
+        
+        Array.from(container.children).forEach(child => {
+            const cls = child.textContent.trim();
+            if (selectedNewStudentClasses.has(cls)) {
+                child.style.background = '#48bb78';
+            } else {
+                child.style.background = '#4299e1';
+            }
+        });
+    }
 
     let selectedNewStudentClasses = new Set();
 
@@ -1791,10 +1799,9 @@ function renderClassCheckboxes() {
         return classes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }
 
-    // ---------- 取得班級列表 ----------
+    // ---------- 取得班级列表 ----------
     async function loadClassList() {
-        const res = await fetch(`${SCRIPT_URL}?action=getAllClasses`);
-        let classes = await res.json();
+        let classes = await fetchWithFallback('getAllClasses');
         classes = sortClasses(classes);
         
         if (currentUser && currentUser.role !== 'admin') {
@@ -1841,8 +1848,7 @@ function renderClassCheckboxes() {
         if (currentUser.role !== 'admin') { showError('無權限'); return; }
         const className = document.getElementById('newClassName').value.trim();
         if (!className) return showError('請輸入班級名稱');
-        const res = await fetch(`${SCRIPT_URL}?action=addClass&className=${encodeURIComponent(className)}`);
-        const result = await res.json();
+        const result = await fetchWithFallback('addClass', { className });
         if (result.success) {
             showSuccess(result.message);
             document.getElementById('newClassName').value = '';
@@ -1855,8 +1861,7 @@ function renderClassCheckboxes() {
     async function deleteClass(className) {
         if (currentUser.role !== 'admin') { showError('無權限'); return; }
         showConfirm(`確定刪除班級「${className}」？`, async () => {
-            const res = await fetch(`${SCRIPT_URL}?action=deleteClass&className=${encodeURIComponent(className)}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('deleteClass', { className });
             if (result.success) {
                 showSuccess(result.message);
                 loadClassList();
@@ -1874,22 +1879,14 @@ function renderClassCheckboxes() {
         }
         showLoadingSpinner('處理中...');
         try {
-            const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(time)}&studentName=${encodeURIComponent(studentName)}`);
-            const markResult = await markRes.json();
-            if (!markResult.success) {
-                throw new Error(markResult.error || '標記繳費記錄失敗');
-            }
+            const markResult = await fetchWithFallback('markPaymentProcessed', { time, studentName });
+            if (!markResult.success) throw new Error(markResult.error || '標記繳費記錄失敗');
 
-            const clearRes = await fetch(`${SCRIPT_URL}?action=clearStudentNewFlag&name=${encodeURIComponent(studentName)}`);
-            const clearResult = await clearRes.json();
-            if (!clearResult.success) {
-                throw new Error(clearResult.error || '清除新學生標記失敗');
-            }
+            const clearResult = await fetchWithFallback('clearStudentNewFlag', { name: studentName });
+            if (!clearResult.success) throw new Error(clearResult.error || '清除新學生標記失敗');
 
             const studentIndex = allStudents.findIndex(s => s.name === studentName);
-            if (studentIndex !== -1) {
-                allStudents[studentIndex].flags = '';
-            }
+            if (studentIndex !== -1) allStudents[studentIndex].flags = '';
 
             paymentNotifications = paymentNotifications.filter(p => !(p.studentName === studentName && p.time === time));
             renderNotificationBody();
@@ -1906,8 +1903,7 @@ function renderClassCheckboxes() {
     async function showStudentRecords(name) {
         showLoadingSpinner('載入學生記錄...');
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=getStudentDetails&name=${encodeURIComponent(name)}`);
-            const data = await res.json();
+            const data = await fetchWithFallback('getStudentDetails', { name });
             if (data.error) throw new Error(data.error);
 
             renderCoachStudentModal(data);
@@ -1922,93 +1918,90 @@ function renderClassCheckboxes() {
     }
 
     // 渲染教練端學生記錄模態框
-function renderCoachStudentModal(d) {
-    let leaveBadge = '';
-    if (d.leaveCount >= 2) {
-        leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
-    } else {
-        leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
+    function renderCoachStudentModal(d) {
+        let leaveBadge = '';
+        if (d.leaveCount >= 2) {
+            leaveBadge = `<span class="badge red">⚠️ 請假 ${d.leaveCount} 次</span>`;
+        } else {
+            leaveBadge = `<span class="badge green">請假 ${d.leaveCount} 次</span>`;
+        }
+
+        let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
+        let remainingWarning = '';
+        if (d.remainingClasses <= 0) {
+            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
+            remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫家長繳費。</div>`;
+        } else if (d.remainingClasses <= 2) {
+            remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
+            remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請提醒家長續費。</div>`;
+        }
+
+        let allRecords = [
+            ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
+            ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
+        ];
+        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        function getWeekday(dateStr) {
+            if (!dateStr) return '';
+            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const normalized = dateStr.replace(/\//g, '-');
+            const d = new Date(normalized + 'T00:00:00');
+            if (isNaN(d.getTime())) return '';
+            return weekdays[d.getDay()];
+        }
+
+        let recordsHtml = '';
+        if (allRecords.length === 0) {
+            recordsHtml = '<p style="color:#718096;">尚無任何上課或請假記錄。</p>';
+        } else {
+            recordsHtml = `<div style="overflow-x: auto;">
+                <table class="record-table">
+                    <thead>汽水<th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th> </thead>
+                    <tbody>`;
+            allRecords.slice(0, 50).forEach(rec => {
+                const weekday = getWeekday(rec.date);
+                const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
+                if (rec.type === '課堂') {
+                    const isMakeup = rec.reason === '補點名';
+                    const rowClass = isMakeup ? 'makeup-row' : '';
+                    const typeLabel = rec.displayType;
+                    recordsHtml += `<tr class="${rowClass}">  on<td>${dateWithWeekday}</td>  on<td>${rec.time || ''}</td>  on<td><span class="badge blue">${typeLabel}</span></td>  on<td>${rec.remainingClasses}</td>  on</tr>`;
+                } else {
+                    recordsHtml += `<tr>  on<td>${dateWithWeekday}</td>  on<td>—</td>  on<td><span class="badge yellow">請假</span></td>  on<td>—</td>  on</tr>`;
+                }
+            });
+            recordsHtml += `</tbody>  on</table></div>`;
+        }
+
+        const modalContent = document.getElementById('coachStudentRecordContent');
+        modalContent.innerHTML = `
+            <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
+            ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
+            <div class="modal-info-row">
+                <span class="modal-info-label">班級</span>
+                <span class="modal-info-value">${Array.isArray(d.class) ? d.class.join(', ') : d.class}</span>
+            </div>
+            <div class="modal-info-row">
+                <span class="modal-info-label">剩餘課堂</span>
+                <span class="modal-info-value">${remainingDisplay}</span>
+            </div>
+            ${remainingWarning}
+            <div class="modal-info-row">
+                <span class="modal-info-label">租借裝備</span>
+                <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
+            </div>
+            <h3>📋 完整記錄</h3>
+            ${recordsHtml}
+            <div class="modal-buttons">
+                <button onclick="closeCoachStudentModal()">關閉</button>
+            </div>
+        `;
     }
-
-    let remainingDisplay = `<span style="font-size:1.5rem; font-weight:700;">${d.remainingClasses}</span>`;
-    let remainingWarning = '';
-    if (d.remainingClasses <= 0) {
-        remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b91c1c;">${d.remainingClasses} 堂</span>`;
-        remainingWarning = `<div class="warning-text">❗ 剩餘課堂數已用完，請聯繫家長繳費。</div>`;
-    } else if (d.remainingClasses <= 2) {
-        remainingDisplay = `<span style="font-size:1.5rem; font-weight:700; color:#b45309;">${d.remainingClasses} 堂</span>`;
-        remainingWarning = `<div class="warning-text">📌 剩餘課堂不多，請提醒家長續費。</div>`;
-    }
-
-    // 包含所有課堂記錄，並使用映射顯示類型
-    let allRecords = [
-        ...d.classRecords.map(r => ({ ...r, type: '課堂', displayType: getDisplayType(r.reason) })),
-        ...d.leaveRecords.map(r => ({ date: r.date, type: '請假', displayType: '請假' }))
-    ];
-    allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    function getWeekday(dateStr) {
-        if (!dateStr) return '';
-        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-        const normalized = dateStr.replace(/\//g, '-');
-        const d = new Date(normalized + 'T00:00:00');
-        if (isNaN(d.getTime())) return '';
-        return weekdays[d.getDay()];
-    }
-
-    let recordsHtml = '';
-    if (allRecords.length === 0) {
-        recordsHtml = '<p style="color:#718096;">尚無任何上課或請假記錄。</p>';
-    } else {
-        recordsHtml = `<div style="overflow-x: auto;">
-            <table class="record-table">
-                <thead>汽水<th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th> </thead>
-                <tbody>`;
-        allRecords.slice(0, 50).forEach(rec => {
-            const weekday = getWeekday(rec.date);
-            const dateWithWeekday = weekday ? `${rec.date} ${weekday}` : rec.date;
-            if (rec.type === '課堂') {
-                const isMakeup = rec.reason === '補點名';
-                const rowClass = isMakeup ? 'makeup-row' : '';
-                const typeLabel = rec.displayType;
-                recordsHtml += `<tr class="${rowClass}"> <td>${dateWithWeekday}</td> <td>${rec.time || ''}</td> <td><span class="badge blue">${typeLabel}</span></td> <td>${rec.remainingClasses}</td> </tr>`;
-            } else {
-                recordsHtml += `<tr> <td>${dateWithWeekday}</td> <td>—</td> <td><span class="badge yellow">請假</span></td> <td>—</td> </tr>`;
-            }
-        });
-        recordsHtml += `</tbody> </table> </div>`;
-    }
-
-    const modalContent = document.getElementById('coachStudentRecordContent');
-    modalContent.innerHTML = `
-        <h2>🧑‍🎓 ${d.name} ${leaveBadge}</h2>
-        ${d.leaveCount >= 2 ? `<div class="warning-text">⚠️ 已請假 ${d.leaveCount} 次，下次請假將自動扣減1堂課。</div>` : ''}
-        <div class="modal-info-row">
-            <span class="modal-info-label">班級</span>
-            <span class="modal-info-value">${Array.isArray(d.class) ? d.class.join(', ') : d.class}</span>
-        </div>
-        <div class="modal-info-row">
-            <span class="modal-info-label">剩餘課堂</span>
-            <span class="modal-info-value">${remainingDisplay}</span>
-        </div>
-        ${remainingWarning}
-        <div class="modal-info-row">
-            <span class="modal-info-label">租借裝備</span>
-            <span class="modal-info-value">${d.rentalCount} 次 (每次 $20)</span>
-        </div>
-        <h3>📋 完整記錄</h3>
-        ${recordsHtml}
-        <div class="modal-buttons">
-            <button onclick="closeCoachStudentModal()">關閉</button>
-        </div>
-    `;
-}
 
     function closeCoachStudentModal() {
         document.getElementById('coachStudentRecordModal').style.display = 'none';
-    }
-
-    // ---------- 續費數量模態框 ----------
+    }    // ---------- 续费数量模态框 ----------
     let pendingRenewData = { name: '', className: '' };
 
     function openRenewQuantityModal(name, className, remaining, leaveCount, deductedClasses) {
@@ -2088,18 +2081,15 @@ function renderCoachStudentModal(d) {
                 className = actualClass;
             }
 
-            let res = await fetch(`${SCRIPT_URL}?action=clearLeaveCount&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            let result = await res.json();
+            let result = await fetchWithFallback('clearLeaveCount', { name, operator: currentUser.username });
             if (!result.success) throw new Error(result.error || '清零請假失敗');
 
-            res = await fetch(`${SCRIPT_URL}?action=clearRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            result = await res.json();
+            result = await fetchWithFallback('clearRental', { name, operator: currentUser.username });
             if (!result.success) throw new Error(result.error || '清零租借失敗');
 
             const payload = { name, class: className, classesChange: delta, reason: '已續費' };
             console.log('續費 payload:', JSON.stringify(payload));
-            res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
-            result = await res.json();
+            result = await fetchWithFallback('addClasses', { data: JSON.stringify(payload), operator: currentUser.username });
             console.log('addClasses 回應:', result);
             if (!result.success) {
                 throw new Error(result.message || '增加課堂失敗');
@@ -2109,8 +2099,7 @@ function renderCoachStudentModal(d) {
             for (let p of pendingForStudent) {
                 if (!p.time || !p.studentName) continue;
                 try {
-                    const markRes = await fetch(`${SCRIPT_URL}?action=markPaymentProcessed&time=${encodeURIComponent(p.time)}&studentName=${encodeURIComponent(p.studentName)}`);
-                    const markResult = await markRes.json();
+                    const markResult = await fetchWithFallback('markPaymentProcessed', { time: p.time, studentName: p.studentName });
                     if (!markResult.success) {
                         console.error('標記繳費記錄失敗', markResult);
                         showError(`標記失敗：${markResult.error || '未知錯誤'}`);
@@ -2233,8 +2222,7 @@ function renderCoachStudentModal(d) {
             console.log('新增學生 payload:', JSON.stringify(payload));
 
             if (currentUser.role === 'admin') {
-                const res = await fetch(`${SCRIPT_URL}?action=addStudent&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('addStudent', { data: JSON.stringify(payload), operator: currentUser.username });
                 console.log('addStudent 回應:', result);
                 if (result.success) {
                     showSuccess(`學生 ${name} 新增成功！已獲得 ${classes} 堂課。`);
@@ -2252,8 +2240,7 @@ function renderCoachStudentModal(d) {
                     showError(result.message || '新增失敗');
                 }
             } else {
-                const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify({ type: 'addStudent', payload }), requester: currentUser.username });
                 console.log('submitApprovalRequest 回應:', result);
                 if (result.success) {
                     showSuccess('請求已提交，等待管理員審批');
@@ -2318,26 +2305,26 @@ function renderCoachStudentModal(d) {
         document.getElementById('editStudentClassModal').style.display = 'flex';
     }
 
-function renderEditClassButtons() {
-    const container = document.getElementById('editClassContainer');
-    if (!container) return;
-    
-    const allowed = getAuthorizedClasses();
-    let displayClasses = [];
-    if (allowed === '*') {
-        displayClasses = [...allClasses];
-    } else {
-        displayClasses = allClasses.filter(c => allowed.includes(c));
+    function renderEditClassButtons() {
+        const container = document.getElementById('editClassContainer');
+        if (!container) return;
+        
+        const allowed = getAuthorizedClasses();
+        let displayClasses = [];
+        if (allowed === '*') {
+            displayClasses = [...allClasses];
+        } else {
+            displayClasses = allClasses.filter(c => allowed.includes(c));
+        }
+        
+        let html = '';
+        displayClasses.forEach(className => {
+            const isSelected = editClassSelected.has(className);
+            html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClass('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
+        });
+        container.innerHTML = html;
+        document.getElementById('editClassValue').value = Array.from(editClassSelected).join(',');
     }
-    
-    let html = '';
-    displayClasses.forEach(className => {
-        const isSelected = editClassSelected.has(className);
-        html += `<span class="class-badge" style="cursor:pointer; background:${isSelected ? '#48bb78' : '#4299e1'};" onclick="toggleEditClass('${className}')">${className} ${isSelected ? '✓' : ''}</span>`;
-    });
-    container.innerHTML = html;
-    document.getElementById('editClassValue').value = Array.from(editClassSelected).join(',');
-}
 
     function toggleEditClass(className) {
         if (editClassSelected.has(className)) {
@@ -2362,8 +2349,7 @@ function renderEditClassButtons() {
         closeEditClassModal();
         showLoadingSpinner('更新班級中...');
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=updateStudentClasses&name=${encodeURIComponent(studentName)}&classes=${encodeURIComponent(newClassStr)}&operator=${encodeURIComponent(currentUser.username)}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('updateStudentClasses', { name: studentName, classes: newClassStr, operator: currentUser.username });
             if (result.success) {
                 showSuccess(`學生 ${studentName} 班級已更新`);
                 await fetchAllStudents();
@@ -2401,8 +2387,7 @@ function renderEditClassButtons() {
 
         showLoadingSpinner('修改姓名中...');
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=updateStudentName&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(newName)}&operator=${encodeURIComponent(currentUser.username)}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('updateStudentName', { oldName, newName, operator: currentUser.username });
             if (result.success) {
                 showSuccess('學生姓名修改成功');
                 closeEditStudentNameModal();
@@ -2434,8 +2419,7 @@ function renderEditClassButtons() {
         }
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=markAttendanceMakeup&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}&date=${encodeURIComponent(makeupDate)}`);
-            const data = await res.json();
+            const data = await fetchWithFallback('markAttendanceMakeup', { name, operator: currentUser.username, date: makeupDate });
             if (data.success) {
                 showSuccess(`${name} 補點名成功！`);
                 await fetchAllStudents();
@@ -2483,8 +2467,7 @@ function renderEditClassButtons() {
         };
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify(payload))}&requester=${encodeURIComponent(currentUser.username)}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify(payload), requester: currentUser.username });
             if (result.success) {
                 showSuccess('補點名審批請求已提交，等待管理員批准');
                 makeupSelectedStudents.clear();
@@ -2591,8 +2574,7 @@ function renderEditClassButtons() {
 
             try {
                 const payload = { name };
-                const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'deleteStudent', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify({ type: 'deleteStudent', payload }), requester: currentUser.username });
                 if (result.success) {
                     showSuccess('刪除請求已提交，等待管理員審批');
                 } else {
@@ -2624,8 +2606,7 @@ function renderEditClassButtons() {
         processing[`attendance_${name}`] = true;
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=markAttendance&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            const data = await res.json();
+            const data = await fetchWithFallback('markAttendance', { name, operator: currentUser.username });
             if (data.success) {
                 showSuccess(`${name} 點名成功！`);
                 await fetchAllStudents();
@@ -2737,8 +2718,7 @@ function renderEditClassButtons() {
         processing[`rental_${name}`] = true;
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=addRental&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}`);
-            const data = await res.json();
+            const data = await fetchWithFallback('addRental', { name, operator: currentUser.username });
             if (data.success) {
                 showSuccess(`${name} 租借+1，總次數 ${data.rentals}`);
                 await fetchAllStudents();
@@ -2778,8 +2758,7 @@ function renderEditClassButtons() {
 
     // ---------- 試堂通知 ----------
     async function loadTrialNotifications() {
-        const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
-        const trials = await res.json();
+        const trials = await fetchWithFallback('getTrialStudents');
         const today = getTodayUTC8();
         trialNotifications = trials.filter(t => {
             if (!t.paid) return true;
@@ -2789,39 +2768,37 @@ function renderEditClassButtons() {
     }
 
     // ---------- 繳費通知 ----------
-async function loadPaymentNotifications() {
-    const res = await fetch(`${SCRIPT_URL}?action=getPaymentRecords`);
-    const payments = await res.json();
+    async function loadPaymentNotifications() {
+        const payments = await fetchWithFallback('getPaymentRecords');
 
-    const authClasses = getAuthorizedClasses();
-    const isAuthorizedForClass = (className) => {
-        if (authClasses === '*') return true;
-        if (!className) return false;
-        return authClasses.includes(className);
-    };
+        const authClasses = getAuthorizedClasses();
+        const isAuthorizedForClass = (className) => {
+            if (authClasses === '*') return true;
+            if (!className) return false;
+            return authClasses.includes(className);
+        };
 
-    paymentNotifications = payments
-        .filter(p => !p.processed && isAuthorizedForClass(p.className))
-        .map(p => ({
-            studentName: p.studentName,
-            className: p.className,
-            paymentDate: p.paymentDate,
-            time: p.time,
-            imageUrl: p.imageUrl
-        }));
+        paymentNotifications = payments
+            .filter(p => !p.processed && isAuthorizedForClass(p.className))
+            .map(p => ({
+                studentName: p.studentName,
+                className: p.className,
+                paymentDate: p.paymentDate,
+                time: p.time,
+                imageUrl: p.imageUrl
+            }));
 
-    const paidStudentNames = new Set(payments.map(p => p.studentName));
-    newStudentNotifications = allStudents
-        .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
-        .map(s => ({ name: s.name, className: s.class.join(',') }));
+        const paidStudentNames = new Set(payments.map(p => p.studentName));
+        newStudentNotifications = allStudents
+            .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
+            .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-    renderNotificationBody();
-}
+        renderNotificationBody();
+    }
 
     // ---------- 待審批請求 ----------
     async function loadPendingApprovals() {
-        const res = await fetch(`${SCRIPT_URL}?action=getPendingApprovals`);
-        const data = await res.json();
+        const data = await fetchWithFallback('getPendingApprovals');
         pendingApprovals = data;
         renderNotificationBody();
     }
@@ -3032,12 +3009,9 @@ async function loadPaymentNotifications() {
     function uploadPaymentForNewStudent(name, className) {
         pendingNewStudent = { name, className };
         document.getElementById('paymentUploadInput').click();
-    }
-
-    // ---------- 試堂管理 ----------
+    }    // ---------- 试堂管理 ----------
     async function loadTrialList() {
-        const res = await fetch(`${SCRIPT_URL}?action=getTrialStudents`);
-        const trials = await res.json();
+        const trials = await fetchWithFallback('getTrialStudents');
         const container = document.getElementById('trialList');
         let html = '';
         trials.forEach(t => {
@@ -3084,8 +3058,7 @@ async function loadPaymentNotifications() {
             hiddenPicker.style.opacity = '0';
             if (!newDate) return;
             const updates = { date: newDate };
-            const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(originalDate)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('updateTrialStudent', { name, date: originalDate, updates: JSON.stringify(updates) });
             if (result.success) {
                 showSuccess('日期已更新');
                 await loadTrialNotifications();
@@ -3114,8 +3087,7 @@ async function loadPaymentNotifications() {
         showConfirm(`確定要刪除 ${name} 於 ${date} 的試堂記錄嗎？`, async () => {
             processing[lockKey] = true;
             try {
-                const res = await fetch(`${SCRIPT_URL}?action=deleteTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('deleteTrialStudent', { name, date });
                 if (result.success) {
                     showSuccess('刪除成功');
                     await loadTrialNotifications();
@@ -3133,8 +3105,7 @@ async function loadPaymentNotifications() {
 
     window.markTrialPaid = async function(name, date) {
         if (currentUser.role !== 'admin') { showError('無權限'); return; }
-        const res = await fetch(`${SCRIPT_URL}?action=markTrialPaid&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}`);
-        const result = await res.json();
+        const result = await fetchWithFallback('markTrialPaid', { name, date });
         if (result.success) {
             showSuccess('已標記收費');
             await loadTrialNotifications();
@@ -3166,8 +3137,7 @@ async function loadPaymentNotifications() {
                 note: document.getElementById('trialNote').value
             };
             if (!data.name || !data.date) return showError('姓名與日期必填');
-            const res = await fetch(`${SCRIPT_URL}?action=addTrialStudent&data=${encodeURIComponent(JSON.stringify(data))}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('addTrialStudent', { data: JSON.stringify(data) });
             if (result.success) {
                 showSuccess('新增成功');
                 document.getElementById('trialName').value = '';
@@ -3242,8 +3212,7 @@ async function loadPaymentNotifications() {
             const payload = { name, class: className, classesChange: delta, reason };
 
             if (currentUser.role === 'admin') {
-                const res = await fetch(`${SCRIPT_URL}?action=addClasses&data=${encodeURIComponent(JSON.stringify(payload))}&operator=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('addClasses', { data: JSON.stringify(payload), operator: currentUser.username });
                 if (result.success) {
                     showSuccess(result.message);
                     document.getElementById('searchStudentInput').value = '';
@@ -3258,8 +3227,7 @@ async function loadPaymentNotifications() {
                     showError(result.message);
                 }
             } else {
-                const res = await fetch(`${SCRIPT_URL}?action=submitApprovalRequest&data=${encodeURIComponent(JSON.stringify({ type: 'addClasses', payload }))}&requester=${encodeURIComponent(currentUser.username)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify({ type: 'addClasses', payload }), requester: currentUser.username });
                 if (result.success) {
                     showSuccess('請求已提交，等待管理員審批');
                     document.getElementById('searchStudentInput').value = '';
@@ -3397,8 +3365,7 @@ async function loadPaymentNotifications() {
         try {
             if (type === 'student') {
                 const updates = { note: newNote };
-                const res = await fetch(`${SCRIPT_URL}?action=updateStudentNote&name=${encodeURIComponent(name)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('updateStudentNote', { name, updates: JSON.stringify(updates) });
                 if (result.success) {
                     showSuccess('備註已更新');
                     await fetchAllStudents();
@@ -3408,8 +3375,7 @@ async function loadPaymentNotifications() {
                 }
             } else if (type === 'trial') {
                 const updates = { note: newNote };
-                const res = await fetch(`${SCRIPT_URL}?action=updateTrialStudent&name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('updateTrialStudent', { name, date, updates: JSON.stringify(updates) });
                 if (result.success) {
                     showSuccess('備註已更新');
                     await loadTrialNotifications();
@@ -3441,8 +3407,7 @@ async function loadPaymentNotifications() {
             showConfirm(`真的要刪除 ${name} 嗎？此操作無法復原，僅能從備份還原。`, async () => {
                 processing[lockKey] = true;
                 try {
-                    const res = await fetch(`${SCRIPT_URL}?action=deleteStudent&name=${encodeURIComponent(name)}`);
-                    const result = await res.json();
+                    const result = await fetchWithFallback('deleteStudent', { name });
                     if (result.success) {
                         showSuccess(`${name} 已刪除`);
                         await fetchAllStudents();
@@ -3517,8 +3482,7 @@ async function loadPaymentNotifications() {
             let msg = `確定為 ${name} 提交請假？\n請假日期：${leaveDate}`;
             if (student && student.leaveCount >= 2) msg += '\n⚠️ 將扣1堂課！';
             showConfirm(msg, async () => {
-                const res = await fetch(`${SCRIPT_URL}?action=coachSubmitLeave&name=${encodeURIComponent(name)}&operator=${encodeURIComponent(currentUser.username)}&date=${encodeURIComponent(leaveDate)}`);
-                const result = await res.json();
+                const result = await fetchWithFallback('coachSubmitLeave', { name, operator: currentUser.username, date: leaveDate });
                 if (result.success) {
                     showSuccess(`請假成功！請假次數: ${result.leaveCount}，剩餘: ${result.remaining}`);
                     await fetchAllStudents();
@@ -3581,8 +3545,7 @@ async function loadPaymentNotifications() {
     // ---------- 用戶管理 ----------
     async function loadUserList() {
         if (currentUser.role !== 'admin') return;
-        const res = await fetch(`${SCRIPT_URL}?action=getAllUsers`);
-        const users = await res.json();
+        const users = await fetchWithFallback('getAllUsers');
         const container = document.getElementById('userList');
         let html = '';
         users.forEach(u => {
@@ -3630,16 +3593,14 @@ async function loadPaymentNotifications() {
             return;
         }
 
-        const verifyRes = await fetch(`${SCRIPT_URL}?action=verifyUser&username=${encodeURIComponent(currentUser.username)}&password=${encodeURIComponent(oldPwd)}`);
-        const verifyData = await verifyRes.json();
+        const verifyData = await fetchWithFallback('verifyUser', { username: currentUser.username, password: oldPwd });
         if (!verifyData.success) {
             showError('舊密碼錯誤');
             return;
         }
 
         const updates = { password: newPwd1 };
-        const updateRes = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(currentUser.username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-        const updateData = await updateRes.json();
+        const updateData = await fetchWithFallback('updateUser', { username: currentUser.username, updates: JSON.stringify(updates) });
         if (updateData.success) {
             showSuccess('密碼修改成功');
             closeChangePasswordModal();
@@ -3674,8 +3635,7 @@ async function loadPaymentNotifications() {
             authorizedClasses: authClasses
         };
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=addUser&data=${encodeURIComponent(JSON.stringify(data))}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('addUser', { data: JSON.stringify(data) });
             if (result.success) {
                 showSuccess('用戶新增成功');
                 document.getElementById('newUsername').value = '';
@@ -3768,8 +3728,7 @@ async function loadPaymentNotifications() {
         saveBtn.textContent = '儲存中...';
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?action=updateUser&username=${encodeURIComponent(username)}&updates=${encodeURIComponent(JSON.stringify(updates))}`);
-            const result = await res.json();
+            const result = await fetchWithFallback('updateUser', { username, updates: JSON.stringify(updates) });
             if (result.success) {
                 showSuccess('用戶資料已更新');
                 closeEditUserModal();
@@ -3796,8 +3755,7 @@ async function loadPaymentNotifications() {
     }
 
     async function deleteUser(username) {
-        const res = await fetch(`${SCRIPT_URL}?action=deleteUser&username=${encodeURIComponent(username)}`);
-        const result = await res.json();
+        const result = await fetchWithFallback('deleteUser', { username });
         if (result.success) {
             showSuccess('用戶已刪除');
             loadUserList();
@@ -3808,8 +3766,7 @@ async function loadPaymentNotifications() {
 
     // ---------- 審批請求處理 ----------
     async function approveRequest(id) {
-        const res = await fetch(`${SCRIPT_URL}?action=approveRequest&id=${id}&approver=${encodeURIComponent(currentUser.username)}`);
-        const result = await res.json();
+        const result = await fetchWithFallback('approveRequest', { id, approver: currentUser.username });
         if (result.success) {
             showSuccess('請求已批准');
             await loadPendingApprovals();
@@ -3823,8 +3780,7 @@ async function loadPaymentNotifications() {
     }
 
     async function rejectRequest(id) {
-        const res = await fetch(`${SCRIPT_URL}?action=rejectRequest&id=${id}&approver=${encodeURIComponent(currentUser.username)}`);
-        const result = await res.json();
+        const result = await fetchWithFallback('rejectRequest', { id, approver: currentUser.username });
         if (result.success) {
             showSuccess('請求已拒絕');
             await loadPendingApprovals();
@@ -3948,13 +3904,7 @@ async function loadPaymentNotifications() {
             });
 
             console.log('發送請求至後端');
-            const res = await fetch(`${SCRIPT_URL}?action=uploadPaymentPhoto`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            });
-
-            const result = await res.json();
+            const result = await fetchWithFallback('uploadPaymentPhoto', {}, 'POST', params);
             console.log('後端回應：', result);
 
             if (result.success) {
@@ -4046,13 +3996,7 @@ async function loadPaymentNotifications() {
             });
 
             console.log('發送請求至後端');
-            const res = await fetch(`${SCRIPT_URL}?action=uploadPhoto`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            });
-
-            const result = await res.json();
+            const result = await fetchWithFallback('uploadPhoto', {}, 'POST', params);
             console.log('後端回應：', result);
 
             if (result.success) {
