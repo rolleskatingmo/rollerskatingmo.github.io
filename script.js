@@ -1160,82 +1160,77 @@
 
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
-    function updateAttendanceList() {
-        const container = document.getElementById('attendanceList');
-        if (!container) return;
+function updateAttendanceList() {
+    const container = document.getElementById('attendanceList');
+    if (!container) return;
 
-        const filteredStudents = getFilteredStudents();
-        const grouped = {};
-        filteredStudents.forEach(s => {
-            (s.class || []).forEach(className => {
-                if (!grouped[className]) grouped[className] = [];
-                grouped[className].push(s);
-            });
+    const filteredStudents = getFilteredStudents();
+    const grouped = {};
+    filteredStudents.forEach(s => {
+        (s.class || []).forEach(className => {
+            if (!grouped[className]) grouped[className] = [];
+            grouped[className].push(s);
         });
+    });
 
-        let html = '';
-        for (let className in grouped) {
-            html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-            grouped[className].forEach(s => {
-                const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
-                const isSelectedMakeup = makeupSelectedStudents.has(s.name);
-                
-                let buttonClass = 'student-button';
-                let disabled = false;
-                let onClick = '';
+    let html = '';
+    for (let className in grouped) {
+        html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
+        grouped[className].forEach(s => {
+            const isCheckedNormal = localStorage.getItem(`attendance_${s.name}`) === 'checked';
+            const isSelectedMakeup = makeupSelectedStudents.has(s.name);
+            
+            let buttonClass = 'student-button';
+            let disabled = false;
 
-                if (isMakeupMode) {
-                    if (currentUser.role === 'coach') {
-                        if (isCheckedNormal) {
-                            buttonClass += ' checked';
-                            disabled = true;
-                        } else {
-                            onClick = `markMakeupAttendance(${JSON.stringify(s.name)})`;
-                        }
-                    } else {
-                        if (isCheckedNormal) {
-                            buttonClass += ' checked';
-                            disabled = true;
-                        } else {
-                            buttonClass += isSelectedMakeup ? ' selected' : '';
-                            onClick = `toggleMakeupStudent(${JSON.stringify(s.name)})`;
-                        }
+            if (isMakeupMode) {
+                if (currentUser.role === 'coach') {
+                    if (isCheckedNormal) {
+                        buttonClass += ' checked';
+                        disabled = true;
                     }
                 } else {
-                    // 一般點名模式（批次選取）
                     if (isCheckedNormal) {
                         buttonClass += ' checked';
                         disabled = true;
                     } else {
-                        buttonClass += window.selectedAttendanceStudents.has(s.name) ? ' selected' : '';
-                        onClick = `toggleAttendanceStudent(${JSON.stringify(s.name)})`;
+                        buttonClass += isSelectedMakeup ? ' selected' : '';
                     }
                 }
-
-                let buttonText = s.name;
-                if (currentUser.role === 'coach' || currentUser.role === 'admin') {
-                    const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
-                    if (zeroClass) buttonClass += ' zero-class';
-                    buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
-                }
-
-                html += `<button class="${buttonClass}" data-name="${s.name}" onclick="${onClick}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
-            });
-            html += '</div>';
-        }
-        container.innerHTML = html;
-
-        // 更新確認點名按鈕的顯示狀態
-        const btnReview = document.getElementById('btnReviewAttendance');
-        if (btnReview) {
-            if (window.selectedAttendanceStudents.size > 0 && !isMakeupMode) {
-                btnReview.style.display = 'block';
-                document.getElementById('attendanceSelectedCount').textContent = window.selectedAttendanceStudents.size;
             } else {
-                btnReview.style.display = 'none';
+                // 一般點名模式（批次選取）
+                if (isCheckedNormal) {
+                    buttonClass += ' checked';
+                    disabled = true;
+                } else {
+                    buttonClass += window.selectedAttendanceStudents.has(s.name) ? ' selected' : '';
+                }
             }
+
+            let buttonText = s.name;
+            if (currentUser.role === 'coach' || currentUser.role === 'admin') {
+                const zeroClass = s.remainingClasses <= 0 ? 'zero-class' : '';
+                if (zeroClass) buttonClass += ' zero-class';
+                buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+            }
+
+            html += `<button class="${buttonClass}" data-name="${s.name}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+        });
+        html += '</div>';
+    }
+    container.innerHTML = html;
+
+    // 更新確認點名按鈕的顯示狀態
+    const btnReview = document.getElementById('btnReviewAttendance');
+    if (btnReview) {
+        if (window.selectedAttendanceStudents.size > 0 && !isMakeupMode) {
+            btnReview.style.display = 'block';
+            document.getElementById('attendanceSelectedCount').textContent = window.selectedAttendanceStudents.size;
+        } else {
+            btnReview.style.display = 'none';
         }
     }
+}
 
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
@@ -2846,12 +2841,36 @@
             });
         }
 
-        const modal = document.getElementById('coachStudentRecordModal');
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    closeCoachStudentModal();
+    const modal = document.getElementById('coachStudentRecordModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeCoachStudentModal();
+            }
+        });
+    }
+    // 事件委托：點名區塊的按鈕點擊處理（避免 onclick 字符串語法錯誤）
+    const attendanceList = document.getElementById('attendanceList');
+    if (attendanceList) {
+        attendanceList.addEventListener('click', function(e) {
+            const btn = e.target.closest('.student-button');
+            if (!btn) return;
+            if (btn.disabled) return;
+
+            const name = btn.getAttribute('data-name');
+            if (!name) return;
+
+            if (isMakeupMode) {
+                // 補點名模式
+                if (currentUser.role === 'coach') {
+                    markMakeupAttendance(name);
+                } else {
+                    toggleMakeupStudent(name);
                 }
-            });
-        }
-    });
+            } else {
+                // 一般點名模式
+                toggleAttendanceStudent(name);
+            }
+        });
+    }
+});
