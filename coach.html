@@ -1255,7 +1255,17 @@
             </div>
         </div>
     </div>
-
+    <!-- 補點名審批確認模態框 -->
+    <div id="makeupApprovalModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>📋 確認補點名名單</h3>
+            <div id="makeupApprovalList" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeMakeupApprovalModal()">取消</button>
+                <button class="confirm" onclick="confirmMakeupApproval()">確認提交審批</button>
+            </div>
+        </div>
+    </div>
     <div id="classSelectModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📸 選擇班級</h3>
