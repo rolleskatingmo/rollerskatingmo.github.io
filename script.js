@@ -1103,47 +1103,48 @@
         }
     }
 
-    async function submitMakeupApproval() {
-        if (makeupSelectedStudents.size === 0) {
-            showError('請至少選擇一位學生');
-            return;
-        }
-        if (!makeupDate) {
-            showError('日期不存在，請重新進入補點名模式');
-            return;
-        }
-
-        const lockKey = 'submitMakeupApproval';
-        if (processing[lockKey]) {
-            showError('正在提交中，請稍後...');
-            return;
-        }
-        processing[lockKey] = true;
-
-        const students = Array.from(makeupSelectedStudents);
-        const payload = {
-            type: 'makeupAttendance',
-            payload: {
-                students: students,
-                date: makeupDate
-            }
-        };
-
-        try {
-            const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify(payload), requester: currentUser.username });
-            if (result.success) {
-                showSuccess('補點名審批請求已提交，等待管理員批准');
-                makeupSelectedStudents.clear();
-                exitMakeupMode();
-            } else {
-                showError(result.error || '提交失敗');
-            }
-        } catch (err) {
-            showError('網路錯誤');
-        } finally {
-            delete processing[lockKey];
-        }
+async function submitMakeupApproval() {
+    if (makeupSelectedStudents.size === 0) {
+        showError('請至少選擇一位學生');
+        return;
     }
+    if (!makeupDate) {
+        showError('日期不存在，請重新進入補點名模式');
+        return;
+    }
+
+    const lockKey = 'submitMakeupApproval';
+    if (processing[lockKey]) {
+        showError('正在提交中，請稍後...');
+        return;
+    }
+    processing[lockKey] = true;
+
+    const students = Array.from(makeupSelectedStudents);
+    const payload = {
+        type: 'makeupAttendance',
+        payload: {
+            students: students,
+            date: makeupDate
+        }
+    };
+
+    try {
+        const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify(payload), requester: currentUser.username });
+        if (result.success) {
+            showSuccess('補點名審批請求已提交，等待管理員批准');
+            await loadPendingApprovals();  // 立即刷新通知栏
+            makeupSelectedStudents.clear();
+            exitMakeupMode();
+        } else {
+            showError(result.error || '提交失敗');
+        }
+    } catch (err) {
+        showError('網路錯誤');
+    } finally {
+        delete processing[lockKey];
+    }
+}
 
     function toggleMakeupStudent(name) {
         if (makeupSelectedStudents.has(name)) {
