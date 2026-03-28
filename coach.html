@@ -1344,7 +1344,7 @@
 </div>
 <script>
     // ========== 單一後端網址（無備援） ==========
-    const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbzBaZ6HytU2qomPGTKyE4OzANNOYUwnpjD-yCGhhp_nGcMQKUofCA5cJdxKgd_P1Pm8oQ/exec';
+    const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbzgPeCSzbfXTZqkAhcB4WoRSalCKIAoTFT001z_iV_OiGAJDGbTMVlmLq35qv9nJefUKA/exec';
 
     // 直接發送請求（無超時、無備援）
     async function callGAS(action, params = {}, method = 'GET', body = null) {
@@ -2622,11 +2622,6 @@
         showError("請先選取要點名的學生");
         return;
     }
-        if (window.selectedAttendanceStudents.size === 0) {
-            showError("請先選取要點名的學生");
-            return;
-        }
-
         const modal = document.getElementById('batchAttendanceModal');
         const listContainer = document.getElementById('batchAttendanceList');
         
