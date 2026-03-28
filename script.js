@@ -1128,7 +1128,7 @@ async function submitMakeupApproval() {
         const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify(payload), requester: currentUser.username });
         if (result.success) {
             showSuccess('補點名審批請求已提交，等待管理員批准');
-            await loadPendingApprovals();  // 立即刷新通知栏
+            await loadPendingApprovals();   // 立即刷新通知栏
             makeupSelectedStudents.clear();
             exitMakeupMode();
         } else {
@@ -1231,16 +1231,12 @@ function updateAttendanceList() {
         } else {
             btnReview.style.display = 'none';
         }
-    } else if (currentUser.role !== 'coach') {
-        // 补点名模式（非教练）：显示提交审批按钮
-        if (makeupSelectedStudents.size > 0) {
-            btnReview.style.display = 'block';
-            if (countSpan) countSpan.textContent = makeupSelectedStudents.size;
-            btnReview.onclick = submitMakeupApproval;
-            btnReview.textContent = `📝 提交審批 (${makeupSelectedStudents.size}人)`;
-        } else {
-            btnReview.style.display = 'none';
-        }
+} else if (currentUser.role !== 'coach') {
+    if (makeupSelectedStudents.size > 0) {
+        btnReview.style.display = 'block';
+        if (countSpan) countSpan.textContent = makeupSelectedStudents.size;
+        btnReview.onclick = openMakeupApprovalModal;   // 关键！
+        btnReview.textContent = `📝 提交審批 (${makeupSelectedStudents.size}人)`;
     } else {
         btnReview.style.display = 'none';
     }
@@ -1256,7 +1252,49 @@ function updateAttendanceList() {
         }
         updateAttendanceList();
     }
+function openMakeupApprovalModal() {
+    if (makeupSelectedStudents.size === 0) {
+        showError("請先選取要補點名的學生");
+        return;
+    }
 
+    const modal = document.getElementById('makeupApprovalModal');
+    const listContainer = document.getElementById('makeupApprovalList');
+    
+    if (!modal || !listContainer) {
+        // 若元素缺失，直接询问确认
+        if(confirm(`確定要為這 ${makeupSelectedStudents.size} 位學生提交補點名審批嗎？`)) {
+            submitMakeupApproval();
+        }
+        return;
+    }
+
+    let html = '<table class="record-table" style="width:100%; border-collapse: collapse; margin-top:10px;">';
+    html += '<thead style="background:#f1f5f9;"><tr><th style="padding:8px; border:1px solid #e2e8f0;">學生姓名</th><th style="padding:8px; border:1px solid #e2e8f0;">班級</th><th style="padding:8px; border:1px solid #e2e8f0;">剩餘堂數</th></tr></thead><tbody>';
+    
+    makeupSelectedStudents.forEach(name => {
+        const s = allStudents.find(st => st.name === name);
+        if (s) {
+            html += `<tr><td style="padding:8px; border:1px solid #e2e8f0;">${s.name}</td>`;
+            html += `<td style="padding:8px; border:1px solid #e2e8f0;">${s.class.join(',')}</td>`;
+            html += `<td style="padding:8px; border:1px solid #e2e8f0;">${s.remainingClasses} 堂</td></tr>`;
+        }
+    });
+    html += '</tbody></table>';
+    
+    listContainer.innerHTML = html;
+    modal.style.display = 'flex';
+}
+
+function closeMakeupApprovalModal() {
+    const modal = document.getElementById('makeupApprovalModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function confirmMakeupApproval() {
+    closeMakeupApprovalModal();
+    submitMakeupApproval();
+}
 function openBatchAttendanceModal() {
     if (processing['batchAttendance']) {
         showError('正在處理點名，請稍後...');
