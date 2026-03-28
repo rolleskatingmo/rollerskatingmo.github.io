@@ -611,7 +611,7 @@
             recordsHtml = `<div style="overflow-x: auto;">
                 <table class="record-table">
                     <thead>
-                        <tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th> throne
+                        <tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th>
                     </thead>
                     <tbody>`;
             allRecords.slice(0, 50).forEach(rec => {
