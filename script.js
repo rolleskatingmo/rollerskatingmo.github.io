@@ -1575,7 +1575,27 @@ function resetAttendance() {
         pendingApprovals = data;
         renderNotificationBody();
     }
+function updateNotificationScrollHint() {
+    const body = document.getElementById('notificationBody');
+    const hint = document.getElementById('notificationScrollHint');
+    if (!body || !hint) return;
+    if (notificationCollapsed) {
+        hint.style.display = 'none';
+        return;
+    }
+    if (body.scrollHeight > body.clientHeight) {
+        hint.style.display = 'flex';
+    } else {
+        hint.style.display = 'none';
+    }
+}
 
+function scrollNotificationToBottom() {
+    const body = document.getElementById('notificationBody');
+    if (body) {
+        body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+    }
+}
     function toggleNotificationBody() {
         notificationCollapsed = !notificationCollapsed;
         const body = document.getElementById('notificationBody');
@@ -1587,6 +1607,7 @@ function resetAttendance() {
             body.classList.remove('collapsed');
             header.classList.remove('collapsed');
         }
+            updateNotificationScrollHint();
     }
 
     function renderNotificationBody() {
@@ -1774,6 +1795,7 @@ function resetAttendance() {
 
         body.innerHTML = html;
         countSpan.textContent = total;
+            updateNotificationScrollHint();
     }
 
     function uploadPaymentForNewStudent(name, className) {
