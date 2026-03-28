@@ -998,10 +998,16 @@
             </div>
 
             <!-- 點名區塊 -->
-            <div id="attendance" class="section" style="display: none;">
+<div id="attendance" class="section" style="display: none;">
                 <h2>📌 點名 (扣課)</h2>
+                <div class="info-box">💡 請點擊要點名的學生，選取完畢後點擊下方的「確認點名」進行批次扣課。</div>
                 <div id="attendanceList"></div>
-                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px;">重置點名狀態</button>
+                
+                <button id="btnReviewAttendance" class="btn btn-primary" style="width:100%; margin-top:15px; display:none; padding:16px; font-size:1.1rem;" onclick="openBatchAttendanceModal()">
+                    📝 確認點名 (<span id="attendanceSelectedCount">0</span>人)
+                </button>
+
+                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; width:100%;">重置今日點名狀態</button>
             </div>
 
             <!-- 租借裝備區塊 -->
@@ -1235,6 +1241,18 @@
                 <button class="confirm" onclick="confirmMakeupDate()">下一步</button>
             </div>
         </div>
+        <div id="batchAttendanceModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>📋 確認點名名單</h3>
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:10px;">請確認以下學生是否皆出席，點擊確認後將一次性扣除課堂數。</p>
+            <div id="batchAttendanceList" style="max-height: 40vh; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+                </div>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeBatchAttendanceModal()">返回修改</button>
+                <button class="confirm" onclick="confirmBatchAttendance()">確定點名</button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <div id="classSelectModal" class="modal-overlay">
@@ -1330,7 +1348,7 @@
 <script>
     // ========== 双后端备援配置 ==========
     const PRIMARY_URL = 'https://rollerskatingmo.sytes.netnull';
-    const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbxanvKtXbWL1ic5ZP0PYu3Vu2CZsjQdnbzfY41z8u9Xym1PwEWYVH1ESmdsm5AXlkpF5g/exec';
+    const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbysnJKCmVHCkmiEiqhZUZ5FMX803EsDrRKApDz0Jzv0gfavAfvKFTrdsbE31ZjPlGo2jA/exec';
 
     // 统一请求函数，自动切换主备
     async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
@@ -1356,6 +1374,7 @@
     let isMakeupMode = false;
     let makeupSelectedStudents = new Set();
     let makeupDate = '';
+    let selectedAttendanceStudents = new Set();
     let currentUser = null;
     const processing = {};
 
@@ -2495,6 +2514,15 @@
         }
     }
 
+function toggleAttendanceStudent(name) {
+        if (selectedAttendanceStudents.has(name)) {
+            selectedAttendanceStudents.delete(name);
+        } else {
+            selectedAttendanceStudents.add(name);
+        }
+        updateAttendanceList();
+    }
+
     function updateAttendanceList() {
         const container = document.getElementById('attendanceList');
         if (!container) return;
@@ -2537,11 +2565,14 @@
                         }
                     }
                 } else {
+                    // 一般點名模式（批次選取）
                     if (isCheckedNormal) {
                         buttonClass += ' checked';
                         disabled = true;
+                    } else {
+                        buttonClass += selectedAttendanceStudents.has(s.name) ? ' selected' : '';
+                        onClick = `toggleAttendanceStudent('${s.name}')`;
                     }
-                    onClick = `markAttendance('${s.name}')`;
                 }
 
                 let buttonText = s.name;
@@ -2556,6 +2587,76 @@
             html += '</div>';
         }
         container.innerHTML = html;
+
+        // 更新確認點名按鈕的顯示狀態
+        const btnReview = document.getElementById('btnReviewAttendance');
+        if (btnReview) {
+            if (selectedAttendanceStudents.size > 0 && !isMakeupMode) {
+                btnReview.style.display = 'block';
+                document.getElementById('attendanceSelectedCount').textContent = selectedAttendanceStudents.size;
+            } else {
+                btnReview.style.display = 'none';
+            }
+        }
+    }
+
+    // 打開確認名單模態框
+    function openBatchAttendanceModal() {
+        if (selectedAttendanceStudents.size === 0) return;
+        let html = '<table class="record-table"><thead><tr><th>學生姓名</th><th>班級</th><th>剩餘堂數</th></tr></thead><tbody>';
+        selectedAttendanceStudents.forEach(name => {
+            const s = allStudents.find(st => st.name === name);
+            if (s) {
+                html += `<tr><td><strong>${s.name}</strong></td><td>${s.class.join(',')}</td><td>${s.remainingClasses} 堂</td></tr>`;
+            }
+        });
+        html += '</tbody></table>';
+        document.getElementById('batchAttendanceList').innerHTML = html;
+        document.getElementById('batchAttendanceModal').style.display = 'flex';
+    }
+
+    function closeBatchAttendanceModal() {
+        document.getElementById('batchAttendanceModal').style.display = 'none';
+    }
+
+    // 執行批次點名
+    async function confirmBatchAttendance() {
+        if (selectedAttendanceStudents.size === 0) return;
+        const lockKey = 'batchAttendance';
+        if (processing[lockKey]) {
+            showError('正在處理中，請稍後...');
+            return;
+        }
+        processing[lockKey] = true;
+        closeBatchAttendanceModal();
+        showLoadingSpinner('點名處理中，請勿關閉視窗...');
+
+        const studentsArray = Array.from(selectedAttendanceStudents);
+        try {
+            // 呼叫後端新的 batchMarkAttendance API
+            const result = await fetchWithFallback('batchMarkAttendance', { 
+                students: JSON.stringify(studentsArray),
+                operator: currentUser.username
+            });
+
+            if (result.success) {
+                showSuccess(result.message);
+                // 更新 LocalStorage 防呆標記
+                studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
+                selectedAttendanceStudents.clear();
+                
+                await fetchAllStudents();
+                updateAttendanceList();
+                renderNoteListByClass();
+            } else {
+                showError(result.message || result.error || '點名失敗');
+            }
+        } catch (err) {
+            showError('網路錯誤，點名失敗: ' + err.message);
+        } finally {
+            delete processing[lockKey];
+            hideLoadingSpinner();
+        }
     }
 
     async function coachRequestDeleteStudent(name) {
@@ -2637,15 +2738,17 @@ async function markAttendance(name) {
     }
 }
 
-    function resetAttendance() {
+function resetAttendance() {
         document.querySelectorAll('.student-button.checked').forEach(b => {
             b.classList.remove('checked');
             b.disabled = false;
         });
         if (!isMakeupMode) {
             allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
+            selectedAttendanceStudents.clear(); // 清空目前的選取
+            updateAttendanceList(); // 刷新畫面隱藏按鈕
         }
-        showSuccess('點名狀態已重置');
+        showSuccess('今日點名狀態已重置');
     }
 
     function exitMakeupMode() {
