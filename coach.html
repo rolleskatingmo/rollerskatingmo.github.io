@@ -2573,7 +2573,7 @@
                         disabled = true;
                     } else {
                         buttonClass += window.selectedAttendanceStudents.has(s.name) ? ' selected' : '';
-                        onClick = `toggleAttendanceStudent('${s.name}')`;
+                        onClick = `toggleAttendanceStudent(${JSON.stringify(s.name)})`;
                     }
                 }
 
@@ -2617,6 +2617,11 @@
 
     // --- 3. 彈出確認模態框 ---
     function openBatchAttendanceModal() {
+        console.log('openBatchAttendanceModal 被呼叫，已選學生數:', window.selectedAttendanceStudents.size);
+    if (window.selectedAttendanceStudents.size === 0) {
+        showError("請先選取要點名的學生");
+        return;
+    }
         if (window.selectedAttendanceStudents.size === 0) {
             showError("請先選取要點名的學生");
             return;
