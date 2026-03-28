@@ -1351,24 +1351,25 @@
     const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbysnJKCmVHCkmiEiqhZUZ5FMX803EsDrRKApDz0Jzv0gfavAfvKFTrdsbE31ZjPlGo2jA/exec';
 
     // 统一请求函数，自动切换主备
-    async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
-        const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
-        try {
+        async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
+            const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
             const options = { method, timeout: 5000 };
             if (body && method === 'POST') {
                 options.body = body;
                 options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
             }
-            const res = await fetch(url, options);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return await res.json();
-        } catch (err) {
-            console.warn('主服务器不可用，切换至备用', err);
-            const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
-            const fallbackRes = await fetch(fallbackUrl);
-            return await fallbackRes.json();
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.warn('主服务器不可用，切换至备用', err);
+                const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
+                // ⚠️ 重要修復：備用 URL 也要加上 options 才能正確送出 POST 請求
+                const fallbackRes = await fetch(fallbackUrl, options);
+                return await fallbackRes.json();
+            }
         }
-    }
 
     let allStudents = [];
     let isMakeupMode = false;
@@ -2514,11 +2515,14 @@
         }
     }
 
-function toggleAttendanceStudent(name) {
-        if (selectedAttendanceStudents.has(name)) {
-            selectedAttendanceStudents.delete(name);
+// 確保變數為全域，避免報錯導致視窗卡住
+    window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
+
+    function toggleAttendanceStudent(name) {
+        if (window.selectedAttendanceStudents.has(name)) {
+            window.selectedAttendanceStudents.delete(name);
         } else {
-            selectedAttendanceStudents.add(name);
+            window.selectedAttendanceStudents.add(name);
         }
         updateAttendanceList();
     }
@@ -2570,7 +2574,7 @@ function toggleAttendanceStudent(name) {
                         buttonClass += ' checked';
                         disabled = true;
                     } else {
-                        buttonClass += selectedAttendanceStudents.has(s.name) ? ' selected' : '';
+                        buttonClass += window.selectedAttendanceStudents.has(s.name) ? ' selected' : '';
                         onClick = `toggleAttendanceStudent('${s.name}')`;
                     }
                 }
@@ -2591,13 +2595,85 @@ function toggleAttendanceStudent(name) {
         // 更新確認點名按鈕的顯示狀態
         const btnReview = document.getElementById('btnReviewAttendance');
         if (btnReview) {
-            if (selectedAttendanceStudents.size > 0 && !isMakeupMode) {
+            if (window.selectedAttendanceStudents.size > 0 && !isMakeupMode) {
                 btnReview.style.display = 'block';
-                document.getElementById('attendanceSelectedCount').textContent = selectedAttendanceStudents.size;
+                document.getElementById('attendanceSelectedCount').textContent = window.selectedAttendanceStudents.size;
             } else {
                 btnReview.style.display = 'none';
             }
         }
+    }
+
+    function openBatchAttendanceModal() {
+        if (!window.selectedAttendanceStudents || window.selectedAttendanceStudents.size === 0) return;
+        let html = '<table class="record-table"><thead><tr><th>學生姓名</th><th>班級</th><th>剩餘堂數</th></tr></thead><tbody>';
+        window.selectedAttendanceStudents.forEach(name => {
+            const s = allStudents.find(st => st.name === name);
+            if (s) {
+                html += `<tr><td><strong>${s.name}</strong></td><td>${s.class.join(',')}</td><td>${s.remainingClasses} 堂</td></tr>`;
+            }
+        });
+        html += '</tbody></table>';
+        document.getElementById('batchAttendanceList').innerHTML = html;
+        document.getElementById('batchAttendanceModal').style.display = 'flex';
+    }
+
+    function closeBatchAttendanceModal() {
+        document.getElementById('batchAttendanceModal').style.display = 'none';
+    }
+
+    // 執行批次點名
+    async function confirmBatchAttendance() {
+        if (!window.selectedAttendanceStudents || window.selectedAttendanceStudents.size === 0) return;
+        const lockKey = 'batchAttendance';
+        if (processing[lockKey]) {
+            showError('正在處理中，請稍後...');
+            return;
+        }
+        processing[lockKey] = true;
+        closeBatchAttendanceModal();
+        showLoadingSpinner('點名處理中，請勿關閉視窗...');
+
+        const studentsArray = Array.from(window.selectedAttendanceStudents);
+        try {
+            // 使用 POST 避免學生人數過多超過 URL 長度限制
+            const bodyParams = new URLSearchParams({
+                students: JSON.stringify(studentsArray),
+                operator: currentUser.username
+            });
+            
+            const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', bodyParams);
+
+            if (result.success) {
+                showSuccess(result.message);
+                studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
+                window.selectedAttendanceStudents.clear();
+                
+                await fetchAllStudents();
+                updateAttendanceList();
+                renderNoteListByClass();
+            } else {
+                showError(result.message || result.error || '點名失敗');
+            }
+        } catch (err) {
+            showError('網路錯誤，點名失敗: ' + err.message);
+        } finally {
+            delete processing[lockKey];
+            hideLoadingSpinner();
+        }
+    }
+
+    function resetAttendance() {
+        document.querySelectorAll('.student-button.checked').forEach(b => {
+            b.classList.remove('checked');
+            b.disabled = false;
+        });
+        if (!isMakeupMode) {
+            allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
+            window.selectedAttendanceStudents.clear(); // 同步清空批次選取
+            updateAttendanceList();
+        }
+        showSuccess('今日點名狀態已重置');
     }
 
     // 打開確認名單模態框
