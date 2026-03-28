@@ -1241,7 +1241,7 @@ function updateAttendanceList() {
         btnReview.style.display = 'none';
     }
 }
-
+}
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
     function toggleAttendanceStudent(name) {
