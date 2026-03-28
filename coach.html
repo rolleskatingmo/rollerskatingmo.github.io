@@ -1347,43 +1347,24 @@
     const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbwDd948i4e62Nt1sI4GG11667VQ0RVC9QCe_qzZS0RNxIxgUc8VIgSvWZ4PMH66pbDrpQ/exec';
     const FALLBACK_URL = 'https://rollerskatingmo.sytes.netnull';
 
-async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
-    // 確保 params 是物件
-    const queryString = new URLSearchParams({ action, ...params }).toString();
-    const primaryUrl = `${PRIMARY_URL}?${queryString}`;
-    const fallbackUrl = `${FALLBACK_URL}?${queryString}`;
-
-    const options = {
-        method: method,
-        mode: 'cors', // 強制開啟跨域模式
-        cache: 'no-cache'
-    };
-
-    if (method === 'POST' && body) {
-        options.body = body;
-        // 注意：GAS 的 POST 建議不使用 application/json，改用 text/plain 或 URLSearchParams
-    }
-
-    try {
-        console.log(`正在請求 API (${action})...`);
-        const response = await fetch(primaryUrl, options);
-        if (!response.ok) throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
-        return await response.json();
-    } catch (err) {
-        console.error(`主伺服器失敗，嘗試備用: ${err.message}`);
-        try {
-            const fbResponse = await fetch(fallbackUrl, options);
-            return await fbResponse.json();
-        } catch (fbErr) {
-            console.error("備用伺服器也失敗:", fbErr);
-            // 這裡彈出提示給用戶
-            if (typeof showError === 'function') {
-                showError("無法連線至伺服器，請檢查網路或 API 部署狀態");
+        async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
+            const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
+            try {
+                const options = { method, timeout: 5000 };
+                if (body && method === 'POST') {
+                    options.body = body;
+                    options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+                }
+                const res = await fetch(url, options);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.warn('主服务器不可用，切换至备用', err);
+                const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
+                const fallbackRes = await fetch(fallbackUrl);
+                return await fallbackRes.json();
             }
-            throw fbErr;
         }
-    }
-}
 
 
     let allStudents = [];
