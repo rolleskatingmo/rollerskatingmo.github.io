@@ -2525,15 +2525,6 @@
     // 確保變數為全域，避免報錯導致視窗卡住
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
-    function toggleAttendanceStudent(name) {
-        if (window.selectedAttendanceStudents.has(name)) {
-            window.selectedAttendanceStudents.delete(name);
-        } else {
-            window.selectedAttendanceStudents.add(name);
-        }
-        updateAttendanceList();
-    }
-
     function updateAttendanceList() {
         const container = document.getElementById('attendanceList');
         if (!container) return;
@@ -3524,7 +3515,38 @@
         document.getElementById('coachLeaveSelectedClass').value = className;
         coachDropdown.style.display = 'none';
     };
+async function coachRequestDeleteStudent(name) {
+    if (currentUser.role !== 'coach') {
+        showError('無權限');
+        return;
+    }
+    
+    showConfirm(`確定要請求刪除學生 ${name} 嗎？此操作需要管理員審批。`, async () => {
+        const lockKey = `requestDelete_${name}`;
+        if (processing[lockKey]) {
+            showError('正在處理中，請稍後...');
+            return;
+        }
+        processing[lockKey] = true;
 
+        try {
+            const payload = { name };
+            const result = await fetchWithFallback('submitApprovalRequest', { 
+                data: JSON.stringify({ type: 'deleteStudent', payload }), 
+                requester: currentUser.username 
+            });
+            if (result.success) {
+                showSuccess('刪除請求已提交，等待管理員審批');
+            } else {
+                showError(result.error || '提交失敗');
+            }
+        } catch (err) {
+            showError('網路錯誤');
+        } finally {
+            delete processing[lockKey];
+        }
+    });
+}
     async function submitCoachLeave() {
         if (currentUser.role !== 'admin' && currentUser.role !== 'coach') { showError('無權限'); return; }
         if (processing.coachLeave) {
