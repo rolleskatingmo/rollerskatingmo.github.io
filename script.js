@@ -1343,17 +1343,22 @@ async function confirmBatchAttendance() {
         return;
     }
     
-    // 立即清空选中的学生，防止重复提交
     const studentsArray = Array.from(window.selectedAttendanceStudents);
     if (studentsArray.length === 0) {
         showError('沒有選取任何學生');
         return;
     }
+    
+    // 立即清空选中的学生，防止重复提交
     window.selectedAttendanceStudents.clear();
     
     processing[lockKey] = true;
     closeBatchAttendanceModal();
     showLoadingSpinner('正在處理點名，請勿關閉或重新整理...');
+    
+    // 记录本次请求的时间戳，用于防止重置后误写
+    const requestTimestamp = Date.now();
+    window.lastBatchAttendanceRequest = requestTimestamp;
 
     try {
         const formData = new URLSearchParams();
@@ -1362,39 +1367,58 @@ async function confirmBatchAttendance() {
 
         const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', formData);
 
+        // 检查是否有新的重置操作发生（如果重置时间晚于请求时间，则忽略结果）
+        if (window.lastResetTimestamp && window.lastResetTimestamp > requestTimestamp) {
+            console.log('點名請求被重置操作取消，不更新本地狀態');
+            return;
+        }
+
         if (result && result.success) {
             showSuccess(result.message || '點名成功');
+            // 写入本地标记
             studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
             await loadAllData();
         } else {
             showError(result ? result.message : '伺服器回應失敗');
-            // 如果失败，恢复选中的学生（可选）
+            // 失败时恢复选中的学生
             studentsArray.forEach(name => window.selectedAttendanceStudents.add(name));
+            updateAttendanceList();
         }
     } catch (err) {
         console.error('點名錯誤:', err);
         showError('系統錯誤，請稍後再試');
-        // 如果失败，恢复选中的学生
         studentsArray.forEach(name => window.selectedAttendanceStudents.add(name));
+        updateAttendanceList();
     } finally {
         delete processing[lockKey];
         hideLoadingSpinner();
-        updateAttendanceList(); // 刷新界面，恢复按钮状态
     }
 }
-
-    function resetAttendance() {
-        document.querySelectorAll('.student-button.checked').forEach(b => {
-            b.classList.remove('checked');
-            b.disabled = false;
-        });
-        if (!isMakeupMode) {
-            allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
-            window.selectedAttendanceStudents.clear();
-            updateAttendanceList();
+function resetAttendance() {
+    // 清除所有带有 checked 类的按钮样式和禁用状态
+    window.lastResetTimestamp = Date.now();
+    document.querySelectorAll('.student-button.checked').forEach(b => {
+        b.classList.remove('checked');
+        b.disabled = false;
+    });
+    
+    if (!isMakeupMode) {
+        // 清除所有学生的本地点名标记（确保无残留）
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('attendance_')) {
+                localStorage.removeItem(key);
+            }
         }
+        // 清空选中的学生集合
+        window.selectedAttendanceStudents.clear();
+        // 重新渲染点名单
+        updateAttendanceList();
         showSuccess('今日點名狀態已重置');
+    } else {
+        showError('請先退出補點名模式再重置');
     }
+}
 
     function exitMakeupMode() {
         isMakeupMode = false;
