@@ -183,14 +183,7 @@
             margin: 20px 0 12px;
             color: #334155;
         }
-        .notification-section {
-            background: white;
-            border-radius: 32px;
-            margin-bottom: 24px;
-            border: 1px solid #e9eef2;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
-        }
+        
         .notification-header {
             background: #f8fafc;
             padding: 18px 20px;
@@ -211,15 +204,43 @@
         .notification-header.collapsed .toggle-icon {
             transform: rotate(-90deg);
         }
-        .notification-body {
-            transition: max-height 0.3s ease, padding 0.3s;
-            max-height: 1000px;
-            overflow: hidden;
-        }
-        .notification-body.collapsed {
-            max-height: 0;
-            padding: 0 20px;
-        }
+       .notification-section {
+    background: white;
+    border-radius: 32px;
+    margin-bottom: 24px;
+    border: 1px solid #e9eef2;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+    position: relative; /* 为箭头定位 */
+}
+.notification-body {
+    transition: max-height 0.3s ease;
+    max-height: 400px;  /* 固定最大高度，超出滚动 */
+    overflow-y: auto;
+    padding: 0;
+}
+.notification-body.collapsed {
+    max-height: 0;
+    padding: 0 20px;
+}
+.notification-scroll-hint {
+    position: absolute;
+    bottom: 8px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+    display: none;
+    pointer-events: auto;
+}
+.notification-scroll-hint:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
         .notification-item {
             padding: 18px 20px;
             border-bottom: 1px solid #edf2f7;
@@ -972,6 +993,7 @@
                 <span id="notificationCount" style="background:#e53e3e; padding:2px 10px; border-radius:30px; font-size:0.8rem;">0</span>
             </div>
             <div id="notificationBody" class="notification-body"></div>
+            <div id="notificationScrollHint" class="notification-scroll-hint" onclick="scrollNotificationToBottom()">▼ 滑動查看更多</div>
         </div>
 
         <div id="loadingSpinner">
