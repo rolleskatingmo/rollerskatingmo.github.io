@@ -1216,14 +1216,16 @@ function updateAttendanceList() {
     }
     container.innerHTML = html;
 
-    // 更新確認點名按鈕的顯示狀態
-const btnReview = document.getElementById('btnReviewAttendance');
-if (btnReview) {
+    // 更新確認點名/提交審批按鈕的顯示狀態
+    const btnReview = document.getElementById('btnReviewAttendance');
+    const countSpan = document.getElementById('attendanceSelectedCount');
+    if (!btnReview) return;
+
     if (!isMakeupMode) {
         // 正常点名模式：显示确认点名的按钮
         if (window.selectedAttendanceStudents.size > 0) {
             btnReview.style.display = 'block';
-            document.getElementById('attendanceSelectedCount').textContent = window.selectedAttendanceStudents.size;
+            if (countSpan) countSpan.textContent = window.selectedAttendanceStudents.size;
             btnReview.onclick = openBatchAttendanceModal;
             btnReview.textContent = `📝 確認點名 (${window.selectedAttendanceStudents.size}人)`;
         } else {
@@ -1233,7 +1235,7 @@ if (btnReview) {
         // 补点名模式（非教练）：显示提交审批按钮
         if (makeupSelectedStudents.size > 0) {
             btnReview.style.display = 'block';
-            document.getElementById('attendanceSelectedCount').textContent = makeupSelectedStudents.size;
+            if (countSpan) countSpan.textContent = makeupSelectedStudents.size;
             btnReview.onclick = submitMakeupApproval;
             btnReview.textContent = `📝 提交審批 (${makeupSelectedStudents.size}人)`;
         } else {
@@ -1242,7 +1244,6 @@ if (btnReview) {
     } else {
         btnReview.style.display = 'none';
     }
-}
 }
 
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
