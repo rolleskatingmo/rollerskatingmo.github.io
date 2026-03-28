@@ -366,26 +366,21 @@
                     hint.style.marginBottom = '15px';
                     attendanceDiv.insertBefore(hint, attendanceDiv.firstChild);
                 }
-                if (isMakeupMode) {
-                    let actionButtons = '';
-                    if (isAdmin || isAssistant) {
-                        actionButtons = `
-                            <button class="btn-sm" onclick="submitMakeupApproval()" style="margin-left:10px; background:#2563eb; color:white;">提交審批</button>
-                            <button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>
-                        `;
-                        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-                            <span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span>
-                            ${actionButtons}`;
-                    } else if (isCoach) {
-                        actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
-                        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate} 
-                            <span style="margin-left:10px;">點擊學生直接補點名</span>
-                            ${actionButtons}`;
-                    }
-                    hint.style.display = 'block';
-                } else {
-                    hint.style.display = 'none';
-                }
+if (isMakeupMode) {
+    let actionButtons = '';
+    if (isAdmin || isAssistant) {
+        // 只保留退出按钮，提交审批由底部确认按钮负责
+        actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate}`;
+    } else if (isCoach) {
+        actionButtons = `<button class="btn-sm" onclick="exitMakeupMode()" style="margin-left:10px;">退出</button>`;
+        hint.innerHTML = `📅 目前為 <strong>補點名模式</strong>，日期：${makeupDate}<br>點擊學生直接補點名`;
+    }
+    hint.innerHTML += `<span style="margin-left:10px;">已選 <span id="selectedCount">${makeupSelectedStudents.size}</span> 位學生</span> ${actionButtons}`;
+    hint.style.display = 'block';
+} else {
+    hint.style.display = 'none';
+}
             } else if (sectionId === 'rental') {
                 updateRentalList();
                 scrollToSection('rental');
@@ -1222,15 +1217,32 @@ function updateAttendanceList() {
     container.innerHTML = html;
 
     // 更新確認點名按鈕的顯示狀態
-    const btnReview = document.getElementById('btnReviewAttendance');
-    if (btnReview) {
-        if (window.selectedAttendanceStudents.size > 0 && !isMakeupMode) {
+const btnReview = document.getElementById('btnReviewAttendance');
+if (btnReview) {
+    if (!isMakeupMode) {
+        // 正常点名模式：显示确认点名的按钮
+        if (window.selectedAttendanceStudents.size > 0) {
             btnReview.style.display = 'block';
             document.getElementById('attendanceSelectedCount').textContent = window.selectedAttendanceStudents.size;
+            btnReview.onclick = openBatchAttendanceModal;
+            btnReview.textContent = `📝 確認點名 (${window.selectedAttendanceStudents.size}人)`;
         } else {
             btnReview.style.display = 'none';
         }
+    } else if (currentUser.role !== 'coach') {
+        // 补点名模式（非教练）：显示提交审批按钮
+        if (makeupSelectedStudents.size > 0) {
+            btnReview.style.display = 'block';
+            document.getElementById('attendanceSelectedCount').textContent = makeupSelectedStudents.size;
+            btnReview.onclick = submitMakeupApproval;
+            btnReview.textContent = `📝 提交審批 (${makeupSelectedStudents.size}人)`;
+        } else {
+            btnReview.style.display = 'none';
+        }
+    } else {
+        btnReview.style.display = 'none';
     }
+}
 }
 
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
