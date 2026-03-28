@@ -1243,74 +1243,93 @@ function updateAttendanceList() {
         updateAttendanceList();
     }
 
-    function openBatchAttendanceModal() {
-        console.log('openBatchAttendanceModal 被呼叫，已選學生數:', window.selectedAttendanceStudents.size);
-        if (window.selectedAttendanceStudents.size === 0) {
-            showError("請先選取要點名的學生");
-            return;
-        }
-        const modal = document.getElementById('batchAttendanceModal');
-        const listContainer = document.getElementById('batchAttendanceList');
-        
-        if (!modal || !listContainer) {
-            if(confirm(`確定要為這 ${window.selectedAttendanceStudents.size} 位學生點名嗎？`)) {
-                confirmBatchAttendance();
-            }
-            return;
-        }
-
-        let html = '<table class="record-table" style="width:100%; border-collapse: collapse; margin-top:10px;">';
-        html += '<thead style="background:#f1f5f9;"><tr><th style="padding:8px; border:1px solid #e2e8f0;">學生姓名</th><th style="padding:8px; border:1px solid #e2e8f0;">剩餘堂數</th></tr></thead><tbody>';
-        
-        window.selectedAttendanceStudents.forEach(name => {
-            const s = allStudents.find(st => st.name === name);
-            const remaining = s ? s.remainingClasses : '-';
-            html += `<tr><td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${name}</td>`;
-            html += `<td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${remaining} 堂</td></tr>`;
-        });
-        html += '</tbody></table>';
-        
-        listContainer.innerHTML = html;
-        modal.style.display = 'flex';
+function openBatchAttendanceModal() {
+    if (processing['batchAttendance']) {
+        showError('正在處理點名，請稍後...');
+        return;
     }
+    const modal = document.getElementById('batchAttendanceModal');
+    if (modal && modal.style.display === 'flex') return;
+
+    console.log('openBatchAttendanceModal 被呼叫，已選學生數:', window.selectedAttendanceStudents.size);
+    if (window.selectedAttendanceStudents.size === 0) {
+        showError("請先選取要點名的學生");
+        return;
+    }
+    const listContainer = document.getElementById('batchAttendanceList');
+    
+    if (!modal || !listContainer) {
+        if(confirm(`確定要為這 ${window.selectedAttendanceStudents.size} 位學生點名嗎？`)) {
+            confirmBatchAttendance();
+        }
+        return;
+    }
+
+    let html = '<table class="record-table" style="width:100%; border-collapse: collapse; margin-top:10px;">';
+    html += '<thead style="background:#f1f5f9;"> <tr><th style="padding:8px; border:1px solid #e2e8f0;">學生姓名</th><th style="padding:8px; border:1px solid #e2e8f0;">剩餘堂數</th></tr> </thead><tbody>';
+    
+    window.selectedAttendanceStudents.forEach(name => {
+        const s = allStudents.find(st => st.name === name);
+        const remaining = s ? s.remainingClasses : '-';
+        html += `<tr><td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${name}</td>`;
+        html += `<td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${remaining} 堂</td></tr>`;
+    });
+    html += '</tbody></table>';
+    
+    listContainer.innerHTML = html;
+    modal.style.display = 'flex';
+}
 
     function closeBatchAttendanceModal() {
         document.getElementById('batchAttendanceModal').style.display = 'none';
     }
 
-    async function confirmBatchAttendance() {
-        const lockKey = 'batchAttendance';
-        if (processing[lockKey]) return;
-        
-        processing[lockKey] = true;
-        const studentsArray = Array.from(window.selectedAttendanceStudents);
-        
-        closeBatchAttendanceModal();
-        showLoadingSpinner('正在處理點名，請勿關閉或重新整理...');
-
-        try {
-            const formData = new URLSearchParams();
-            formData.append('students', JSON.stringify(studentsArray));
-            formData.append('operator', currentUser.username);
-
-            const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', formData);
-
-            if (result && result.success) {
-                showSuccess(result.message || '點名成功');
-                studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
-                window.selectedAttendanceStudents.clear();
-                await loadAllData();
-            } else {
-                showError(result ? result.message : '伺服器回應失敗');
-            }
-        } catch (err) {
-            console.error('點名錯誤:', err);
-            showError('系統錯誤，請稍後再試');
-        } finally {
-            delete processing[lockKey];
-            hideLoadingSpinner();
-        }
+async function confirmBatchAttendance() {
+    const lockKey = 'batchAttendance';
+    if (processing[lockKey]) {
+        showError('正在處理中，請勿重複點擊');
+        return;
     }
+    
+    // 立即清空选中的学生，防止重复提交
+    const studentsArray = Array.from(window.selectedAttendanceStudents);
+    if (studentsArray.length === 0) {
+        showError('沒有選取任何學生');
+        return;
+    }
+    window.selectedAttendanceStudents.clear();
+    
+    processing[lockKey] = true;
+    closeBatchAttendanceModal();
+    showLoadingSpinner('正在處理點名，請勿關閉或重新整理...');
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('students', JSON.stringify(studentsArray));
+        formData.append('operator', currentUser.username);
+
+        const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', formData);
+
+        if (result && result.success) {
+            showSuccess(result.message || '點名成功');
+            studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
+            await loadAllData();
+        } else {
+            showError(result ? result.message : '伺服器回應失敗');
+            // 如果失败，恢复选中的学生（可选）
+            studentsArray.forEach(name => window.selectedAttendanceStudents.add(name));
+        }
+    } catch (err) {
+        console.error('點名錯誤:', err);
+        showError('系統錯誤，請稍後再試');
+        // 如果失败，恢复选中的学生
+        studentsArray.forEach(name => window.selectedAttendanceStudents.add(name));
+    } finally {
+        delete processing[lockKey];
+        hideLoadingSpinner();
+        updateAttendanceList(); // 刷新界面，恢复按钮状态
+    }
+}
 
     function resetAttendance() {
         document.querySelectorAll('.student-button.checked').forEach(b => {
