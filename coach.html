@@ -1343,29 +1343,26 @@
     </div>
 </div>
 <script>
-    // ========== 双后端备援配置 ==========
-    const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbwDd948i4e62Nt1sI4GG11667VQ0RVC9QCe_qzZS0RNxIxgUc8VIgSvWZ4PMH66pbDrpQ/exec';
-    const FALLBACK_URL = 'https://rollerskatingmo.sytes.net';
+    // ========== 單一後端網址（無備援） ==========
+    const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbzBaZ6HytU2qomPGTKyE4OzANNOYUwnpjD-yCGhhp_nGcMQKUofCA5cJdxKgd_P1Pm8oQ/exec';
 
-        async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
-            const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
-            try {
-                const options = { method, timeout: 5000 };
-                if (body && method === 'POST') {
-                    options.body = body;
-                    options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-                }
-                const res = await fetch(url, options);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.json();
-            } catch (err) {
-                console.warn('主服务器不可用，切换至备用', err);
-                const fallbackUrl = `${FALLBACK_URL}?action=${action}&${new URLSearchParams(params)}`;
-                const fallbackRes = await fetch(fallbackUrl);
-                return await fallbackRes.json();
-            }
+    // 直接發送請求（無超時、無備援）
+    async function callGAS(action, params = {}, method = 'GET', body = null) {
+        const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
+        const options = { method };
+        if (body && method === 'POST') {
+            options.body = body;
+            options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
         }
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    }
 
+    // 為了相容原有命名，保留 fetchWithFallback 名稱但只呼叫 callGAS
+    async function fetchWithFallback(action, params = {}, method = 'GET', body = null) {
+        return callGAS(action, params, method, body);
+    }
 
     let allStudents = [];
     let isMakeupMode = false;
@@ -1636,7 +1633,7 @@
             `;
         }
     }
-        // ---------- 权限控制 ----------
+    // ---------- 权限控制 ----------
     function applyRoleRestrictions() {
         const role = currentUser.role;
         const isAdmin = role === 'admin';
@@ -1973,7 +1970,9 @@
         } else {
             recordsHtml = `<div style="overflow-x: auto;">
                 <table class="record-table">
-                    <thead><tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr></thead>
+                    <thead>
+                        <tr><th>日期</th><th>時間</th><th>類型</th><th>剩餘堂數</th></tr>
+                    </thead>
                     <tbody>`;
             allRecords.slice(0, 50).forEach(rec => {
                 const weekday = getWeekday(rec.date);
@@ -1982,9 +1981,19 @@
                     const isMakeup = rec.reason === '補點名';
                     const rowClass = isMakeup ? 'makeup-row' : '';
                     const typeLabel = rec.displayType;
-                    recordsHtml += `<tr class="${rowClass}">  on<td>${dateWithWeekday}</td>  on<td>${rec.time || ''}</td>  on<td><span class="badge blue">${typeLabel}</span></td>  on<td>${rec.remainingClasses}</td>  on</tr>`;
+                    recordsHtml += `<tr class="${rowClass}">
+                        <td>${dateWithWeekday}</td>
+                        <td>${rec.time || ''}</td>
+                        <td><span class="badge blue">${typeLabel}</span></td>
+                        <td>${rec.remainingClasses}</td>
+                    </tr>`;
                 } else {
-                    recordsHtml += `<tr>  on<td>${dateWithWeekday}</td>  on<td>—</td>  on<td><span class="badge yellow">請假</span></td>  on<td>—</td>  on</tr>`;
+                    recordsHtml += `<tr>
+                        <td>${dateWithWeekday}</td>
+                        <td>—</td>
+                        <td><span class="badge yellow">請假</span></td>
+                        <td>—</td>
+                    </tr>`;
                 }
             });
             recordsHtml += `</tbody></table></div>`;
@@ -2017,7 +2026,9 @@
 
     function closeCoachStudentModal() {
         document.getElementById('coachStudentRecordModal').style.display = 'none';
-    }    // ---------- 续费数量模态框 ----------
+    }
+
+    // ---------- 续费数量模态框 ----------
     let pendingRenewData = { name: '', className: '' };
 
     function openRenewQuantityModal(name, className, remaining, leaveCount, deductedClasses) {
@@ -2511,7 +2522,7 @@
         }
     }
 
-// 確保變數為全域，避免報錯導致視窗卡住
+    // 確保變數為全域，避免報錯導致視窗卡住
     window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
     function toggleAttendanceStudent(name) {
@@ -2599,147 +2610,90 @@
             }
         }
     }
-// --- 1. 初始化選取名單變數 ---
-window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
-// --- 2. 切換學生選取狀態 ---
-function toggleAttendanceStudent(name) {
-    if (window.selectedAttendanceStudents.has(name)) {
-        window.selectedAttendanceStudents.delete(name);
-    } else {
-        window.selectedAttendanceStudents.add(name);
-    }
-    updateAttendanceList(); // 刷新 UI 顯示顏色
-}
+    // --- 1. 初始化選取名單變數 ---
+    window.selectedAttendanceStudents = window.selectedAttendanceStudents || new Set();
 
-// --- 3. 彈出確認模態框 ---
-function openBatchAttendanceModal() {
-    if (window.selectedAttendanceStudents.size === 0) {
-        showError("請先選取要點名的學生");
-        return;
-    }
-
-    const modal = document.getElementById('batchAttendanceModal');
-    const listContainer = document.getElementById('batchAttendanceList');
-    
-    if (!modal || !listContainer) {
-        // 如果找不到 HTML 元素，補救措施：直接執行
-        if(confirm(`確定要為這 ${window.selectedAttendanceStudents.size} 位學生點名嗎？`)) {
-            confirmBatchAttendance();
-        }
-        return;
-    }
-
-    let html = '<table class="record-table" style="width:100%; border-collapse: collapse; margin-top:10px;">';
-    html += '<thead style="background:#f1f5f9;"><tr><th style="padding:8px; border:1px solid #e2e8f0;">學生姓名</th><th style="padding:8px; border:1px solid #e2e8f0;">剩餘堂數</th></tr></thead><tbody>';
-    
-    window.selectedAttendanceStudents.forEach(name => {
-        const s = allStudents.find(st => st.name === name);
-        const remaining = s ? s.remainingClasses : '-';
-        html += `<tr><td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${name}</td>`;
-        html += `<td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${remaining} 堂</td></tr>`;
-    });
-    html += '</tbody></table>';
-    
-    listContainer.innerHTML = html;
-    modal.style.display = 'flex';
-}
-
-function closeBatchAttendanceModal() {
-    document.getElementById('batchAttendanceModal').style.display = 'none';
-}
-
-// --- 4. 執行批次點名 (解決多重扣課 BUG) ---
-async function confirmBatchAttendance() {
-    const lockKey = 'batchAttendance';
-    if (processing[lockKey]) return; // 前端防連點
-    
-    processing[lockKey] = true;
-    const studentsArray = Array.from(window.selectedAttendanceStudents);
-    
-    closeBatchAttendanceModal();
-    showLoadingSpinner('正在處理點名，請勿關閉或重新整理...');
-
-    try {
-        // 構建 POST 參數
-        const formData = new URLSearchParams();
-        formData.append('students', JSON.stringify(studentsArray));
-        formData.append('operator', currentUser.username);
-
-        // 注意：這裡 action 放在 URL，數據放在 body
-        const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', formData);
-
-        if (result && result.success) {
-            showSuccess(result.message || '點名成功');
-            // 本地標記已點名，防止重複操作
-            studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
-            window.selectedAttendanceStudents.clear();
-            
-            await loadAllData(); // 重新獲取最新剩餘堂數
+    // --- 2. 切換學生選取狀態 ---
+    function toggleAttendanceStudent(name) {
+        if (window.selectedAttendanceStudents.has(name)) {
+            window.selectedAttendanceStudents.delete(name);
         } else {
-            showError(result ? result.message : '伺服器回應失敗');
+            window.selectedAttendanceStudents.add(name);
         }
-    } catch (err) {
-        console.error('點名錯誤:', err);
-        showError('系統錯誤，請稍後再試');
-    } finally {
-        delete processing[lockKey];
-        hideLoadingSpinner();
+        updateAttendanceList(); // 刷新 UI 顯示顏色
     }
-}
+
+    // --- 3. 彈出確認模態框 ---
     function openBatchAttendanceModal() {
-        if (!window.selectedAttendanceStudents || window.selectedAttendanceStudents.size === 0) return;
-        let html = '<table class="record-table"><thead><tr><th>學生姓名</th><th>班級</th><th>剩餘堂數</th></tr></thead><tbody>';
+        if (window.selectedAttendanceStudents.size === 0) {
+            showError("請先選取要點名的學生");
+            return;
+        }
+
+        const modal = document.getElementById('batchAttendanceModal');
+        const listContainer = document.getElementById('batchAttendanceList');
+        
+        if (!modal || !listContainer) {
+            // 如果找不到 HTML 元素，補救措施：直接執行
+            if(confirm(`確定要為這 ${window.selectedAttendanceStudents.size} 位學生點名嗎？`)) {
+                confirmBatchAttendance();
+            }
+            return;
+        }
+
+        let html = '<table class="record-table" style="width:100%; border-collapse: collapse; margin-top:10px;">';
+        html += '<thead style="background:#f1f5f9;"><tr><th style="padding:8px; border:1px solid #e2e8f0;">學生姓名</th><th style="padding:8px; border:1px solid #e2e8f0;">剩餘堂數</th></tr></thead><tbody>';
+        
         window.selectedAttendanceStudents.forEach(name => {
             const s = allStudents.find(st => st.name === name);
-            if (s) {
-                html += `<tr><td><strong>${s.name}</strong></td><td>${s.class.join(',')}</td><td>${s.remainingClasses} 堂</td></tr>`;
-            }
+            const remaining = s ? s.remainingClasses : '-';
+            html += `<tr><td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${name}</td>`;
+            html += `<td style="padding:8px; border:1px solid #e2e8f0; text-align:center;">${remaining} 堂</td></tr>`;
         });
         html += '</tbody></table>';
-        document.getElementById('batchAttendanceList').innerHTML = html;
-        document.getElementById('batchAttendanceModal').style.display = 'flex';
+        
+        listContainer.innerHTML = html;
+        modal.style.display = 'flex';
     }
 
     function closeBatchAttendanceModal() {
         document.getElementById('batchAttendanceModal').style.display = 'none';
     }
 
-    // 執行批次點名
+    // --- 4. 執行批次點名 (解決多重扣課 BUG) ---
     async function confirmBatchAttendance() {
-        if (!window.selectedAttendanceStudents || window.selectedAttendanceStudents.size === 0) return;
         const lockKey = 'batchAttendance';
-        if (processing[lockKey]) {
-            showError('正在處理中，請稍後...');
-            return;
-        }
+        if (processing[lockKey]) return; // 前端防連點
+        
         processing[lockKey] = true;
-        closeBatchAttendanceModal();
-        showLoadingSpinner('點名處理中，請勿關閉視窗...');
-
         const studentsArray = Array.from(window.selectedAttendanceStudents);
-        try {
-            // 使用 POST 避免學生人數過多超過 URL 長度限制
-            const bodyParams = new URLSearchParams({
-                students: JSON.stringify(studentsArray),
-                operator: currentUser.username
-            });
-            
-            const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', bodyParams);
+        
+        closeBatchAttendanceModal();
+        showLoadingSpinner('正在處理點名，請勿關閉或重新整理...');
 
-            if (result.success) {
-                showSuccess(result.message);
+        try {
+            // 構建 POST 參數
+            const formData = new URLSearchParams();
+            formData.append('students', JSON.stringify(studentsArray));
+            formData.append('operator', currentUser.username);
+
+            // 注意：這裡 action 放在 URL，數據放在 body
+            const result = await fetchWithFallback('batchMarkAttendance', {}, 'POST', formData);
+
+            if (result && result.success) {
+                showSuccess(result.message || '點名成功');
+                // 本地標記已點名，防止重複操作
                 studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
                 window.selectedAttendanceStudents.clear();
                 
-                await fetchAllStudents();
-                updateAttendanceList();
-                renderNoteListByClass();
+                await loadAllData(); // 重新獲取最新剩餘堂數
             } else {
-                showError(result.message || result.error || '點名失敗');
+                showError(result ? result.message : '伺服器回應失敗');
             }
         } catch (err) {
-            showError('網路錯誤，點名失敗: ' + err.message);
+            console.error('點名錯誤:', err);
+            showError('系統錯誤，請稍後再試');
         } finally {
             delete processing[lockKey];
             hideLoadingSpinner();
@@ -2755,157 +2709,6 @@ async function confirmBatchAttendance() {
             allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
             window.selectedAttendanceStudents.clear(); // 同步清空批次選取
             updateAttendanceList();
-        }
-        showSuccess('今日點名狀態已重置');
-    }
-
-    // 打開確認名單模態框
-    function openBatchAttendanceModal() {
-        if (selectedAttendanceStudents.size === 0) return;
-        let html = '<table class="record-table"><thead><tr><th>學生姓名</th><th>班級</th><th>剩餘堂數</th></tr></thead><tbody>';
-        selectedAttendanceStudents.forEach(name => {
-            const s = allStudents.find(st => st.name === name);
-            if (s) {
-                html += `<tr><td><strong>${s.name}</strong></td><td>${s.class.join(',')}</td><td>${s.remainingClasses} 堂</td></tr>`;
-            }
-        });
-        html += '</tbody></table>';
-        document.getElementById('batchAttendanceList').innerHTML = html;
-        document.getElementById('batchAttendanceModal').style.display = 'flex';
-    }
-
-    function closeBatchAttendanceModal() {
-        document.getElementById('batchAttendanceModal').style.display = 'none';
-    }
-
-    // 執行批次點名
-    async function confirmBatchAttendance() {
-        if (selectedAttendanceStudents.size === 0) return;
-        const lockKey = 'batchAttendance';
-        if (processing[lockKey]) {
-            showError('正在處理中，請稍後...');
-            return;
-        }
-        processing[lockKey] = true;
-        closeBatchAttendanceModal();
-        showLoadingSpinner('點名處理中，請勿關閉視窗...');
-
-        const studentsArray = Array.from(selectedAttendanceStudents);
-        try {
-            // 呼叫後端新的 batchMarkAttendance API
-            const result = await fetchWithFallback('batchMarkAttendance', { 
-                students: JSON.stringify(studentsArray),
-                operator: currentUser.username
-            });
-
-            if (result.success) {
-                showSuccess(result.message);
-                // 更新 LocalStorage 防呆標記
-                studentsArray.forEach(name => localStorage.setItem(`attendance_${name}`, 'checked'));
-                selectedAttendanceStudents.clear();
-                
-                await fetchAllStudents();
-                updateAttendanceList();
-                renderNoteListByClass();
-            } else {
-                showError(result.message || result.error || '點名失敗');
-            }
-        } catch (err) {
-            showError('網路錯誤，點名失敗: ' + err.message);
-        } finally {
-            delete processing[lockKey];
-            hideLoadingSpinner();
-        }
-    }
-
-    async function coachRequestDeleteStudent(name) {
-        if (currentUser.role !== 'coach') {
-            showError('無權限');
-            return;
-        }
-        
-        showConfirm(`確定要請求刪除學生 ${name} 嗎？此操作需要管理員審批。`, async () => {
-            const lockKey = `requestDelete_${name}`;
-            if (processing[lockKey]) {
-                showError('正在處理中，請稍後...');
-                return;
-            }
-            processing[lockKey] = true;
-
-            try {
-                const payload = { name };
-                const result = await fetchWithFallback('submitApprovalRequest', { data: JSON.stringify({ type: 'deleteStudent', payload }), requester: currentUser.username });
-                if (result.success) {
-                    showSuccess('刪除請求已提交，等待管理員審批');
-                } else {
-                    showError(result.error || '提交失敗');
-                }
-            } catch (err) {
-                showError('網路錯誤');
-            } finally {
-                delete processing[lockKey];
-            }
-        });
-    }
-
-async function markAttendance(name) {
-    if (processing[`attendance_${name}`]) {
-        showError('正在處理中，請稍後...');
-        return;
-    }
-    const btn = document.querySelector(`.student-button[data-name="${name}"]`);
-    if (btn && (btn.disabled || btn.classList.contains('checked'))) {
-        showError('此學生已完成點名');
-        return;
-    }
-    if (btn) {
-        btn.disabled = true;
-        btn.classList.add('checked');
-        localStorage.setItem(`attendance_${name}`, 'checked');
-    }
-    processing[`attendance_${name}`] = true;
-
-    try {
-        const data = await fetchWithFallback('markAttendance', { name, operator: currentUser.username });
-        if (data.success) {
-            // 更新本地学生数据
-            const student = allStudents.find(s => s.name === name);
-            if (student) {
-                student.remainingClasses = data.remaining;
-            }
-            showSuccess(`${name} 點名成功！`);
-            // 刷新点名单和学生信息列表（使用更新后的 allStudents）
-            updateAttendanceList();
-            renderNoteListByClass();
-        } else {
-            showError(data.message || '點名失敗');
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('checked');
-                localStorage.removeItem(`attendance_${name}`);
-            }
-        }
-    } catch (err) {
-        showError('網路錯誤，點名失敗');
-        if (btn) {
-            btn.disabled = false;
-            btn.classList.remove('checked');
-            localStorage.removeItem(`attendance_${name}`);
-        }
-    } finally {
-        delete processing[`attendance_${name}`];
-    }
-}
-
-function resetAttendance() {
-        document.querySelectorAll('.student-button.checked').forEach(b => {
-            b.classList.remove('checked');
-            b.disabled = false;
-        });
-        if (!isMakeupMode) {
-            allStudents.forEach(s => localStorage.removeItem(`attendance_${s.name}`));
-            selectedAttendanceStudents.clear(); // 清空目前的選取
-            updateAttendanceList(); // 刷新畫面隱藏按鈕
         }
         showSuccess('今日點名狀態已重置');
     }
@@ -3276,7 +3079,9 @@ function resetAttendance() {
     function uploadPaymentForNewStudent(name, className) {
         pendingNewStudent = { name, className };
         document.getElementById('paymentUploadInput').click();
-    }    // ---------- 试堂管理 ----------
+    }
+
+    // ---------- 试堂管理 ----------
     async function loadTrialList() {
         const trials = await fetchWithFallback('getTrialStudents');
         const container = document.getElementById('trialList');
