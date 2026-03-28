@@ -1232,6 +1232,7 @@
         </div>
     </div>
 
+    <!-- 補點名日期選擇模態框 -->
     <div id="makeupDateModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📅 選擇補點名日期</h3>
@@ -1241,16 +1242,19 @@
                 <button class="confirm" onclick="confirmMakeupDate()">下一步</button>
             </div>
         </div>
-        <div id="batchAttendanceModal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <h3>📋 確認點名名單</h3>
-        <div id="batchAttendanceList" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
-        <div class="modal-buttons">
-            <button class="cancel" onclick="closeBatchAttendanceModal()">返回</button>
-            <button class="confirm" onclick="confirmBatchAttendance()">確認點名</button>
+    </div>
+
+    <!-- 批次點名確認模態框（獨立，避免被父層隱藏） -->
+    <div id="batchAttendanceModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>📋 確認點名名單</h3>
+            <div id="batchAttendanceList" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeBatchAttendanceModal()">返回</button>
+                <button class="confirm" onclick="confirmBatchAttendance()">確認點名</button>
+            </div>
         </div>
     </div>
-</div>
 
     <div id="classSelectModal" class="modal-overlay">
         <div class="modal-content">
