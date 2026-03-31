@@ -359,6 +359,11 @@ async function loadAllData(forceRefresh = false) {
     } catch (error) {
         console.error(error);
         hideLoadingSpinner();
+        // 確保主內容隱藏，登入表單顯示
+        if (document.getElementById('loginForm').style.display !== 'block') {
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        }
         showError('載入失敗：' + error.message);
     }
 }
@@ -3014,25 +3019,30 @@ window.addEventListener('DOMContentLoaded', async function() {
         });
     }
     const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        try {
-            currentUser = JSON.parse(savedUser);
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
+if (savedUser) {
+    try {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
 
-            let roleName = '助教';
-            if (currentUser.role === 'admin') roleName = '管理員';
-            else if (currentUser.role === 'coach') roleName = '教練';
-            document.getElementById('userInfoDisplay').textContent = `👤 ${currentUser.username} (${roleName})`;
+        let roleName = '助教';
+        if (currentUser.role === 'admin') roleName = '管理員';
+        else if (currentUser.role === 'coach') roleName = '教練';
+        document.getElementById('userInfoDisplay').textContent = `👤 ${currentUser.username} (${roleName})`;
 
-            document.getElementById('loadingSpinner').style.display = 'flex';
-            document.getElementById('appContent').style.display = 'none';
-            await loadAllData();
-        } catch (e) {
-            console.error('自動登入失敗', e);
-            localStorage.removeItem('currentUser');
-        }
+        document.getElementById('loadingSpinner').style.display = 'flex';
+        document.getElementById('appContent').style.display = 'none';
+        await loadAllData();
+    } catch (e) {
+        console.error('自動登入失敗', e);
+        localStorage.removeItem('currentUser');
+        // 恢復登入畫面
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('loadingSpinner').style.display = 'none';
+        showLoginError('自動登入失敗，請重新登入');
     }
+}
 
     const renewModal = document.getElementById('renewQuantityModal');
     if (renewModal) {
