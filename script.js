@@ -3002,6 +3002,11 @@ function showError(msg) {
 }
 
 window.addEventListener('DOMContentLoaded', async function() {
+        // ========== 強制隱藏主內容，確保未登入時不顯示 ==========
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    // ========================================================
        const lastTime = localStorage.getItem('last_load_time');
     if (lastTime) {
         updateCacheTimeDisplay(parseInt(lastTime));
