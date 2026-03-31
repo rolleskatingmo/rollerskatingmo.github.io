@@ -360,14 +360,17 @@ async function loadAllData(forceRefresh = false) {
 }
 
 function updateCacheTimeDisplay(timestamp) {
-    if (!timestamp) return;
+    if (!timestamp) {
+        const elem = document.getElementById('cacheTimeDisplay');
+        if (elem) elem.textContent = '📅 最後更新：--';
+        return;
+    }
     const date = new Date(timestamp);
     const timeStr = formatDateTimeUTC8(date);
     const elem = document.getElementById('cacheTimeDisplay');
     if (elem) {
         elem.textContent = `📅 最後更新：${timeStr}`;
     }
-    // 同時儲存到 localStorage 以便下次載入顯示
     localStorage.setItem('last_load_time', timestamp);
 }
 
