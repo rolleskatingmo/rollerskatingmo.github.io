@@ -58,6 +58,25 @@ function normalizeStudentClasses(students) {
         return s;
     });
 }
+function getStudentActions(name) {
+    const student = allStudents.find(s => s.name === name);
+    const classStr = student ? student.class.join(',') : '';
+    if (currentUser.role === 'admin') {
+        return `
+            <button class="btn-sm" onclick="openNoteModalForStudent('${name}')">✏️備註</button>
+            <button class="btn-sm" onclick="openEditClassModal('${name}', '${classStr}')">🏷️修改班級</button>
+            <button class="btn-sm" onclick="confirmDeleteStudent('${name}')">❌刪除</button>
+            <button class="btn-sm" onclick="showStudentRecords('${name}')">📋記錄</button>
+            <button class="btn-sm" onclick="openEditStudentNameModal('${name}')">✏️改名</button>
+        `;
+    } else if (currentUser.role === 'coach') {
+        return `
+            <button class="btn-sm" onclick="coachRequestDeleteStudent('${name}')">❌請求刪除</button>
+            <button class="btn-sm" onclick="showStudentRecords('${name}')">📋記錄</button>
+        `;
+    }
+    return '';
+}
 function clearBrowserCache() {
     // 清除所有以 attendance_ 開頭的 localStorage 鍵值
     const keysToRemove = [];
