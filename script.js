@@ -97,8 +97,8 @@ function clearBrowserCache() {
 async function forceRefreshCache() {
     // 清除前端緩存
     localStorage.removeItem(CACHE_KEY);
-    // 強制重新載入
-    await loadAllData(true);
+    // 直接重新載入頁面（無需顯示載入中提示）
+    location.reload();
 }
 
 function formatDateTimeUTC8(date) {
@@ -283,7 +283,6 @@ async function loadAllData(forceRefresh = false) {
     showLoadingSpinner('載入中...');
     try {
         let data;
-        let fromCache = false;
         let cacheTimestamp = null;
 
         if (!forceRefresh) {
@@ -292,7 +291,6 @@ async function loadAllData(forceRefresh = false) {
                 const { timestamp, value } = JSON.parse(cached);
                 if (Date.now() - timestamp < CACHE_EXPIRE) {
                     data = value;
-                    fromCache = true;
                     cacheTimestamp = timestamp;
                 }
             }
@@ -300,25 +298,21 @@ async function loadAllData(forceRefresh = false) {
 
         if (!data) {
             data = await fetchWithFallback('getInitialData');
-            // 儲存到緩存
             localStorage.setItem(CACHE_KEY, JSON.stringify({
                 timestamp: Date.now(),
                 value: data
             }));
             cacheTimestamp = Date.now();
         } else {
-            // 背景更新緩存（非阻塞）
             fetchWithFallback('getInitialData').then(newData => {
                 localStorage.setItem(CACHE_KEY, JSON.stringify({
                     timestamp: Date.now(),
                     value: newData
                 }));
-                // 如果資料有重大變化，可選擇重新載入，此處簡單重新整理時間顯示
                 updateCacheTimeDisplay(Date.now());
             }).catch(console.error);
         }
 
-        // 處理資料（與原有邏輯相同）
         allStudents = normalizeStudentClasses(data.students || []);
         allClasses = data.classes || [];
         pendingApprovals = data.pendingApprovals || [];
@@ -348,33 +342,24 @@ async function loadAllData(forceRefresh = false) {
             .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
             .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-        // 關閉 loading，顯示主內容
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
 
-        // 立即渲染核心區塊
         updateAttendanceList();
         renderNoteListByClass();
         updateRentalList();
 
-        // 延遲渲染通知欄
         setTimeout(() => {
             renderNotificationBody();
         }, 100);
 
         applyRoleRestrictions();
-
-        // 更新緩存時間顯示
         updateCacheTimeDisplay(cacheTimestamp);
 
     } catch (error) {
         console.error(error);
-        document.getElementById('loadingSpinner').innerHTML = `
-            <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
-            <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
-        `;
-    } finally {
         hideLoadingSpinner();
+        showError('載入失敗：' + error.message);
     }
 }
 
