@@ -1,4 +1,4 @@
-const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbyaFhwjiP7us6sazx2yZmw75KSgrDpH3ElQ2oXTnqtsnVTn0X1j84Kl1FXR-WP-brGVfg/exec';
+const PRIMARY_URL = 'https://script.google.com/macros/s/AKfycbzq7ENrYXslbbB6msmCdDDHXEdY9xtMOcL6lclN02S-jGgv1_Cph9q_J14tFH0d4Bcn7A/exec';
 
 async function callGAS(action, params = {}, method = 'GET', body = null) {
     const url = `${PRIMARY_URL}?action=${action}&${new URLSearchParams(params)}`;
@@ -271,12 +271,22 @@ async function loadAllData() {
             .filter(s => s.flags === 'new' && !paidStudentNames.has(s.name) && s.class.some(cls => isAuthorizedForClass(cls)))
             .map(s => ({ name: s.name, className: s.class.join(',') }));
 
-        renderNotificationBody();
-
+        // 關閉 loading，顯示主內容
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
 
+        // 立即渲染核心區塊（點名區塊、學生資訊區塊），它們預設摺疊，速度極快
+        updateAttendanceList();    // 點名區塊（會根據 isMakeupMode 顯示對應按鈕）
+        renderNoteListByClass();   // 學生資訊區塊（預設摺疊）
+        updateRentalList();        // 租借區塊（無摺疊，但內容簡單）
+
+        // 延遲渲染通知欄，避免阻塞主線程
+        setTimeout(() => {
+            renderNotificationBody();
+        }, 100);
+
         applyRoleRestrictions();
+
     } catch (error) {
         console.error(error);
         document.getElementById('loadingSpinner').innerHTML = `
@@ -1100,65 +1110,83 @@ function updateAttendanceList() {
         });
     });
 
-    let html = '';
-    for (let className in grouped) {
-        html += `<div style="margin-bottom:16px;"><h3>${className}班</h3>`;
-        grouped[className].forEach(s => {
-            let buttonClass = 'student-button';
-            let disabled = false;
+    const fragment = document.createDocumentFragment();
+    const sortedClasses = sortClasses(Object.keys(grouped));
 
-            // 檢查是否為零堂數（僅影響樣式，不影響點擊）
-            if (s.remainingClasses <= 0) {
-                buttonClass += ' zero-class';
-            }
-
-            // 選取狀態（一般點名或補點名）
-            if (isMakeupMode) {
-                if (makeupSelectedStudents.has(s.name)) {
-                    buttonClass += ' selected';
-                }
+    sortedClasses.forEach(className => {
+        // 建立班級標題
+        const header = document.createElement('div');
+        header.className = 'class-header';
+        header.setAttribute('data-class', className);
+        header.innerHTML = `
+            <span class="toggle-icon">▶</span>
+            <h3>${className}班</h3>
+        `;
+        header.style.cursor = 'pointer';
+        header.onclick = (e) => {
+            e.stopPropagation();
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            if (body.style.display === 'none') {
+                body.style.display = 'flex';
+                icon.textContent = '▼';
             } else {
-                if (selectedAttendanceStudents.has(s.name)) {
-                    buttonClass += ' selected';
-                }
+                body.style.display = 'none';
+                icon.textContent = '▶';
             }
+        };
+        fragment.appendChild(header);
 
-            let buttonText = s.name;
-            // 只有管理員/教練顯示剩餘堂數（助教不顯示）
-            if (currentUser.role === 'admin' || currentUser.role === 'coach') {
-                buttonText += ` <span class="class-count">${s.remainingClasses}堂</span>`;
+        // 建立班級學生容器（預設隱藏）
+        const bodyDiv = document.createElement('div');
+        bodyDiv.className = 'class-students';
+        bodyDiv.style.display = 'none';      // 預設收合
+        bodyDiv.style.flexWrap = 'wrap';
+        bodyDiv.style.gap = '8px';
+        bodyDiv.style.marginBottom = '16px';
+
+        grouped[className].forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = 'student-button';
+            if (s.remainingClasses <= 0) btn.classList.add('zero-class');
+            if (isMakeupMode && makeupSelectedStudents.has(s.name)) btn.classList.add('selected');
+            if (!isMakeupMode && selectedAttendanceStudents.has(s.name)) btn.classList.add('selected');
+            btn.setAttribute('data-name', s.name);
+            let text = s.name;
+            if (currentUser.role !== 'assistant') {
+                text += ` <span class="class-count">${s.remainingClasses}堂</span>`;
             }
-
-            html += `<button class="${buttonClass}" data-name="${s.name}" ${disabled ? 'disabled' : ''}>${buttonText}</button>`;
+            btn.innerHTML = text;
+            bodyDiv.appendChild(btn);
         });
-        html += '</div>';
-    }
-    container.innerHTML = html;
+        fragment.appendChild(bodyDiv);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
 
     // 控制確認按鈕顯示
     const btnReview = document.getElementById('btnReviewAttendance');
     const countSpan = document.getElementById('attendanceSelectedCount');
-    if (!btnReview) return;
-
-    if (isMakeupMode) {
-        // 補點名模式：顯示確認按鈕（管理員/教練直接扣課，助教提交審批）
-        if (makeupSelectedStudents.size > 0) {
-            btnReview.style.display = 'block';
-            if (countSpan) countSpan.textContent = makeupSelectedStudents.size;
-            btnReview.onclick = () => openMakeupApprovalModal(); // 打開確認對話框
-            btnReview.textContent = `📝 確認點名 (${makeupSelectedStudents.size}人)`;
+    if (btnReview) {
+        if (isMakeupMode) {
+            if (makeupSelectedStudents.size > 0) {
+                btnReview.style.display = 'block';
+                if (countSpan) countSpan.textContent = makeupSelectedStudents.size;
+                btnReview.onclick = () => openMakeupApprovalModal();
+                btnReview.textContent = `📝 確認點名 (${makeupSelectedStudents.size}人)`;
+            } else {
+                btnReview.style.display = 'none';
+            }
         } else {
-            btnReview.style.display = 'none';
-        }
-    } else {
-        // 一般點名模式
-        if (selectedAttendanceStudents.size > 0) {
-            btnReview.style.display = 'block';
-            if (countSpan) countSpan.textContent = selectedAttendanceStudents.size;
-            btnReview.onclick = () => openBatchAttendanceModal();
-            btnReview.textContent = `📝 確認點名 (${selectedAttendanceStudents.size}人)`;
-        } else {
-            btnReview.style.display = 'none';
+            if (selectedAttendanceStudents.size > 0) {
+                btnReview.style.display = 'block';
+                if (countSpan) countSpan.textContent = selectedAttendanceStudents.size;
+                btnReview.onclick = () => openBatchAttendanceModal();
+                btnReview.textContent = `📝 確認點名 (${selectedAttendanceStudents.size}人)`;
+            } else {
+                btnReview.style.display = 'none';
+            }
         }
     }
 }
@@ -2028,6 +2056,7 @@ async function submitAddClasses() {
     }
 }
 
+// 在 loadAllData 完成後，若 classCollapsed 未定義則設為 true
 function renderNoteListByClass() {
     const container = document.getElementById('noteListByClass');
     if (!container) return;
@@ -2041,71 +2070,59 @@ function renderNoteListByClass() {
         });
     });
 
-    let html = '';
+    const fragment = document.createDocumentFragment();
     const sortedClasses = sortClasses(Object.keys(grouped));
     sortedClasses.forEach(className => {
+        // 若尚未設定，預設收合
         if (classCollapsed[className] === undefined) {
             classCollapsed[className] = true;
         }
-        const collapsed = classCollapsed[className] ? 'collapsed' : '';
-        const icon = classCollapsed[className] ? '▶' : '▼';
-        html += `<div class="class-header ${collapsed}" onclick="toggleClass('${className}')">
+        const isCollapsed = classCollapsed[className];
+        const icon = isCollapsed ? '▶' : '▼';
+
+        const header = document.createElement('div');
+        header.className = `class-header ${isCollapsed ? 'collapsed' : ''}`;
+        header.setAttribute('data-class', className);
+        header.onclick = () => toggleClass(className);
+        header.innerHTML = `
             <span class="toggle-icon">${icon}</span>
             <h3>${className}班</h3>
-        </div>`;
-        html += `<div class="class-students ${collapsed}" id="class-${className}">`;
+        `;
+        fragment.appendChild(header);
+
+        const studentsDiv = document.createElement('div');
+        studentsDiv.className = `class-students ${isCollapsed ? 'collapsed' : ''}`;
+        studentsDiv.id = `class-${className}`;
 
         grouped[className].forEach(s => {
-            const icons = [];
-            if (currentUser.role === 'admin' && s.remainingClasses <= 0) icons.push('🔴');
-            if (s.leaveCount >= 2) icons.push('🟡');
-            const iconsHtml = icons.length ? `<span class="student-icons">${icons.join(' ')}</span>` : '';
-
-            const remainingClass = s.remainingClasses <= 0 ? 'remaining-zero' : '';
-            const remainingDisplay = `<span class="remaining-class ${remainingClass}">${s.remainingClasses} 堂</span>`;
-
-            let actionsHtml = '';
-            if (currentUser.role === 'admin') {
-                actionsHtml = `
-                    <button class="btn-sm" onclick="openNoteModalForStudent('${s.name}')">✏️備註</button>
-                    <button class="btn-sm" onclick="openEditClassModal('${s.name}', '${s.class.join(',')}')">🏷️修改班級</button>
-                    <button class="btn-sm" onclick="confirmDeleteStudent('${s.name}')">❌刪除</button>
-                    <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
-                    <button class="btn-sm" onclick="openEditStudentNameModal('${s.name}')">✏️改名</button>
-                `;
-            } else if (currentUser.role === 'coach') {
-                actionsHtml = `
-                    <button class="btn-sm" onclick="coachRequestDeleteStudent('${s.name}')">❌請求刪除</button>
-                    <button class="btn-sm" onclick="showStudentRecords('${s.name}')">📋記錄</button>
-                `;
-            }
-
-            const noteHtml = s.note ? `<div class="student-note">📝 ${s.note}</div>` : '';
-
-            html += `
-                <div class="student-card">
-                    <div class="student-card-header">
-                        <div class="student-name-icons">
-                            ${iconsHtml}
-                            <span class="student-name"><strong>${s.name}</strong></span>
-                        </div>
-                        ${remainingDisplay}
+            const card = document.createElement('div');
+            card.className = 'student-card';
+            // 卡片內容與原本相同，但改用 DOM 操作
+            card.innerHTML = `
+                <div class="student-card-header">
+                    <div class="student-name-icons">
+                        ${(currentUser.role === 'admin' && s.remainingClasses <= 0) ? '<span class="student-icons">🔴</span>' : ''}
+                        ${(s.leaveCount >= 2) ? '<span class="student-icons">🟡</span>' : ''}
+                        <span class="student-name"><strong>${s.name}</strong></span>
                     </div>
-                    <div class="student-stats">
-                        <span class="leave-badge">請假 ${s.leaveCount}</span>
-                        <span class="rental-badge">租借 ${s.rentalCount}</span>
-                    </div>
-                    ${noteHtml}
-                    <div class="student-actions">
-                        ${actionsHtml}
-                    </div>
+                    <span class="remaining-class ${s.remainingClasses <= 0 ? 'remaining-zero' : ''}">${s.remainingClasses} 堂</span>
+                </div>
+                <div class="student-stats">
+                    <span class="leave-badge">請假 ${s.leaveCount}</span>
+                    <span class="rental-badge">租借 ${s.rentalCount}</span>
+                </div>
+                ${s.note ? `<div class="student-note">📝 ${s.note}</div>` : ''}
+                <div class="student-actions">
+                    ${getStudentActions(s.name)}
                 </div>
             `;
+            studentsDiv.appendChild(card);
         });
-
-        html += `</div>`;
+        fragment.appendChild(studentsDiv);
     });
-    container.innerHTML = html || '無學生資料';
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 window.toggleClass = function(className) {
