@@ -54,7 +54,22 @@ function normalizeStudentClasses(students) {
         return s;
     });
 }
-
+function clearBrowserCache() {
+    // 清除所有以 attendance_ 開頭的 localStorage 鍵值
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('attendance_')) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    // 可選：清除點名選取狀態
+    if (window.selectedAttendanceStudents) window.selectedAttendanceStudents.clear();
+    if (window.makeupSelectedStudents) window.makeupSelectedStudents.clear();
+    // 重新載入頁面以確保所有狀態重置
+    location.reload();
+}
 function showConfirm(message, callback) {
     const modal = document.getElementById('confirmModal');
     const msgElem = document.getElementById('confirmMessage');
