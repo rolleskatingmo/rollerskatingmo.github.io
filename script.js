@@ -24,6 +24,8 @@ let selectedAttendanceStudents = new Set();
 let currentUser = null;
 const processing = {};
 
+let attendanceCollapsed = {};
+
 let currentNoteTarget = null;
 let currentConfirmCallback = null;
 let currentPromptCallback = null;
@@ -1097,6 +1099,8 @@ function toggleMakeupStudent(name) {
     }
 }
 
+// 點名區塊各班級收合狀態（與學生資訊區塊的 classCollapsed 分開）
+
 function updateAttendanceList() {
     const container = document.getElementById('attendanceList');
     if (!container) return;
@@ -1114,33 +1118,31 @@ function updateAttendanceList() {
     const sortedClasses = sortClasses(Object.keys(grouped));
 
     sortedClasses.forEach(className => {
+        // 初始化狀態：預設收合
+        if (attendanceCollapsed[className] === undefined) {
+            attendanceCollapsed[className] = true;
+        }
+        const isCollapsed = attendanceCollapsed[className];
+        const icon = isCollapsed ? '▶' : '▼';
+
         // 建立班級標題
         const header = document.createElement('div');
         header.className = 'class-header';
         header.setAttribute('data-class', className);
-        header.innerHTML = `
-            <span class="toggle-icon">▶</span>
-            <h3>${className}班</h3>
-        `;
+        header.innerHTML = `<span class="toggle-icon">${icon}</span><h3>${className}班</h3>`;
         header.style.cursor = 'pointer';
         header.onclick = (e) => {
             e.stopPropagation();
-            const body = header.nextElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-            if (body.style.display === 'none') {
-                body.style.display = 'flex';
-                icon.textContent = '▼';
-            } else {
-                body.style.display = 'none';
-                icon.textContent = '▶';
-            }
+            // 切換狀態並重新渲染
+            attendanceCollapsed[className] = !attendanceCollapsed[className];
+            updateAttendanceList();
         };
         fragment.appendChild(header);
 
-        // 建立班級學生容器（預設隱藏）
+        // 建立學生容器
         const bodyDiv = document.createElement('div');
         bodyDiv.className = 'class-students';
-        bodyDiv.style.display = 'none';      // 預設收合
+        bodyDiv.style.display = isCollapsed ? 'none' : 'flex';
         bodyDiv.style.flexWrap = 'wrap';
         bodyDiv.style.gap = '8px';
         bodyDiv.style.marginBottom = '16px';
@@ -1165,7 +1167,7 @@ function updateAttendanceList() {
     container.innerHTML = '';
     container.appendChild(fragment);
 
-    // 控制確認按鈕顯示
+    // 控制確認按鈕顯示（維持原有邏輯）
     const btnReview = document.getElementById('btnReviewAttendance');
     const countSpan = document.getElementById('attendanceSelectedCount');
     if (btnReview) {
