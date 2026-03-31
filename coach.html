@@ -967,12 +967,15 @@
 
     <div id="mainContent" class="container" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div class="user-bar">
-                <div class="user-info" id="userInfoDisplay"></div>
-                <button class="btn-sm" id="changePasswordBtn" onclick="openChangePasswordModal()">🔑 修改密碼</button>
-                <button class="btn-sm" onclick="logout()">🚪 登出</button>
-            </div>
+<div class="user-bar">
+    <div class="user-info" id="userInfoDisplay"></div>
+    <button class="btn-sm" id="changePasswordBtn" onclick="openChangePasswordModal()">🔑 修改密碼</button>
+    <!-- 新增清除緩存按鈕 -->
+    <button class="btn-sm" onclick="clearBrowserCache()">🗑️ 清除緩存</button>
+    <button class="btn-sm" onclick="logout()">🚪 登出</button>
+</div>
         </div>
+    </div>
         <h1>🛼 輪滑課程管理系統</h1>
 
         <div id="notificationSection" class="notification-section">
