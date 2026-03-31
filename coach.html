@@ -211,11 +211,11 @@
     border: 1px solid #e9eef2;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0,0,0,0.02);
-    position: relative; /* 为箭头定位 */
+    position: relative; /* 為箭頭定位 */
 }
 .notification-body {
     transition: max-height 0.3s ease;
-    max-height: 400px;  /* 固定最大高度，超出滚动 */
+    max-height: 400px;  /* 固定最大高度，超出滾動 */
     overflow-y: auto;
     padding: 0;
 }
@@ -305,17 +305,6 @@
         .student-button.zero-class .class-count {
             background: #fecaca;
             color: #7f1d1d;
-        }
-        .student-button.checked {
-            background: #bbf7d0 !important;
-            border-color: #86efac !important;
-            color: #166534 !important;
-            opacity: 0.9;
-            cursor: default;
-        }
-        .student-button.checked .class-count {
-            background: #86efac;
-            color: #14532d;
         }
         .student-button.selected {
             background: #fef3c7 !important;
@@ -1020,16 +1009,16 @@
             </div>
 
             <!-- 點名區塊 -->
-<div id="attendance" class="section" style="display: none;">
+            <div id="attendance" class="section" style="display: none;">
                 <h2>📌 點名 (扣課)</h2>
                 <div class="info-box">💡 請點擊要點名的學生，選取完畢後點擊下方的「確認點名」進行批次扣課。</div>
                 <div id="attendanceList"></div>
                 
-                <button id="btnReviewAttendance" class="btn btn-primary" style="width:100%; margin-top:15px; display:none; padding:16px; font-size:1.1rem;" onclick="openBatchAttendanceModal()">
+                <button id="btnReviewAttendance" class="btn btn-primary" style="width:100%; margin-top:15px; display:none; padding:16px; font-size:1.1rem;">
                     📝 確認點名 (<span id="attendanceSelectedCount">0</span>人)
                 </button>
 
-                <button id="resetAttendanceBtn" class="btn btn-warning" onclick="resetAttendance()" style="margin-top:20px; width:100%;">重置今日點名狀態</button>
+                <!-- 重置點名狀態按鈕已移除 -->
             </div>
 
             <!-- 租借裝備區塊 -->
@@ -1309,23 +1298,22 @@
         </div>
     </div>
     
-<!-- 續費數量輸入模態框 -->
-<div id="renewQuantityModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3>💰 續費課堂數量</h3>
-        <p>學生：<span id="renewStudentName"></span>（<span id="renewStudentClass"></span>）</p>
-        <!-- 警告區塊（預設隱藏） -->
-        <div id="renewWarning" style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none;"></div>
-        <div class="form-group">
-            <label>增加課堂數</label>
-            <input type="number" id="renewQuantityInput" value="10" min="1" step="1">
-        </div>
-        <div class="modal-buttons">
-            <button class="cancel" onclick="closeRenewQuantityModal()">取消</button>
-            <button class="confirm" onclick="confirmRenewQuantity()">確認續費</button>
+    <!-- 續費數量輸入模態框 -->
+    <div id="renewQuantityModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>💰 續費課堂數量</h3>
+            <p>學生：<span id="renewStudentName"></span>（<span id="renewStudentClass"></span>）</p>
+            <div id="renewWarning" style="background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none;"></div>
+            <div class="form-group">
+                <label>增加課堂數</label>
+                <input type="number" id="renewQuantityInput" value="10" min="1" step="1">
+            </div>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeRenewQuantityModal()">取消</button>
+                <button class="confirm" onclick="confirmRenewQuantity()">確認續費</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- 新增學生初始課堂數輸入模態框 -->
     <div id="addStudentQuantityModal" class="modal-overlay">
@@ -1354,30 +1342,30 @@
             </div>
         </div>
     </div>
-<div id="alertModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3>⚠️ 操作警告，只能用於新學生，否則可能出現未知BUG</h3>
-        <p id="alertMessage"></p>
-        <div class="modal-buttons">
-            <button class="confirm" onclick="closeAlertModal()">確定</button>
+    <div id="alertModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>⚠️ 操作警告，只能用於新學生，否則可能出現未知BUG</h3>
+            <p id="alertMessage"></p>
+            <div class="modal-buttons">
+                <button class="confirm" onclick="closeAlertModal()">確定</button>
+            </div>
         </div>
     </div>
-</div>
-<div id="editStudentClassModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3>✏️ 修改學生班級</h3>
-        <p>學生：<span id="editClassStudentName"></span></p>
-        <div class="form-group">
-            <label>班級（可複選）</label>
-            <div id="editClassContainer" class="class-badge-container" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-            <input type="hidden" id="editClassValue" value="">
-        </div>
-        <div class="modal-buttons">
-            <button class="cancel" onclick="closeEditClassModal()">取消</button>
-            <button class="confirm" onclick="confirmEditClass()">確認修改</button>
+    <div id="editStudentClassModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>✏️ 修改學生班級</h3>
+            <p>學生：<span id="editClassStudentName"></span></p>
+            <div class="form-group">
+                <label>班級（可複選）</label>
+                <div id="editClassContainer" class="class-badge-container" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                <input type="hidden" id="editClassValue" value="">
+            </div>
+            <div class="modal-buttons">
+                <button class="cancel" onclick="closeEditClassModal()">取消</button>
+                <button class="confirm" onclick="confirmEditClass()">確認修改</button>
+            </div>
         </div>
     </div>
-</div>
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
