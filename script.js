@@ -23,7 +23,9 @@ let makeupDate = '';
 let selectedAttendanceStudents = new Set();
 let currentUser = null;
 const processing = {};
-
+const CACHE_KEY = 'skating_app_cache';
+const CACHE_EXPIRE = 10 * 60 * 1000; // 10分鐘
+let lastLoadTime = null; // 最後載入時間（UTC+8 字串）
 let attendanceCollapsed = {};
 
 let currentNoteTarget = null;
@@ -71,6 +73,25 @@ function clearBrowserCache() {
     if (window.makeupSelectedStudents) window.makeupSelectedStudents.clear();
     // 重新載入頁面以確保所有狀態重置
     location.reload();
+}
+
+async function forceRefreshCache() {
+    // 清除前端緩存
+    localStorage.removeItem(CACHE_KEY);
+    // 強制重新載入
+    await loadAllData(true);
+}
+
+function formatDateTimeUTC8(date) {
+    // 將日期物件轉為 UTC+8 字串 YYYY-MM-DD HH:MM:SS
+    const d = new Date(date.getTime() + (8 * 60 * 60 * 1000)); // 轉為 UTC+8 時間戳
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const hours = String(d.getUTCHours()).padStart(2, '0');
+    const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 function showConfirm(message, callback) {
     const modal = document.getElementById('confirmModal');
@@ -239,11 +260,46 @@ function scrollToSection(sectionId) {
     }, 350);
 }
 
-async function loadAllData() {
+async function loadAllData(forceRefresh = false) {
+    showLoadingSpinner('載入中...');
     try {
-        document.getElementById('loadingSpinner').style.display = 'flex';
-        const data = await fetchWithFallback('getInitialData');
+        let data;
+        let fromCache = false;
+        let cacheTimestamp = null;
 
+        if (!forceRefresh) {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { timestamp, value } = JSON.parse(cached);
+                if (Date.now() - timestamp < CACHE_EXPIRE) {
+                    data = value;
+                    fromCache = true;
+                    cacheTimestamp = timestamp;
+                }
+            }
+        }
+
+        if (!data) {
+            data = await fetchWithFallback('getInitialData');
+            // 儲存到緩存
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                timestamp: Date.now(),
+                value: data
+            }));
+            cacheTimestamp = Date.now();
+        } else {
+            // 背景更新緩存（非阻塞）
+            fetchWithFallback('getInitialData').then(newData => {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    timestamp: Date.now(),
+                    value: newData
+                }));
+                // 如果資料有重大變化，可選擇重新載入，此處簡單重新整理時間顯示
+                updateCacheTimeDisplay(Date.now());
+            }).catch(console.error);
+        }
+
+        // 處理資料（與原有邏輯相同）
         allStudents = normalizeStudentClasses(data.students || []);
         allClasses = data.classes || [];
         pendingApprovals = data.pendingApprovals || [];
@@ -277,17 +333,20 @@ async function loadAllData() {
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
 
-        // 立即渲染核心區塊（點名區塊、學生資訊區塊），它們預設摺疊，速度極快
-        updateAttendanceList();    // 點名區塊（會根據 isMakeupMode 顯示對應按鈕）
-        renderNoteListByClass();   // 學生資訊區塊（預設摺疊）
-        updateRentalList();        // 租借區塊（無摺疊，但內容簡單）
+        // 立即渲染核心區塊
+        updateAttendanceList();
+        renderNoteListByClass();
+        updateRentalList();
 
-        // 延遲渲染通知欄，避免阻塞主線程
+        // 延遲渲染通知欄
         setTimeout(() => {
             renderNotificationBody();
         }, 100);
 
         applyRoleRestrictions();
+
+        // 更新緩存時間顯示
+        updateCacheTimeDisplay(cacheTimestamp);
 
     } catch (error) {
         console.error(error);
@@ -295,7 +354,21 @@ async function loadAllData() {
             <p style="color: #c53030;">載入失敗，請重新整理頁面或聯繫管理員。</p>
             <button class="btn btn-primary" onclick="location.reload()">重新整理</button>
         `;
+    } finally {
+        hideLoadingSpinner();
     }
+}
+
+function updateCacheTimeDisplay(timestamp) {
+    if (!timestamp) return;
+    const date = new Date(timestamp);
+    const timeStr = formatDateTimeUTC8(date);
+    const elem = document.getElementById('cacheTimeDisplay');
+    if (elem) {
+        elem.textContent = `📅 最後更新：${timeStr}`;
+    }
+    // 同時儲存到 localStorage 以便下次載入顯示
+    localStorage.setItem('last_load_time', timestamp);
 }
 
 function applyRoleRestrictions() {
@@ -2917,6 +2990,10 @@ function showError(msg) {
 }
 
 window.addEventListener('DOMContentLoaded', async function() {
+       const lastTime = localStorage.getItem('last_load_time');
+    if (lastTime) {
+        updateCacheTimeDisplay(parseInt(lastTime));
+    }
     const editClassModal = document.getElementById('editStudentClassModal');
     if (editClassModal) {
         editClassModal.addEventListener('click', function(e) {
